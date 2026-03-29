@@ -1,0 +1,63 @@
+# === 项目特定排除 ===
+reference/
+.learnings/
+data/
+dist/
+config.json
+worker/wrangler.toml
+
+# === Node.js ===
+node_modules/
+package-lock.json
+yarn.lock
+*.tsbuildinfo
+
+# === 构建产物 ===
+**/dist/
+**/.wrangler/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.cache/
+.parcel-cache/
+.turbo/
+
+# === 日志 ===
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# === 环境与配置 ===
+.env
+.env.*
+!.env.example
+.dev.vars
+**/.dev.vars
+
+# === 编辑器与系统 ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === 测试与覆盖率 ===
+coverage/
+.nyc_output/
+
+# === 临时文件 ===
+tmp/
+temp/
+*.tmp
+__pycache__/
+*.pyc
+.venv/
+dist-sdk/

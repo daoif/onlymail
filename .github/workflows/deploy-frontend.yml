@@ -1,0 +1,50 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Build & Deploy Frontend to Cloudflare Pages
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+
+      - name: Deploy to Cloudflare Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG_FILE="$(mktemp)"
+          if npx wrangler pages deploy frontend/dist --project-name=mails-frontend >"$LOG_FILE" 2>&1; then
+            echo "Frontend 部署完成。"
+          else
+            sed -E \
+              -e 's#https?://[^[:space:]]+\.pages\.dev#https://REDACTED.pages.dev#g' \
+              -e 's#[A-Za-z0-9.-]+\.pages\.dev#REDACTED.pages.dev#g' \
+              "$LOG_FILE"
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

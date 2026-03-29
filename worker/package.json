@@ -1,0 +1,22 @@
+{
+  "name": "@mails/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "build": "tsc --noEmit",
+    "check": "tsc --noEmit",
+    "types": "wrangler types",
+    "db:local:init": "wrangler d1 execute mails-db --local --file db/schema.sql"
+  },
+  "dependencies": {
+    "hono": "^4.10.2",
+    "postal-mime": "^2.4.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260310.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.14.4"
+  }
+}

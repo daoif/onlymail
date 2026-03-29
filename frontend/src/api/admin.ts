@@ -1,0 +1,198 @@
+import type {
+  AddressRecord,
+  ApiEnvelope,
+  DashboardStats,
+  DomainRecord,
+  MailDetail,
+  MailSummary,
+  PaginationMeta,
+  SettingsApiKeyState,
+} from '../types'
+
+import { apiRequest } from './client'
+
+type Paginated<T> = {
+  items: T[]
+  pagination: PaginationMeta
+}
+
+type AddressCreateResult = {
+  status: 'created' | 'occupied' | 'available'
+  address: AddressRecord
+}
+
+export function getInitStatus() {
+  return apiRequest<ApiEnvelope<{ initialized: boolean }>>('/api/init-status')
+}
+
+export function initAdmin(username: string, password: string) {
+  return apiRequest<ApiEnvelope<{ username: string }>>('/api/init', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+}
+
+export function login(username: string, password: string) {
+  return apiRequest<ApiEnvelope<{ token: string; username: string }>>('/api/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+}
+
+export function getDashboard(token: string) {
+  return apiRequest<ApiEnvelope<DashboardStats>>('/api/dashboard', {}, token)
+}
+
+export function getAddresses(token: string, params: URLSearchParams) {
+  return apiRequest<ApiEnvelope<Paginated<AddressRecord>>>(`/api/addresses?${params.toString()}`, {}, token)
+}
+
+export function createAddress(token: string, address: string, project: string, ttlHours?: number) {
+  return apiRequest<ApiEnvelope<AddressCreateResult>>(
+    '/api/address',
+    {
+      method: 'POST',
+      body: JSON.stringify({ address, project, ttl_hours: ttlHours }),
+    },
+    token,
+  )
+}
+
+export function deleteAdminAddress(token: string, address: string) {
+  return apiRequest<{ message: string }>(`/api/address/${encodeURIComponent(address)}`, { method: 'DELETE' }, token)
+}
+
+export function getMails(token: string, params: URLSearchParams) {
+  return apiRequest<ApiEnvelope<Paginated<MailSummary>>>(`/api/mails?${params.toString()}`, {}, token)
+}
+
+export function getMail(token: string, id: number) {
+  return apiRequest<ApiEnvelope<MailDetail>>(`/api/mail/${id}`, {}, token)
+}
+
+export function deleteAdminMail(token: string, id: number) {
+  return apiRequest<{ message: string }>(`/api/mail/${id}`, { method: 'DELETE' }, token)
+}
+
+export function getDomains(token: string) {
+  return apiRequest<ApiEnvelope<DomainRecord[]>>('/api/domains', {}, token)
+}
+
+export function bootstrapDomain(token: string, rootDomain: string, zoneId?: string) {
+  return apiRequest<ApiEnvelope<DomainRecord>>(
+    '/api/domains/bootstrap',
+    {
+      method: 'POST',
+      body: JSON.stringify({ rootDomain, zoneId: zoneId || undefined }),
+    },
+    token,
+  )
+}
+
+export function createSubdomain(token: string, name: string, rootName?: string, workerName?: string) {
+  return apiRequest<ApiEnvelope<DomainRecord>>(
+    '/api/domains',
+    {
+      method: 'POST',
+      body: JSON.stringify({ name, rootName: rootName || undefined, workerName: workerName || undefined }),
+    },
+    token,
+  )
+}
+
+export function deleteDomain(token: string, name: string) {
+  return apiRequest<{ message: string }>(`/api/domains/${encodeURIComponent(name)}`, { method: 'DELETE' }, token)
+}
+
+export function getApiKeyState(token: string) {
+  return apiRequest<ApiEnvelope<SettingsApiKeyState>>('/api/settings/api-key', {}, token)
+}
+
+export function rotateApiKey(token: string) {
+  return apiRequest<ApiEnvelope<{ apiKey: string; preview: string; rotatedAt: string }>>(
+    '/api/settings/api-key/rotate',
+    { method: 'POST', body: JSON.stringify({}) },
+    token,
+  )
+}
+
+export function changePassword(token: string, oldPassword: string, newPassword: string) {
+  return apiRequest<{ message: string }>(
+    '/api/settings/change-password',
+    {
+      method: 'POST',
+      body: JSON.stringify({ oldPassword, newPassword }),
+    },
+    token,
+  )
+}
+
+// ── 自定义域名绑定 ────────────────────────────────────────────
+
+export interface CustomDomainEntry {
+  id: string
+  hostname: string
+  service?: string
+  environment?: string
+}
+
+export function getCustomDomains(token: string) {
+  return apiRequest<ApiEnvelope<CustomDomainEntry[]>>('/api/settings/custom-domains', {}, token)
+}
+
+export function addCustomDomain(token: string, hostname: string, zoneId?: string) {
+  return apiRequest<ApiEnvelope<CustomDomainEntry>>(
+    '/api/settings/custom-domains',
+    {
+      method: 'POST',
+      body: JSON.stringify({ hostname, zoneId: zoneId || undefined }),
+    },
+    token,
+  )
+}
+
+export function removeCustomDomain(token: string, id: string) {
+  return apiRequest<{ message: string }>(`/api/settings/custom-domains/${id}`, { method: 'DELETE' }, token)
+}
+
+// ── Pages 自定义域名 ──────────────────────────────────────────
+
+export interface PagesDomainEntry {
+  id: string | null
+  name: string
+  status: string | null
+  validationData?: {
+    method?: string | null
+    status?: string | null
+    errorMessage?: string | null
+    txtName?: string | null
+    txtValue?: string | null
+  }
+  verificationData?: {
+    status?: string | null
+    errorMessage?: string | null
+  }
+  zoneTag?: string | null
+}
+
+export function getPagesDomains(token: string) {
+  return apiRequest<ApiEnvelope<PagesDomainEntry[]>>('/api/settings/pages-domains', {}, token)
+}
+
+export function addPagesDomain(token: string, domain: string) {
+  return apiRequest<ApiEnvelope<PagesDomainEntry>>(
+    '/api/settings/pages-domains',
+    {
+      method: 'POST',
+      body: JSON.stringify({ domain }),
+    },
+    token,
+  )
+}
+
+export function removePagesDomain(token: string, domain: string) {
+  return apiRequest<{ message: string }>(`/api/settings/pages-domains/${encodeURIComponent(domain)}`, { method: 'DELETE' }, token)
+}
+
+
+

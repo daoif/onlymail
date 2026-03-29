@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-slate-800 antialiased;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply outline-none ring-2 ring-brand-100 ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto max-w-7xl px-6 pb-10 pt-6;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold tracking-tight text-slate-900;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-slate-500;
+  }
+
+  .input-base {
+    @apply w-full rounded-lg bg-white px-3 py-2 text-sm text-slate-900 shadow-sm ring-1 ring-slate-200 transition focus:ring-brand-100;
+  }
+
+  .button-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300;
+  }
+
+  .button-secondary {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50;
+  }
+
+  .button-danger {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-50;
+  }
+}

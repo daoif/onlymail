@@ -1,0 +1,18 @@
+- [README](README.md)
+- [OVERVIEW](OVERVIEW.md)
+- [STATUS](STATUS.md)
+
+- `RESEARCH/`
+  - [CFTE 参考项目调研](RESEARCH/cfte-research.md)
+  - [Cloudflare Email Routing 调研](RESEARCH/cf-email-routing-research.md)
+- `PLANS/`
+  - [项目范围](PLANS/project-scope.md)
+  - [后端与基础设施方案](PLANS/backend-infra.md)
+  - [前端 UI Spec](PLANS/frontend-ui-spec.md)
+  - [前端与 SDK 方案](PLANS/frontend-sdk.md)
+  - [工程化与 SDK 方案](PLANS/engineering-sdk.md)
+- `DECISIONS/`
+  - [API Key 放进 D1](DECISIONS/0001-api-key-in-d1.md)
+  - [邮件在收件时解析并落库](DECISIONS/0002-parse-mail-on-ingest.md)
+  - [前端只用 Tailwind 手写样式](DECISIONS/0003-tailwind-only-admin-ui.md)
+  - [平台抽象 Provider 层](DECISIONS/0005-provider-abstraction.md)

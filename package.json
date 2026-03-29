@@ -1,0 +1,17 @@
+{
+  "name": "mails",
+  "private": true,
+  "packageManager": "pnpm@10.10.0",
+  "scripts": {
+    "init": "npx tsx scripts/init.ts",
+    "build": "pnpm --dir worker run build && pnpm --dir frontend run build && pnpm --dir sdk/nodejs run build",
+    "build:worker": "pnpm --dir worker run build",
+    "build:frontend": "pnpm --dir frontend run build",
+    "build:sdk:node": "pnpm --dir sdk/nodejs run build",
+    "check:python": "python -m compileall sdk/python"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0"
+  }
+}

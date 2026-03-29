@@ -1,0 +1,50 @@
+name: Deploy Worker
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'worker/**'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy Worker to Cloudflare
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Inject wrangler.toml from Secret
+        run: printf '%s' "$BACKEND_TOML" > worker/wrangler.toml
+        env:
+          BACKEND_TOML: ${{ secrets.BACKEND_TOML }}
+
+      - name: Deploy Worker
+        working-directory: worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG_FILE="$(mktemp)"
+          if pnpm wrangler deploy >"$LOG_FILE" 2>&1; then
+            echo "Worker 部署完成。"
+          else
+            sed -E \
+              -e 's#https?://[^[:space:]]+\.workers\.dev#https://REDACTED.workers.dev#g' \
+              -e 's#[A-Za-z0-9.-]+\.workers\.dev#REDACTED.workers.dev#g' \
+              "$LOG_FILE"
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
