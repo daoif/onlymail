@@ -30,7 +30,7 @@
 ## 页面和接口对应
 - 登录页 -> `GET /api/init-status`、首次 `POST /api/init`、日常 `POST /api/login`
 - 仪表盘页 -> `GET /api/dashboard`
-- 地址页 -> `GET /api/addresses`、`DELETE /api/address/:name`
+- 地址页 -> `POST /api/address`、`GET /api/addresses`、`DELETE /api/address/:name`
 - 邮件页 -> `GET /api/mails`、`GET /api/mail/:id`、`DELETE /api/mail/:id`
 - 域名页 -> `GET /api/domains`、`POST /api/domains/bootstrap`、`POST /api/domains`、`DELETE /api/domains/:name`
 - 设置页 -> `GET /api/settings/api-key`、`POST /api/settings/change-password`、`POST /api/settings/api-key/rotate`、`GET/POST/DELETE /api/settings/custom-domains`、`GET/POST/DELETE /api/settings/pages-domains`
@@ -39,6 +39,7 @@
 - 首次访问登录页时，先查管理员是否已初始化；未初始化就直接显示创建管理员表单。
 - 登录成功后存 JWT 到 `localStorage`。
 - JWT 失效后统一跳回登录页。
+- 地址页支持直接生成临时邮箱，生成后展示结果并支持复制或跳到邮件页查看。
 - 地址页按域名和项目筛选。
 - 邮件页左侧列表、右侧详情。
 - 邮件详情优先渲染已清洗 HTML，没有 HTML 时渲染纯文本。

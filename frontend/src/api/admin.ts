@@ -16,9 +16,28 @@ type Paginated<T> = {
   pagination: PaginationMeta
 }
 
-type AddressCreateResult = {
+export type AddressCreateResult = {
   status: 'created' | 'occupied' | 'available'
   address: AddressRecord
+}
+
+type QueryValue = string | number | boolean | undefined
+
+function toSearchString(params?: URLSearchParams | Record<string, QueryValue>) {
+  if (!params) return ''
+  if (params instanceof URLSearchParams) {
+    const value = params.toString()
+    return value ? `?${value}` : ''
+  }
+
+  const searchParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue
+    searchParams.set(key, String(value))
+  }
+
+  const query = searchParams.toString()
+  return query ? `?${query}` : ''
 }
 
 export function getInitStatus() {
@@ -74,8 +93,8 @@ export function deleteAdminMail(token: string, id: number) {
   return apiRequest<{ message: string }>(`/api/mail/${id}`, { method: 'DELETE' }, token)
 }
 
-export function getDomains(token: string) {
-  return apiRequest<ApiEnvelope<DomainRecord[]>>('/api/domains', {}, token)
+export function getDomains(token: string, params?: URLSearchParams | Record<string, QueryValue>) {
+  return apiRequest<ApiEnvelope<DomainRecord[]>>(`/api/domains${toSearchString(params)}`, {}, token)
 }
 
 export function bootstrapDomain(token: string, rootDomain: string, zoneId?: string) {

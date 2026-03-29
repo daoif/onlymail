@@ -32,5 +32,6 @@
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署
 - 新增 `Upstream Sync` workflow，用于 fork 仓库按 fast-forward 自动接收上游更新
 - SDK 分发路径定为“直接从 GitHub 仓库子目录安装”：Node.js 主推 `pnpm`，Python 主推 `pip`；当前不发 npm / PyPI
+- 地址页新增“生成临时邮箱”区域：直接拉取可用子域名、创建地址、展示结果、复制地址并跳到邮件页
 
 
