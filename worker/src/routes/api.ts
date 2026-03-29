@@ -1,8 +1,7 @@
 /**
  * /api/* — JWT 认证路由（前端完整权限）
  *
- * 合并了原 /admin/*（JWT）和旧 /api/*（API Key）的所有功能。
- * 认证相关端点（init-status / init / login）无需 JWT。
+ * 承载前端管理面板的完整能力；认证相关端点（init-status / init / login）无需 JWT。
  */
 
 import { Hono } from 'hono'
@@ -17,7 +16,17 @@ import { getPageParams, toPagination } from '../lib/pagination'
 import { createOrInspectAddress, deleteAddress, listAddresses } from '../services/address'
 import { bootstrapRootDomain, createSubdomain, deleteSubdomain, getDomainDetail, listDomains } from '../services/domain'
 import { deleteMail, getMailById, listMails } from '../services/mail'
-import { changeAdminPassword, getAdminUsername, getApiKeyConfig, initAdmin, isAdminInitialized, rotateApiKey, verifyAdmin } from '../services/settings'
+import {
+  addAllowedOriginPattern,
+  changeAdminPassword,
+  getAdminUsername,
+  getApiKeyConfig,
+  initAdmin,
+  isAdminInitialized,
+  removeAllowedOriginPattern,
+  rotateApiKey,
+  verifyAdmin,
+} from '../services/settings'
 import { getDashboardStats } from '../services/stats'
 import { createProviders } from '../providers/index'
 
@@ -304,6 +313,7 @@ apiRoutes.post('/settings/pages-domains', async (c) => {
   }
 
   const result = await providers.domainBinding.retryPagesDomainValidation(accountId, projectName, domain)
+  await addAllowedOriginPattern(c.env, `https://${domain}`)
   return jsonSuccess(c, result, 201)
 })
 
@@ -332,6 +342,7 @@ apiRoutes.delete('/settings/pages-domains/:domain', async (c) => {
     }
   }
 
+  await removeAllowedOriginPattern(c.env, `https://${domainName}`)
   return jsonMessage(c, 'Pages 自定义域名已移除')
 })
 

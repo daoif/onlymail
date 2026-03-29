@@ -9,24 +9,40 @@ import { handleEmail } from './email'
 import { apiRoutes } from './routes/api'
 import { callRoutes } from './routes/call'
 import { handleScheduled } from './scheduled'
-import { getApiKeyConfig, verifyApiKey } from './services/settings'
+import { getAllowedOriginPatterns, getApiKeyConfig, verifyApiKey } from './services/settings'
 
 const app = new Hono<AppEnv>()
 
-// ── CORS ──────────────────────────────────────────────────────
-// 限制为前端域名 + 本地开发，通过 ALLOWED_ORIGINS 环境变量配置
-app.use('*', async (c, next) => {
-  const allowedOrigins = c.env.ALLOWED_ORIGINS
-    ? c.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
-    : []
+function matchesAllowedOrigin(origin: string, pattern: string) {
+  if (origin === pattern) {
+    return true
+  }
 
-  // 开发环境或未配置时放开
+  if (!pattern.includes('*.')) {
+    return false
+  }
+
+  try {
+    const originUrl = new URL(origin)
+    const patternUrl = new URL(pattern.replace('*.', 'placeholder.'))
+    const suffix = patternUrl.hostname.replace(/^placeholder\./, '')
+    return originUrl.protocol === patternUrl.protocol && originUrl.hostname.endsWith(`.${suffix}`)
+  } catch {
+    return false
+  }
+}
+
+// ── CORS ──────────────────────────────────────────────────────
+// 默认放行 pages.dev 生产/预览地址和本地开发；设置页新增的自定义前端域名会写进数据库动态生效
+app.use('*', async (c, next) => {
+  const allowedOrigins = await getAllowedOriginPatterns(c.env)
+
   if (allowedOrigins.length === 0) {
     return cors()(c, next)
   }
 
   return cors({
-    origin: (origin) => (allowedOrigins.includes(origin) ? origin : ''),
+    origin: (origin) => (allowedOrigins.some((pattern) => matchesAllowedOrigin(origin, pattern)) ? origin : ''),
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
   })(c, next)

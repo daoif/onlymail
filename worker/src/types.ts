@@ -4,6 +4,7 @@ export interface AppBindings {
   DB: D1Database
   JWT_SECRET: string
   CF_API_TOKEN?: string
+  CF_EMAIL?: string
   CF_AUTH_EMAIL?: string
   CF_GLOBAL_API_KEY?: string
   CF_DEFAULT_ZONE_ID?: string

@@ -4,6 +4,8 @@
   "packageManager": "pnpm@10.10.0",
   "scripts": {
     "init": "npx tsx scripts/init.ts",
+    "render:wrangler": "npx tsx scripts/render-wrangler.ts",
+    "setup:github": "npx tsx scripts/setup-github.ts",
     "build": "pnpm --dir worker run build && pnpm --dir frontend run build && pnpm --dir sdk/nodejs run build",
     "build:worker": "pnpm --dir worker run build",
     "build:frontend": "pnpm --dir frontend run build",

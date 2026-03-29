@@ -4,12 +4,26 @@ import { AppError } from '../lib/http'
 import { exec, one } from '../lib/db'
 import { generateApiKey, getApiKeyPreview, sha256 } from '../lib/crypto'
 
-type SettingKey = 'admin_user' | 'admin_pass_hash' | 'api_key_hash' | 'api_key_preview' | 'api_key_rotated_at'
+type SettingKey =
+  | 'admin_user'
+  | 'admin_pass_hash'
+  | 'api_key_hash'
+  | 'api_key_preview'
+  | 'api_key_rotated_at'
+  | 'allowed_origins'
 
 type SettingRow = {
   key: SettingKey
   value: string
 }
+
+type AllowedOriginsCache = {
+  expiresAt: number
+  values: string[]
+}
+
+const ALLOWED_ORIGINS_CACHE_TTL_MS = 60_000
+let allowedOriginsCache: AllowedOriginsCache | null = null
 
 async function getSetting(env: AppBindings, key: SettingKey) {
   return one<SettingRow>(env.DB.prepare('SELECT key, value FROM settings WHERE key = ?1').bind(key))
@@ -23,6 +37,25 @@ async function setSetting(env: AppBindings, key: SettingKey, value: string) {
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     ).bind(key, value),
   )
+}
+
+function normalizeOrigins(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort()
+}
+
+function getEnvAllowedOrigins(env: AppBindings) {
+  return normalizeOrigins((env.ALLOWED_ORIGINS || '').split(','))
+}
+
+function clearAllowedOriginsCache() {
+  allowedOriginsCache = null
+}
+
+async function setAllowedOrigins(env: AppBindings, values: string[]) {
+  const normalized = normalizeOrigins(values)
+  await setSetting(env, 'allowed_origins', JSON.stringify(normalized))
+  clearAllowedOriginsCache()
+  return normalized
 }
 
 export async function getAdminUsername(env: AppBindings) {
@@ -125,6 +158,51 @@ export async function rotateApiKey(env: AppBindings) {
     preview,
     rotatedAt,
   }
+}
+
+export async function getAllowedOriginPatterns(env: AppBindings) {
+  const envOrigins = getEnvAllowedOrigins(env)
+
+  if (allowedOriginsCache && allowedOriginsCache.expiresAt > Date.now()) {
+    return normalizeOrigins([...envOrigins, ...allowedOriginsCache.values])
+  }
+
+  const row = await getSetting(env, 'allowed_origins')
+  let storedOrigins: string[] = []
+  if (row?.value) {
+    try {
+      const parsed = JSON.parse(row.value)
+      if (Array.isArray(parsed)) {
+        storedOrigins = normalizeOrigins(parsed.filter((item): item is string => typeof item === 'string'))
+      }
+    } catch {
+      throw new AppError(500, 'allowed_origins 配置格式无效')
+    }
+  }
+
+  allowedOriginsCache = {
+    values: storedOrigins,
+    expiresAt: Date.now() + ALLOWED_ORIGINS_CACHE_TTL_MS,
+  }
+
+  return normalizeOrigins([...envOrigins, ...storedOrigins])
+}
+
+export async function addAllowedOriginPattern(env: AppBindings, origin: string) {
+  const row = await getSetting(env, 'allowed_origins')
+  const current = row?.value ? JSON.parse(row.value) : []
+  const values = Array.isArray(current) ? current.filter((item): item is string => typeof item === 'string') : []
+  return setAllowedOrigins(env, [...values, origin])
+}
+
+export async function removeAllowedOriginPattern(env: AppBindings, origin: string) {
+  const row = await getSetting(env, 'allowed_origins')
+  const current = row?.value ? JSON.parse(row.value) : []
+  const values = Array.isArray(current) ? current.filter((item): item is string => typeof item === 'string') : []
+  return setAllowedOrigins(
+    env,
+    values.filter((item) => item !== origin.trim()),
+  )
 }
 
 

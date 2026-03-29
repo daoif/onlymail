@@ -36,7 +36,8 @@ jobs:
         run: |
           set -euo pipefail
           LOG_FILE="$(mktemp)"
-          if npx wrangler pages deploy frontend/dist --project-name=mails-frontend >"$LOG_FILE" 2>&1; then
+          PROJECT_NAME="${CF_DEFAULT_PAGES_PROJECT:-mails-frontend}"
+          if npx wrangler pages deploy frontend/dist --project-name="$PROJECT_NAME" >"$LOG_FILE" 2>&1; then
             echo "Frontend 部署完成。"
           else
             sed -E \
@@ -48,3 +49,4 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_DEFAULT_PAGES_PROJECT: ${{ vars.CF_DEFAULT_PAGES_PROJECT }}

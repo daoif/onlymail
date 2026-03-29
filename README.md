@@ -25,21 +25,69 @@ scripts/             # 初始化脚本
 DOCS/                # 项目文档
 ```
 
+## 部署方式
+
+### 1. 本地部署
+
+适合先调试、先确认环境，或者你根本不想接 GitHub Actions。
+
+这条路径里：
+- 把仓库拉到本地
+- 本地跑 `pnpm run init`
+- 后续继续用本地命令部署 Worker 和 Pages
+
+GitHub 在这条路径里不是必需项。
+
+### 2. GitHub-only 部署
+
+适合不想先拉到本地，想直接在自己的 GitHub 仓库里完成首次部署。
+
+这条路径里：
+- fork 本仓库，或新建一个自己的仓库后把代码放进去
+- 在 GitHub 仓库里配置 Cloudflare secrets
+- 手动运行 `Bootstrap Cloudflare` workflow
+- 后续 push 代码后，Worker 和 Pages 自动更新
+
+这条路径的首次初始化不依赖本地 `init`。
+
+### 3. 混合部署
+
+适合先在本地把环境调通，后面再切到 GitHub 自动更新。
+
+这条路径里：
+- 先在本地跑一次 `pnpm run init`
+- 再执行 `pnpm setup:github`，把后续自动部署需要的仓库配置写进去
+- 后续 push 到自己的 GitHub 仓库，交给 Actions 自动部署
+
+如果你需要改代码、调试 Cloudflare 现场、排查域名问题，这条路径最顺手。
+
 ## 快速开始
 
 ### 首次部署
 
 ```bash
 pnpm install
-pnpm run init    # 一键初始化（创建 D1、生成配置、设置 Secrets）
+pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 Pages，默认入口走 workers.dev + pages.dev
 ```
+
+`worker/wrangler.toml` 是本地运行配置，会由模板生成，不提交 Git。
+
+`init` 只准备基础设施，不会提前绑定 Worker / Pages 自定义域名。自定义域名留给应用里的初始化引导和设置页处理。
+
+如果你不想先拉到本地，可以直接走上面的 GitHub-only 部署，第一次运行 `Bootstrap Cloudflare` workflow 即可。
+
+`init` 可以重复运行，用来重新对齐 D1、Worker、Pages 这些基础设施；但它会刷新 `JWT_SECRET`，现有后台登录态会失效。
 
 ### 本地开发
 
+先复制 `worker/.dev.vars.example` 为 `worker/.dev.vars`，至少填好 `JWT_SECRET`。
+
 ```bash
-# 配置环境变量
-cp worker/wrangler.toml.template worker/wrangler.toml
-# 编辑 wrangler.toml 填入实际值
+# 先生成 worker/wrangler.toml
+CF_DEFAULT_ZONE_ID="你的ZoneID" \
+CF_ACCOUNT_ID="你的AccountID" \
+D1_DATABASE_ID="你的database_id" \
+pnpm render:wrangler
 
 # 启动后端
 pnpm --dir worker dev
@@ -50,11 +98,45 @@ pnpm --dir frontend dev
 
 首次打开登录页时，如果系统还没有管理员账号，页面会先进入初始化流程。
 
+只调本地页面和本地 API 时，不需要先跑 `init`。`init` 是给第一次接到真实 Cloudflare 环境时用的。
+
+如果你在本地还要测试域名、Pages、自定义域名这些 Cloudflare 管理能力，再把下面这些补进 `worker/.dev.vars`：
+- `CF_API_TOKEN`
+- `CF_ACCOUNT_ID`
+- `CF_DEFAULT_ZONE_ID`
+- `CF_DEFAULT_PAGES_PROJECT`
+
+如果你在本地还要继续测 Email Routing 的启用、关闭、清理，再额外补：
+- `CF_EMAIL`（也兼容旧名字 `CF_AUTH_EMAIL`）
+- `CF_GLOBAL_API_KEY`
+
 ## 部署
 
 - Worker 通过 GitHub Actions 自动部署到 Cloudflare
-- `wrangler.toml` 不提交 Git，通过 `BACKEND_TOML` Secret 注入
+- `wrangler.toml` 不提交 Git，CI 会按模板和 GitHub Secrets / Variables 现场生成
 - 前端通过 Cloudflare Pages 自动部署
+- 首次如果走 GitHub-only 部署，使用 `Bootstrap Cloudflare` workflow 做基础设施初始化
+- 如果你维护自己的 fork，还可以启用 `Upstream Sync` workflow 定时同步上游更新
+
+## 配置输入
+
+最低需要：
+- Cloudflare API Token
+- Cloudflare Account ID
+- Cloudflare Zone ID
+- D1 Database ID
+
+可选增强：
+- `CF_GLOBAL_API_KEY` + `CF_EMAIL`：让 AI 或脚本继续处理 Email Routing 的启用、关闭、清理和排查
+- `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤
+- `ALLOWED_ORIGINS`：需要手动覆盖默认来源时再提供；默认会按 Pages 项目的 `pages.dev` 地址和本地开发地址生成
+- `GITHUB_REPOSITORY`：给了以后，`init` 可以顺手调用 `gh` 写 GitHub 仓库配置
+
+推荐做法是先给最低必需项，缺到关键节点再补可选项。AI 检测到 `gh` 或额外 Cloudflare 凭证时，可以直接继续，不需要再走手工说明。
+
+首次跑完 `init` 后，先用 Pages 默认地址进入后台完成管理员初始化；等系统能用了，再在设置页绑定 `mails-api.你的域名` 和 `mails.你的域名` 这类正式入口。
+
+如果你走 GitHub-only 路径，第一次 `Bootstrap Cloudflare` workflow 跑完后的顺序也一样：先用 `pages.dev` 默认地址初始化管理员，再在设置页绑定正式域名。
 
 ## API 概览
 
@@ -102,5 +184,5 @@ pnpm --dir frontend dev
 
 ## License
 
-Private
+暂未附带开源许可证。准备公开仓库时，再按你的发布方式补 `LICENSE`。
 

@@ -23,14 +23,18 @@
 - SDK 通过 `/call/*`（API Key）执行只读+创建操作，无删除权限。
 - Cloudflare DNS API 和 Email Routing API 通过 Provider 接口调用，用于根域名初始化、子域名创建和规则回收。
 - Pages 自定义域名通过 Pages Domains API 绑定，再把 CNAME 自动对齐到 Pages 项目的真实 `subdomain`，随后重试验证。
+- `init` 只准备基础设施默认入口：前端走 Pages 默认 `pages.dev`，后端走 Worker 默认 `workers.dev`；正式自定义域名在应用里的设置页处理。
+- 部署有三条正式路径：本地部署、GitHub-only 部署、混合部署。GitHub-only 首次部署通过 `Bootstrap Cloudflare` workflow，fork 仓库的后续更新通过 `Upstream Sync` workflow。
 
 ## 当前落定的关键实现
 - 管理员账号和 API Key 都放进 D1 `settings`；管理员密码只存哈希，首次访问时初始化。
 - 邮件正文收件时解析并落库；前端只做安全渲染。
 - 管理面板采用白色主色调，使用 Tailwind 手写样式，骨架屏占位 + SWR 缓存。
 - 所有 Cloudflare API 调用通过 `providers/` 接口解耦，禁止 service 层直接调用。
-- `wrangler.toml` 不提交 Git，CI/CD 通过 `BACKEND_TOML` Secret 注入。
+- `wrangler.toml` 不提交 Git；本地和 CI/CD 都按模板现场生成。
+- Worker CORS 先读取模板默认来源，再叠加数据库里的运行时来源；Pages 自定义域名新增/删除时会同步更新这部分配置。
 - SDK 只暴露 `/call/*` 受控子集（创建+只读），Key 泄露不会导致数据丢失。
+- GitHub Actions 不只负责后续部署，也能负责首次 bootstrap；本地不再是唯一初始化入口。
 
 ## 文档导航
 - 详细方案和任务顺序：见 `SUMMARY.md`。

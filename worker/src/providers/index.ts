@@ -12,7 +12,7 @@ import { createCloudflareProviders } from './cloudflare/index'
 export function createProviders(env: AppBindings): Providers {
   return createCloudflareProviders({
     token: env.CF_API_TOKEN,
-    authEmail: env.CF_AUTH_EMAIL,
+    authEmail: env.CF_AUTH_EMAIL || env.CF_EMAIL,
     globalApiKey: env.CF_GLOBAL_API_KEY,
   })
 }

@@ -30,7 +30,7 @@ export class CloudflareBase {
 
   protected getGlobalHeaders() {
     if (!this.auth.authEmail || !this.auth.globalApiKey) {
-      throw new AppError(500, '缺少 CF_AUTH_EMAIL 或 CF_GLOBAL_API_KEY，无法调用 Cloudflare 全局鉴权接口')
+      throw new AppError(500, '缺少 CF_EMAIL（或旧名字 CF_AUTH_EMAIL）或 CF_GLOBAL_API_KEY，无法调用 Cloudflare 全局鉴权接口')
     }
 
     return {

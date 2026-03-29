@@ -1,0 +1,50 @@
+name: Upstream Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_repository:
+        description: 上游仓库，格式 owner/repo
+        required: false
+        type: string
+  schedule:
+    - cron: '17 */12 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    name: Sync with upstream
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve upstream repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPSTREAM_REPOSITORY="${INPUT_UPSTREAM_REPOSITORY:-${UPSTREAM_REPOSITORY_VAR:-}}"
+          if [ -z "$UPSTREAM_REPOSITORY" ]; then
+            echo "缺少上游仓库。请在 workflow 输入 upstream_repository，或设置仓库变量 UPSTREAM_REPOSITORY。"
+            exit 1
+          fi
+          echo "UPSTREAM_REPOSITORY=$UPSTREAM_REPOSITORY" >> "$GITHUB_ENV"
+        env:
+          INPUT_UPSTREAM_REPOSITORY: ${{ inputs.upstream_repository }}
+          UPSTREAM_REPOSITORY_VAR: ${{ vars.UPSTREAM_REPOSITORY }}
+
+      - name: Sync default branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "https://github.com/$UPSTREAM_REPOSITORY.git"
+          git fetch upstream "$DEFAULT_BRANCH"
+          git checkout "$DEFAULT_BRANCH"
+          git merge --ff-only "upstream/$DEFAULT_BRANCH"
+          git push origin "HEAD:$DEFAULT_BRANCH"

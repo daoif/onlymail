@@ -25,10 +25,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Inject wrangler.toml from Secret
-        run: printf '%s' "$BACKEND_TOML" > worker/wrangler.toml
+      - name: Generate wrangler.toml
+        run: pnpm render:wrangler
         env:
-          BACKEND_TOML: ${{ secrets.BACKEND_TOML }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_DEFAULT_ZONE_ID: ${{ vars.CF_DEFAULT_ZONE_ID }}
+          D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+          CF_DEFAULT_WORKER_NAME: ${{ vars.CF_DEFAULT_WORKER_NAME }}
+          CF_DEFAULT_PAGES_PROJECT: ${{ vars.CF_DEFAULT_PAGES_PROJECT }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
 
       - name: Deploy Worker
         working-directory: worker
