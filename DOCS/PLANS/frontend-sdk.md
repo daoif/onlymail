@@ -49,9 +49,12 @@
 - SDK 只封装自动化 API，不封装管理端 JWT 登录。
 - Node.js 和 Python 两套接口尽量同名。
 - `waitForMail` 是重点能力，负责轮询、超时和首封匹配。
+- SDK 只面向用户自己部署的实例，不提供公共服务地址。
+- 第一阶段只支持直接从 GitHub 仓库子目录安装，不发 npm / PyPI。
 
 ## Node.js SDK
 - 目录：`sdk/nodejs/`
+- 主推荐安装方式：`pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"`
 - 核心接口：
   - `createAddress(address, project, ttlHours?)`
   - `getMailList(address, page?, size?)`
@@ -63,6 +66,7 @@
 
 ## Python SDK
 - 目录：`sdk/python/`
+- 主推荐安装方式：`python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"`
 - 和 Node.js 对齐的接口：
   - `create_address(address, project, ttl_hours=None)`
   - `get_mail_list(address, page=1, size=20)`
@@ -79,6 +83,7 @@
 - 设置页轮换 API Key 后，旧 key 立刻失效。
 - Node.js SDK 能用很短的代码完成“创建地址 -> 等邮件 -> 取正文”，并能查询域名或创建子域名。
 - Python SDK 能完成同样的链路。
+- 根 README 和两个 SDK README 要明确写清楚安装命令、`baseUrl` 选取顺序，以及 `API Key` 来自后台设置页。
 
 
 

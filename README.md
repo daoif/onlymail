@@ -138,6 +138,75 @@ pnpm --dir frontend dev
 
 如果你走 GitHub-only 路径，第一次 `Bootstrap Cloudflare` workflow 跑完后的顺序也一样：先用 `pages.dev` 默认地址初始化管理员，再在设置页绑定正式域名。
 
+## SDK 接入
+
+SDK 只面向你自己部署的实例，不提供公共服务地址。
+
+### Node.js SDK
+
+主推荐方式是用 `pnpm` 直接从 GitHub 安装子目录包：
+
+```bash
+pnpm add "git+https://github.com/<owner>/<repo>.git#master&path:/sdk/nodejs"
+```
+
+如果你想把依赖直接写进 `package.json`：
+
+```json
+{
+  "dependencies": {
+    "@mails/sdk-nodejs": "git+https://github.com/<owner>/<repo>.git#master&path:/sdk/nodejs"
+  }
+}
+```
+
+然后在项目里这样用：
+
+```ts
+import { MailsClient } from '@mails/sdk-nodejs'
+
+const client = new MailsClient('https://your-worker.your-account.workers.dev', process.env.MAILS_API_KEY!)
+```
+
+### Python SDK
+
+主推荐方式是用 `pip` 直接从 GitHub 安装子目录包：
+
+```bash
+python -m pip install "git+https://github.com/<owner>/<repo>.git@master#subdirectory=sdk/python"
+```
+
+如果你想把依赖写进 `requirements.txt`：
+
+```txt
+git+https://github.com/<owner>/<repo>.git@master#subdirectory=sdk/python
+```
+
+然后在项目里这样用：
+
+```python
+from mails_sdk import MailsClient
+
+client = MailsClient('https://your-worker.your-account.workers.dev', api_key='YOUR_API_KEY')
+```
+
+### 当前边界
+
+- Node SDK 当前主支持 `pnpm` 的 Git 子目录安装
+- Python SDK 主支持 `pip` 的 Git 子目录安装
+- 现在不发 npm，也不发 PyPI
+- 后面是否发包，等仓库外复用频率和版本维护需求都更明确后再决定
+
+### 实际接入顺序
+
+1. 先部署自己的实例
+2. 登录后台，在设置页生成 API Key
+3. 选择一个后端地址作为 `baseUrl`
+   - 正式环境优先用你自己绑定的 Worker API 自定义域名
+   - 没绑自定义域名时，用默认 `workers.dev` 地址
+4. 再在业务项目里安装 SDK
+5. 用 SDK 调 `createAddress -> waitForMail -> getMail`
+
 ## API 概览
 
 ### `/api/*` — 管理 API（Bearer JWT）

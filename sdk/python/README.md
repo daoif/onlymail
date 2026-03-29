@@ -1,10 +1,40 @@
 # Python SDK
 
+## 安装
+
+主推荐方式是直接从 GitHub 仓库安装 `sdk/python` 子目录：
+
+```bash
+python -m pip install "git+https://github.com/<owner>/<repo>.git@master#subdirectory=sdk/python"
+```
+
+如果你要固定到某个 tag、分支或 commit，把 `master` 换成对应引用即可：
+
+```bash
+python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"
+```
+
+如果你想把依赖写进 `requirements.txt`：
+
+```txt
+git+https://github.com/<owner>/<repo>.git@master#subdirectory=sdk/python
+```
+
+## 用法
+
 ```python
 from mails_sdk import MailsClient
 
-client = MailsClient('http://127.0.0.1:8787', api_key='YOUR_API_KEY')
+client = MailsClient('https://your-worker.your-account.workers.dev', api_key='YOUR_API_KEY')
 created = client.create_address('demo@m1.example.com', 'demo', ttl_hours=24)
 mail = client.wait_for_mail(created['address']['name'], timeout_ms=60000, interval_ms=3000)
 print(mail['subject'])
 ```
+
+这个 SDK 只面向你自己部署的实例：
+- 第一个参数是你自己的后端地址
+- `api_key` 是你在后台设置页生成的 API Key
+
+后端地址的选择顺序：
+- 正式环境优先用你自己绑定的 Worker API 自定义域名
+- 没绑自定义域名时，用默认 `workers.dev` 地址

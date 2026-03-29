@@ -31,5 +31,6 @@
 - Pages 自定义域名绑定继续走：读取 Pages 项目真实 subdomain → 自动创建或更新 CNAME → 重试验证，并在设置页显示验证/证书状态
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署
 - 新增 `Upstream Sync` workflow，用于 fork 仓库按 fast-forward 自动接收上游更新
+- SDK 分发路径定为“直接从 GitHub 仓库子目录安装”：Node.js 主推 `pnpm`，Python 主推 `pip`；当前不发 npm / PyPI
 
 

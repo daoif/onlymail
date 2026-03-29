@@ -36,10 +36,18 @@
 ### 维护范围
 
 Python 和 Node.js 两套 SDK 同时维护，保持 API 一致性。
+当前只面向用户自己部署的实例，不面向公共服务。
 
 ### 路径变更
 
 所有请求路径从 `/api/*` 改为 `/call/*`。
+
+### 分发方式
+
+- 第一阶段不发 npm / PyPI。
+- Node.js 主推荐通过 GitHub 仓库子目录安装：`pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"`。
+- Python 主推荐通过 GitHub 仓库子目录安装：`python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"`。
+- Node.js 当前不主推 `npm`，因为官方文档只保证 Git 依赖直接指向仓库根目录里的包，不保证这种子目录安装方式。
 
 ### 方法清单
 
