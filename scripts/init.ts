@@ -330,9 +330,10 @@ async function main() {
   if (cfEmail) {
     try {
       putSecret('CF_EMAIL', cfEmail)
-      console.log('✅ CF_EMAIL 已设置')
+      putSecret('CF_AUTH_EMAIL', cfEmail)
+      console.log('✅ CF_EMAIL / CF_AUTH_EMAIL 已设置')
     } catch {
-      console.log('⚠️  设置 CF_EMAIL 失败，请手动设置')
+      console.log('⚠️  设置 CF_EMAIL / CF_AUTH_EMAIL 失败，请手动设置')
     }
   }
 
