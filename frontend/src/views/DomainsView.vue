@@ -3,14 +3,14 @@
     <section class="space-y-8">
       <div class="space-y-1">
         <h1 class="page-title">域名</h1>
-        <p class="page-subtitle">先初始化根域名，再创建和删除子域名。</p>
+        <p class="page-subtitle">先初始化根域名让它能直接收件，再按需要创建和删除收件子域名。</p>
       </div>
 
       <div class="grid gap-6 lg:grid-cols-2">
         <form class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70" @submit.prevent="submitBootstrap">
           <div>
             <h2 class="text-lg font-semibold text-slate-900">根域名初始化</h2>
-            <p class="mt-1 text-sm text-slate-500">启用 Email Routing 并保存根域名状态。</p>
+            <p class="mt-1 text-sm text-slate-500">启用 Email Routing，把根域名 catch-all 指到 Worker，并保存根域名状态。初始化后可以直接创建 `abc@根域名` 这样的地址。</p>
           </div>
           <input v-model="bootstrapForm.rootDomain" class="input-base" type="text" placeholder="root.example.com" />
           <input v-model="bootstrapForm.zoneId" class="input-base" type="text" placeholder="可选：手动覆盖 Zone ID" />
@@ -20,7 +20,7 @@
         <form class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70" @submit.prevent="submitSubdomain">
           <div>
             <h2 class="text-lg font-semibold text-slate-900">新增子域名</h2>
-            <p class="mt-1 text-sm text-slate-500">创建 3 条 MX、1 条 TXT 和 1 条 Email Routing 规则。</p>
+            <p class="mt-1 text-sm text-slate-500">给这个子域名补齐 3 条 MX、1 条 TXT 和 1 条 Email Routing 规则，让它也能独立收件。</p>
           </div>
           <input v-model="createForm.name" class="input-base" type="text" placeholder="m1.example.com" />
           <input v-model="createForm.rootName" class="input-base" type="text" placeholder="可选：根域名" />
@@ -114,7 +114,7 @@ async function submitBootstrap() {
   message.value = ''
   try {
     const response = await bootstrapDomain(authStore.token, bootstrapForm.rootDomain, bootstrapForm.zoneId)
-    message.value = `根域名 ${response.data.name} 已初始化。`
+    message.value = `根域名 ${response.data.name} 已初始化，现在可以直接创建 ${`abc@${response.data.name}`} 这样的地址。`
     bootstrapForm.rootDomain = ''
     bootstrapForm.zoneId = ''
     await mutate()

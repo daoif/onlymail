@@ -35,6 +35,27 @@ export class CloudflareEmailProvider extends CloudflareBase implements EmailProv
     }
   }
 
+  async updateCatchAll(zoneId: string, workerName: string) {
+    const init = {
+      method: 'PUT',
+      body: JSON.stringify({
+        enabled: true,
+        matchers: [{ type: 'all' }],
+        actions: [{ type: 'worker', value: [workerName] }],
+      }),
+    } satisfies RequestInit
+
+    try {
+      return await this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/catch_all`, init)
+    } catch (error) {
+      if (!this.shouldRetryWithGlobalAuth(error)) {
+        throw error
+      }
+
+      return this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/catch_all`, init, 'global')
+    }
+  }
+
   async createEmailRule(zoneId: string, payload: Record<string, unknown>) {
     const init = {
       method: 'POST',

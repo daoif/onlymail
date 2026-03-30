@@ -81,10 +81,13 @@ export async function bootstrapRootDomain(
   const providers = createProviders(env)
   const zoneId = await providers.dns.resolveZoneId(rootDomain, payload.zoneId?.trim())
   const settings = await providers.email.getEmailRoutingSettings(zoneId)
+  const workerName = env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
 
   if (!settings.enabled) {
     await providers.email.enableEmailRouting(zoneId)
   }
+
+  await providers.email.updateCatchAll(zoneId, workerName)
 
   await exec(
     env.DB.prepare(

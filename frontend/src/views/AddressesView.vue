@@ -10,7 +10,7 @@
         <form class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70" @submit.prevent="submitCreate">
           <div>
             <h2 class="text-lg font-semibold text-slate-900">生成临时邮箱</h2>
-            <p class="mt-1 text-sm text-slate-500">地址页直接创建地址，生成后可以复制或跳到邮件页查看。</p>
+            <p class="mt-1 text-sm text-slate-500">地址页直接创建地址。根域名初始化后就能直接收件，子域名是按项目隔离时的扩展选项。</p>
           </div>
 
           <div class="grid gap-4 md:grid-cols-2">
@@ -22,7 +22,7 @@
                 :disabled="createSubmitting || domainsLoading || availableDomains.length === 0"
               >
                 <option value="" disabled>
-                  {{ domainsLoading ? '加载可用子域名...' : availableDomains.length === 0 ? '暂无可用子域名' : '请选择子域名' }}
+                  {{ domainsLoading ? '加载可用域名...' : availableDomains.length === 0 ? '暂无可用域名' : '请选择域名' }}
                 </option>
                 <option v-for="item in availableDomains" :key="item.id" :value="item.name">{{ item.name }}</option>
               </select>
@@ -68,7 +68,7 @@
 
           <p v-if="domainsError" class="text-sm text-rose-600">{{ domainsError }}</p>
           <p v-else-if="!domainsLoading && availableDomains.length === 0" class="text-sm text-rose-600">
-            当前还没有可用子域名。先去域名页初始化根域名并创建子域名。
+            当前还没有可用域名。先去域名页初始化根域名；如果你想按项目分隔收件，再额外创建子域名。
           </p>
           <p v-if="createError" class="text-sm text-rose-600">{{ createError }}</p>
           <p v-if="copyMessage" class="text-sm text-slate-500">{{ copyMessage }}</p>
@@ -225,8 +225,8 @@ const {
   isLoading: domainsLoading,
   mutate: reloadDomains,
 } = useSWR<ApiEnvelope<DomainRecord[]>>({
-  key: 'address-create-domains:sub',
-  fetcher: () => getDomains(authStore.token, { type: 'sub' }),
+  key: 'address-create-domains:all',
+  fetcher: () => getDomains(authStore.token),
 })
 
 const items = computed(() => data.value?.data?.items ?? [])
@@ -305,7 +305,7 @@ async function submitCreate() {
   const localPart = normalizeLocalPart(createForm.localPart) || generateLocalPart()
 
   if (!domain) {
-    createError.value = '请选择子域名'
+    createError.value = '请选择域名'
     return
   }
 

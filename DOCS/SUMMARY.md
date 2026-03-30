@@ -11,6 +11,7 @@
   - [前端 UI Spec](PLANS/frontend-ui-spec.md)
   - [前端与 SDK 方案](PLANS/frontend-sdk.md)
   - [工程化与 SDK 方案](PLANS/engineering-sdk.md)
+  - [邮件收发六层边界](PLANS/mail-flow-boundaries.md)
 - `DECISIONS/`
   - [API Key 放进 D1](DECISIONS/0001-api-key-in-d1.md)
   - [邮件在收件时解析并落库](DECISIONS/0002-parse-mail-on-ingest.md)

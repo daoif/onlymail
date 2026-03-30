@@ -11,14 +11,13 @@
  * 5. 设置 Worker secrets
  * 6. 部署 Worker，准备默认 workers.dev 入口
  * 7. 构建并部署前端
- * 8. 如果提供全局鉴权和目标 Zone，则启用 Email Routing 并配置 catch-all
- * 9. 如果检测到 gh 和仓库名，则写 GitHub Secrets / Variables
+ * 8. 如果检测到 gh 和仓库名，则写 GitHub Secrets / Variables
  *
  * 前置条件：
  * - pnpm、wrangler CLI 已安装
  * - 已完成 `wrangler login`
  * - 如需完整自动化，提供 CF_API_TOKEN
- * - 如需让 init 顺手自动配置某个 Zone 的 Email Routing，额外提供 CF_EMAIL + CF_GLOBAL_API_KEY
+ * - 如需后续做 Email Routing 自动化，额外提供 CF_EMAIL + CF_GLOBAL_API_KEY（运行时使用，不在 init 里直接操作）
  *
  * 不处理：
  * - Worker / Pages 自定义域名绑定
@@ -39,7 +38,6 @@ const SCHEMA_PATH = resolve(WORKER_DIR, 'db/schema.sql')
 const DB_NAME = 'mails-db'
 
 type SetupContext = {
-  zoneId?: string
   accountId: string
   workerName: string
   pagesProjectName: string
@@ -363,7 +361,6 @@ async function main() {
   }
 
   const context: SetupContext = {
-    zoneId,
     accountId,
     workerName,
     pagesProjectName,
@@ -398,27 +395,8 @@ async function main() {
     console.log('\n⚠️  未检测到 CF_API_TOKEN，跳过 Pages 项目和前端自动部署')
   }
 
-  if (cfEmail && cfGlobalApiKey && client) {
-    const emailRoutingZoneId = context.zoneId || prompt('如需自动启用 Email Routing，请输入目标 Zone ID（留空则跳过）: ')
-    if (emailRoutingZoneId) {
-      console.log('\n📮 步骤 9：启用 Email Routing...')
-      try {
-        await client.enableEmailRouting(emailRoutingZoneId)
-        await client.updateCatchAll(emailRoutingZoneId, context.workerName)
-        writeLocalEnvValues({ CF_DEFAULT_ZONE_ID: emailRoutingZoneId })
-        console.log(`✅ Email Routing catch-all 已指向 Worker: ${context.workerName}`)
-      } catch {
-        console.log('⚠️  Email Routing 自动配置失败，请在 Cloudflare 控制台检查 catch-all -> Worker')
-      }
-    } else {
-      console.log('\n⚠️  未提供目标 Zone ID，跳过 Email Routing 自动配置')
-    }
-  } else {
-    console.log('\n⚠️  未检测到 CF_EMAIL + CF_GLOBAL_API_KEY，跳过 Email Routing 自动配置')
-  }
-
   if (canUseGhSetup(githubRepo) && zoneId) {
-    console.log('\n🔧 步骤 10：写入 GitHub Secrets / Variables...')
+    console.log('\n🔧 步骤 8：写入 GitHub Secrets / Variables...')
     try {
       execSync('pnpm setup:github', {
         cwd: ROOT_DIR,

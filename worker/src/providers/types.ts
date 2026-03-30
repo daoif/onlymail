@@ -48,6 +48,7 @@ export interface EmailRule {
 export interface EmailProvider {
   getEmailRoutingSettings(zoneId: string): Promise<EmailRoutingSettings>
   enableEmailRouting(zoneId: string): Promise<EmailRoutingSettings>
+  updateCatchAll(zoneId: string, workerName: string): Promise<EmailRule>
   createEmailRule(zoneId: string, payload: Record<string, unknown>): Promise<EmailRule>
   deleteEmailRule(zoneId: string, ruleId: string): Promise<EmailRule>
 }

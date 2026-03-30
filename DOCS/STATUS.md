@@ -26,7 +26,7 @@
 - 所有 Cloudflare API 调用通过 Provider 接口解耦
 - API 路由固定为 `/api/*`（JWT）+ `/call/*`（API Key）
 - `wrangler.toml` 不再提交 Git，本地和 CI/CD 都按模板现场生成
-- `scripts/init.ts` 现在只准备基础设施：D1、Worker、Pages 默认入口、可选 Email Routing 和可选 GitHub 配置
+- `scripts/init.ts` 现在只准备基础设施：D1、Worker、Pages 默认入口和可选 GitHub 配置，不再直接操作 Email Routing
 - 本地参数改成根目录 `.env.local` 单一来源；`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件
 - `init` 会把 `D1_DATABASE_ID`、`JWT_SECRET` 回写到 `.env.local`，再生成 `worker/wrangler.toml` 和 `worker/.dev.vars`
 - 新增 `pnpm deploy:worker`、`pnpm deploy:frontend` 两个本地重部署入口，给本地调试和应急使用
@@ -34,7 +34,7 @@
 - Email Routing Provider 现在对规则创建/删除也补上了 global auth fallback，不再只给读设置和启用流程做兜底
 - 文档里删掉了 `Zone → Email Routing Rules` 这条 Token 权限说明，并补充 `CF_ACCOUNT_ID` 获取位置和 `CF_DEFAULT_ZONE_ID` 的“默认 Zone”含义
 - 根域名 bootstrap、Worker 自定义域名、Pages 自定义域名现在都按域名自动解析 Zone；`CF_DEFAULT_ZONE_ID` 不再作为这些运行时操作的默认兜底
-- `init` 和 `render:wrangler` 不再把 `CF_DEFAULT_ZONE_ID` 当成本地硬必填；只有要让 `init` 顺手自动配置某个 Zone 的 Email Routing 时才会用到
+- `init` 和 `render:wrangler` 不再把 `CF_DEFAULT_ZONE_ID` 当成本地硬必填；主要在 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 自动启用某个 Zone 的 Email Routing 和 catch-all 时才会用到
 - Worker CORS 改为：模板默认来源 + 数据库里的运行时追加来源；设置页新增/删除 Pages 自定义域名时会同步维护
 - Pages 自定义域名绑定继续走：读取 Pages 项目真实 subdomain → 自动创建或更新 CNAME → 重试验证，并在设置页显示验证/证书状态
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署

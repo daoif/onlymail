@@ -71,9 +71,7 @@ cp .env.local.example .env.local
 pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 Pages，默认入口走 workers.dev + pages.dev
 ```
 
-先填 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。如果你接下来要做根域名 bootstrap、子域名创建、Email Routing 自动化，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上；如果你还想让 `init` 顺手自动配置某个 Zone 的 Email Routing，再补 `CF_DEFAULT_ZONE_ID`。
-
-如果你后面要跑 `pnpm setup:github` 给 GitHub workflow 写配置，也要准备 `CF_DEFAULT_ZONE_ID`，因为这条线暂时还沿用 workflow 里的默认 Zone 变量。
+先填 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。如果你接下来要做根域名 bootstrap、子域名创建、Email Routing 自动化，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上；如果你要用 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 自动启用 Email Routing 和 catch-all，再补 `CF_DEFAULT_ZONE_ID`。
 
 本地参数统一放在项目根目录的 `.env.local`。`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件；如果 shell 里已经有同名环境变量，shell 的值优先。
 
@@ -111,10 +109,9 @@ pnpm --dir frontend dev
 - `CF_ACCOUNT_ID`
 - `CF_DEFAULT_PAGES_PROJECT`
 
-如果你在本地还要继续测 Email Routing 的启用、关闭、清理，再额外补进 `.env.local`：
+如果你在本地还要继续测 Email Routing 的启用、关闭、清理（在域名页 bootstrap 根域名、创建子域名），再额外补进 `.env.local`：
 - `CF_EMAIL`（也兼容旧名字 `CF_AUTH_EMAIL`）
 - `CF_GLOBAL_API_KEY`
-- `CF_DEFAULT_ZONE_ID`（只在你想让 `init` 顺手自动配置某个 Zone 的 catch-all 时需要）
 
 ## 部署
 
@@ -131,9 +128,9 @@ pnpm --dir frontend dev
 - Cloudflare Account ID
 
 按需增强：
-- `CF_DEFAULT_ZONE_ID`：不是本地部署和本地开发的硬必填；只在你想让 `init` 顺手自动配置某个 Zone 的 Email Routing 时再提供
+- `CF_DEFAULT_ZONE_ID`：不是本地部署和本地开发的硬必填；主要用于 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 自动启用某个 Zone 的 Email Routing 和 catch-all
 - `D1_DATABASE_ID`：手动跑 `pnpm render:wrangler` 时必填；跑过一次 `pnpm run init` 后会自动回写到 `.env.local`
-- `CF_GLOBAL_API_KEY` + `CF_EMAIL`：做根域名 bootstrap、子域名创建、Email Routing 自动化时应当提供。给了以后，系统能对 Email Routing 走鉴权兜底；不给时，Worker / Pages / D1 初始化还能继续，但域名和 Email Routing 相关动作要手动去 CF 控制台配置
+- `CF_GLOBAL_API_KEY` + `CF_EMAIL`：做根域名 bootstrap、子域名创建、Email Routing 自动化时应当提供。给了以后，系统能对 Email Routing 走鉴权兜底；不给时，Worker / Pages / D1 初始化还能继续，但域名和 Email Routing 相关动作要手动去 CF 控制台或 GitHub workflow 配置
 - `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤
 - `ALLOWED_ORIGINS`：需要手动覆盖默认来源时再提供；默认会按 Pages 项目的 `pages.dev` 地址和本地开发地址生成
 - `GITHUB_REPOSITORY`：给了以后，`init` 可以顺手调用 `gh` 写 GitHub 仓库配置
