@@ -13,9 +13,9 @@
 - ✅ P6: 文档更新 — README、DEPLOY、STATUS、OVERVIEW 同步
 
 ## 下一步（最多 3 条）
-1. 用一个干净仓库验证 `Bootstrap Cloudflare` workflow，确认完全不拉本地也能首次部署
-2. 用 fork 仓库验证 `Upstream Sync`，确认 fast-forward 更新能带动自动部署
-3. 用真实根域名初始化 + 创建子域名地址，验证收件全链路
+1. 做 D1 migration 机制，让 `init` 能保留数据升级 schema，让 `rebuild` 能删除 D1 后重建
+2. 补测试和 CI 验证，把“能 build”推进到“核心链路可验证”
+3. 整理开源仓库面：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`
 
 ## 阻塞/风险
 - Pages 预览域名和正式 `pages.dev` 域名依赖 `ALLOWED_ORIGINS` 默认值，CI 需要跟着 Pages 项目真实 `subdomain` 生成
