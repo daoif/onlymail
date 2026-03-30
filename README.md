@@ -71,7 +71,7 @@ cp .env.local.example .env.local
 pnpm run init    # 首次接入或重跑：保留现有 D1，重新部署 Worker / Frontend，默认入口走 workers.dev + pages.dev
 ```
 
-先填 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。如果你接下来要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上；这组值不是 `init` 的硬必填，但只要涉及 Email Routing 就必须有。当前实例按单一 Cloudflare 账号设计，域名相关操作都按域名自动解析 Zone，不再要求手动填写 Zone ID。
+先把 4 个 Cloudflare 值都填上：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`。当前实例按单一 Cloudflare 账号设计，域名相关操作都按域名自动解析 Zone，不再要求手动填写 Zone ID。虽然只填前 2 个值也能把 Worker / Pages / D1 搭起来，但根域名 bootstrap、子域名创建删除、catch-all 和 Email Routing 规则这些核心自动化都离不开后 2 个值，所以这里统一按 4 个值作为正常可用部署的必填项。
 
 本地参数统一放在项目根目录的 `.env.local`。`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件；如果 shell 里已经有同名环境变量，shell 的值优先。
 
@@ -119,10 +119,6 @@ pnpm --dir frontend dev
 - `CF_ACCOUNT_ID`
 - `CF_DEFAULT_PAGES_PROJECT`
 
-如果你在本地还要继续测 Email Routing 的启用、关闭、清理（在域名页 bootstrap 根域名、创建或删除子域名），再额外补进 `.env.local`：
-- `CF_EMAIL`（也兼容旧名字 `CF_AUTH_EMAIL`）
-- `CF_GLOBAL_API_KEY`
-
 ## 部署
 
 - Worker 通过 GitHub Actions 自动部署到 Cloudflare
@@ -133,18 +129,19 @@ pnpm --dir frontend dev
 
 ## 配置输入
 
-最低需要：
+正常可用部署默认需要这 4 个 Cloudflare 值：
 - Cloudflare API Token
 - Cloudflare Account ID
+- Cloudflare 账号邮箱（`CF_EMAIL`，也兼容旧名字 `CF_AUTH_EMAIL`）
+- Cloudflare Global API Key
 
 按需增强：
 - `D1_DATABASE_ID`：手动跑 `pnpm render:wrangler` 时必填；跑过一次 `pnpm run init` 后会自动回写到 `.env.local`
-- `CF_GLOBAL_API_KEY` + `CF_EMAIL`：不是 `init` 的硬必填；但只要要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，就是硬必填。当前 Cloudflare API Token 不能覆盖这组接口，所以这里不是兜底鉴权
 - `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤
 - `ALLOWED_ORIGINS`：需要手动覆盖默认来源时再提供；默认只按 Pages 项目的 `pages.dev` 地址、预览子域名和本地开发地址生成，不自动接管已有自定义域名
 - `GITHUB_REPOSITORY`：给了以后，`init` 可以顺手调用 `gh` 写 GitHub 仓库配置
 
-推荐做法是先给最低必需项；确定会做 Email Routing 自动化时，再把 `CF_GLOBAL_API_KEY` 和 `CF_EMAIL` 一起填上。平台内部状态以 D1 为准，Cloudflare 上存在但没写进 D1 的外部残留不会被默认接管。
+如果你要让 GitHub 参与首次或后续部署，再补 `GITHUB_REPOSITORY`。平台内部状态以 D1 为准，Cloudflare 上存在但没写进 D1 的外部残留不会被默认接管。
 
 前端管理面板的 API 地址不再作为用户配置项暴露。部署时脚本会自动读取当前 Worker 默认 `workers.dev` 地址，并把它写进前端构建结果；设置页里绑定的 Worker 自定义域名不会改变这条主路径。
 

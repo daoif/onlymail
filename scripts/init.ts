@@ -17,7 +17,7 @@
  * - pnpm、wrangler CLI 已安装
  * - 已完成 `wrangler login`
  * - 如需完整自动化，提供 CF_API_TOKEN
- * - 如需后续做 Email Routing 自动化，额外提供 CF_EMAIL + CF_GLOBAL_API_KEY（运行时使用，不在 init 里直接操作）
+ * - 正常可用部署建议一开始就提供 CF_EMAIL + CF_GLOBAL_API_KEY；根域名 bootstrap、子域名创建删除、catch-all 和 Email Routing 规则都会用到它们
  *
  * 不处理：
  * - Worker / Pages 自定义域名绑定

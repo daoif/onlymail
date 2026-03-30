@@ -31,31 +31,25 @@
 ### 额外准备项
 
 - 当前实例按单一 Cloudflare 账号设计。域名相关操作都按域名自动解析 Zone，不支持靠手填 Zone ID 跨账号混用凭证。
-- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 对只做 Worker / Pages / D1 初始化不是硬必填；但对根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作是硬必填。不给时，初始化还能继续，但 Email Routing 相关动作不能自动化。
+- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 也按正常可用部署的必填项处理。只给 `CF_API_TOKEN` 和 `CF_ACCOUNT_ID` 虽然能把 Worker / Pages / D1 搭起来，但根域名 bootstrap、子域名创建删除、catch-all 和 Email Routing 规则这些核心自动化都跑不起来。
 - 纯本地部署不需要 GitHub 仓库。
 - GitHub-only 和混合部署需要 GitHub 仓库。
 - 如果你准备走混合部署，装好 `gh` CLI 会省掉手动填写 GitHub Secrets / Variables 的步骤。
 
 ### AI 读者的输入规则
 
-最低输入：
+正常可用部署默认输入：
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
-
-到了 Worker 持续部署这一步，还需要：
-- `D1_DATABASE_ID`
-
-只要要做 Email Routing 自动化，就应当提前提供：
-- `CF_GLOBAL_API_KEY` + `CF_EMAIL`
-  这组值不是 `init` 的硬必填；但只要要做根域名 bootstrap、子域名创建或删除、catch-all、规则创建删除，就必须有。当前 Cloudflare API Token 不能覆盖这组接口，所以这里不是兜底，是主鉴权。
+- `CF_EMAIL`
+- `CF_GLOBAL_API_KEY`
 
 按需输入：
 - `gh` CLI
   如果 AI 检测到本机有 `gh` 且已经登录，就直接用它写 GitHub Secrets / Variables；没有再提示用户手动去网页设置。
 
 推荐推进方式：
-- 一开始先准备 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。
-- 确定后面要做 Email Routing 自动化时，再把 `CF_EMAIL`、`CF_GLOBAL_API_KEY` 一起补齐。
+- 一开始就准备 4 个 Cloudflare 值：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`。
 - AI 先检测 `gh` 和这组 Email Routing 凭证；检测到就直接用，缺了就在真正要做 Email Routing 的节点拦住并报清楚。
 
 ---
@@ -67,10 +61,9 @@
 先做这一步：
 
 1. 复制 `.env.local.example` 为 `.env.local`
-2. 先填最小必需项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`
-3. 如果你要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，同时填上 `CF_EMAIL`、`CF_GLOBAL_API_KEY`
-4. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
-5. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
+2. 先填 4 个 Cloudflare 必填项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`
+3. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
+4. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
 
 这几个本地入口都会先读 `.env.local`：
 
@@ -159,7 +152,7 @@
 - Cloudflare Account ID
   获取位置：CF 控制台 → 点进任意已托管域名 → 右下角 API 区域
 - Cloudflare 账号邮箱 `CF_EMAIL` 和 Global API Key `CF_GLOBAL_API_KEY`
-  如果你只做 Worker / Pages / D1 初始化，可以先不填；如果你接下来要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，这组值必须提前准备好
+  正常可用部署默认就一起准备好；根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则这些核心自动化都依赖这组值
 - 以上值已填入项目根目录的 `.env.local`
 - 已执行 `npx wrangler login` 完成浏览器授权
 
@@ -355,8 +348,8 @@ pnpm run rebuild
 |------|----------|------|
 | `CLOUDFLARE_ACCOUNT_ID` | 必需 | Cloudflare Account ID |
 | `CLOUDFLARE_API_TOKEN` | 必需 | Cloudflare API Token |
-| `CF_EMAIL` | 做 Email Routing 自动化时必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
-| `CF_GLOBAL_API_KEY` | 做 Email Routing 自动化时必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
+| `CF_EMAIL` | 必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
+| `CF_GLOBAL_API_KEY` | 必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
 
 ### 步骤 4：运行首次初始化 workflow 🧑
 
@@ -406,7 +399,7 @@ pnpm run rebuild
 - 本地部署那一套前置条件已经准备好，尤其是 `.env.local`
 - GitHub 账号和一个你能控制的仓库
 - 如果想自动写 GitHub Secrets / Variables，准备好 `gh` CLI 并完成登录
-- 如果你要在混合部署里继续做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，`CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一开始就写进 `.env.local`
+- `.env.local` 里已经有 4 个 Cloudflare 必填项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`
 
 这条路径的顺序是：
 
