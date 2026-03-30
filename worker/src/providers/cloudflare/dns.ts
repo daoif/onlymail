@@ -11,15 +11,21 @@ export class CloudflareDnsProvider extends CloudflareBase implements DnsProvider
   async resolveZoneId(zoneName: string, zoneId?: string) {
     if (zoneId) return zoneId
 
-    const path = `/zones?name=${encodeURIComponent(zoneName)}&status=active&per_page=1`
     const authMode = this.auth.token ? 'token' : 'global'
-    const result = await this.request<ZoneResult[]>(path, undefined, authMode)
-    const zone = result[0]
-    if (!zone) {
-      throw new Error(`找不到域名 ${zoneName} 对应的 Cloudflare Zone`)
+    const normalized = zoneName.trim().toLowerCase().replace(/\.+$/, '')
+    const labels = normalized.split('.').filter(Boolean)
+
+    for (let index = 0; index < labels.length; index += 1) {
+      const candidate = labels.slice(index).join('.')
+      const path = `/zones?name=${encodeURIComponent(candidate)}&status=active&per_page=1`
+      const result = await this.request<ZoneResult[]>(path, undefined, authMode)
+      const zone = result[0]
+      if (zone) {
+        return zone.id
+      }
     }
 
-    return zone.id
+    throw new Error(`找不到域名 ${zoneName} 对应的 Cloudflare Zone`)
   }
 
   async createZone(zoneName: string, accountId: string): Promise<ZoneInfo> {

@@ -11,14 +11,14 @@
  * 5. 设置 Worker secrets
  * 6. 部署 Worker，准备默认 workers.dev 入口
  * 7. 构建并部署前端
- * 8. 如果提供全局鉴权，则启用 Email Routing 并配置 catch-all
+ * 8. 如果提供全局鉴权和目标 Zone，则启用 Email Routing 并配置 catch-all
  * 9. 如果检测到 gh 和仓库名，则写 GitHub Secrets / Variables
  *
  * 前置条件：
  * - pnpm、wrangler CLI 已安装
  * - 已完成 `wrangler login`
  * - 如需完整自动化，提供 CF_API_TOKEN
- * - 如需 Email Routing 自动化，额外提供 CF_EMAIL + CF_GLOBAL_API_KEY
+ * - 如需让 init 顺手自动配置某个 Zone 的 Email Routing，额外提供 CF_EMAIL + CF_GLOBAL_API_KEY
  *
  * 不处理：
  * - Worker / Pages 自定义域名绑定
@@ -39,7 +39,7 @@ const SCHEMA_PATH = resolve(WORKER_DIR, 'db/schema.sql')
 const DB_NAME = 'mails-db'
 
 type SetupContext = {
-  zoneId: string
+  zoneId?: string
   accountId: string
   workerName: string
   pagesProjectName: string
@@ -194,12 +194,7 @@ async function main() {
   }
 
   // 2. 收集配置
-  const zoneId = process.env.CF_DEFAULT_ZONE_ID || prompt('请输入 CF Zone ID (CF_DEFAULT_ZONE_ID): ')
-  if (!zoneId) {
-    console.error('❌ 需要 Zone ID')
-    process.exit(1)
-  }
-
+  const zoneId = process.env.CF_DEFAULT_ZONE_ID?.trim() || ''
   const workerName = process.env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
   const pagesProjectName = process.env.CF_DEFAULT_PAGES_PROJECT || 'mails-frontend'
   const pagesProductionBranch = process.env.CF_PAGES_PRODUCTION_BRANCH || 'master'
@@ -404,19 +399,25 @@ async function main() {
   }
 
   if (cfEmail && cfGlobalApiKey && client) {
-    console.log('\n📮 步骤 9：启用 Email Routing...')
-    try {
-      await client.enableEmailRouting(context.zoneId)
-      await client.updateCatchAll(context.zoneId, context.workerName)
-      console.log(`✅ Email Routing catch-all 已指向 Worker: ${context.workerName}`)
-    } catch {
-      console.log('⚠️  Email Routing 自动配置失败，请在 Cloudflare 控制台检查 catch-all -> Worker')
+    const emailRoutingZoneId = context.zoneId || prompt('如需自动启用 Email Routing，请输入目标 Zone ID（留空则跳过）: ')
+    if (emailRoutingZoneId) {
+      console.log('\n📮 步骤 9：启用 Email Routing...')
+      try {
+        await client.enableEmailRouting(emailRoutingZoneId)
+        await client.updateCatchAll(emailRoutingZoneId, context.workerName)
+        writeLocalEnvValues({ CF_DEFAULT_ZONE_ID: emailRoutingZoneId })
+        console.log(`✅ Email Routing catch-all 已指向 Worker: ${context.workerName}`)
+      } catch {
+        console.log('⚠️  Email Routing 自动配置失败，请在 Cloudflare 控制台检查 catch-all -> Worker')
+      }
+    } else {
+      console.log('\n⚠️  未提供目标 Zone ID，跳过 Email Routing 自动配置')
     }
   } else {
     console.log('\n⚠️  未检测到 CF_EMAIL + CF_GLOBAL_API_KEY，跳过 Email Routing 自动配置')
   }
 
-  if (canUseGhSetup(githubRepo)) {
+  if (canUseGhSetup(githubRepo) && zoneId) {
     console.log('\n🔧 步骤 10：写入 GitHub Secrets / Variables...')
     try {
       execSync('pnpm setup:github', {
@@ -440,6 +441,8 @@ async function main() {
     } catch {
       console.log('⚠️  GitHub 配置写入失败，请稍后手动执行 pnpm setup:github')
     }
+  } else if (githubRepo && !zoneId) {
+    console.log('\n⚠️  检测到仓库名，但当前未提供 CF_DEFAULT_ZONE_ID，跳过 GitHub 自动配置')
   } else if (githubRepo) {
     console.log('\n⚠️  检测到仓库名，但当前 gh 不可用，跳过 GitHub 自动配置')
   }

@@ -8,7 +8,7 @@ const TEMPLATE_PATH = resolve(ROOT_DIR, 'worker/wrangler.toml.template')
 const OUTPUT_PATH = resolve(ROOT_DIR, 'worker/wrangler.toml')
 
 export type WranglerConfigInput = {
-  zoneId: string
+  zoneId?: string
   accountId: string
   databaseId: string
   databaseName?: string
@@ -27,7 +27,7 @@ function requireValue(value: string | undefined, label: string): string {
 
 export function resolveWranglerConfigFromEnv(env: NodeJS.ProcessEnv): WranglerConfigInput {
   return {
-    zoneId: requireValue(env.CF_DEFAULT_ZONE_ID, 'CF_DEFAULT_ZONE_ID'),
+    zoneId: env.CF_DEFAULT_ZONE_ID?.trim() || '',
     accountId: requireValue(env.CF_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID, 'CF_ACCOUNT_ID / CLOUDFLARE_ACCOUNT_ID'),
     databaseId: requireValue(env.D1_DATABASE_ID || env.DB_ID, 'D1_DATABASE_ID / DB_ID'),
     databaseName: env.D1_DATABASE_NAME?.trim() || 'mails-db',
@@ -42,7 +42,10 @@ export function renderWranglerToml(input: WranglerConfigInput): string {
   const rendered = template
     .replace(/name = "mails-worker"/, `name = "${input.workerName || 'mails-worker'}"`)
     .replace(/CF_DEFAULT_WORKER_NAME = "mails-worker"/, `CF_DEFAULT_WORKER_NAME = "${input.workerName || 'mails-worker'}"`)
-    .replace('__ZONE_ID__', input.zoneId)
+    .replace(
+      '# CF_DEFAULT_ZONE_ID = "__ZONE_ID__"',
+      input.zoneId ? `CF_DEFAULT_ZONE_ID = "${input.zoneId}"` : '# CF_DEFAULT_ZONE_ID = "可选：只在 init 自动配置某个 Zone 的 Email Routing 时需要"',
+    )
     .replace('__ACCOUNT_ID__', input.accountId)
     .replace('__PAGES_PROJECT_NAME__', input.pagesProjectName || 'mails-frontend')
     .replace('__DATABASE_ID__', input.databaseId)

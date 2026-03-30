@@ -71,7 +71,9 @@ cp .env.local.example .env.local
 pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 Pages，默认入口走 workers.dev + pages.dev
 ```
 
-填入 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`。如果你接下来要做根域名 bootstrap、子域名创建、Email Routing 自动化，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上。
+先填 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。如果你接下来要做根域名 bootstrap、子域名创建、Email Routing 自动化，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上；如果你还想让 `init` 顺手自动配置某个 Zone 的 Email Routing，再补 `CF_DEFAULT_ZONE_ID`。
+
+如果你后面要跑 `pnpm setup:github` 给 GitHub workflow 写配置，也要准备 `CF_DEFAULT_ZONE_ID`，因为这条线暂时还沿用 workflow 里的默认 Zone 变量。
 
 本地参数统一放在项目根目录的 `.env.local`。`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件；如果 shell 里已经有同名环境变量，shell 的值优先。
 
@@ -107,12 +109,12 @@ pnpm --dir frontend dev
 如果你在本地还要测试域名、Pages、自定义域名这些 Cloudflare 管理能力，再把下面这些补进 `.env.local`：
 - `CF_API_TOKEN`
 - `CF_ACCOUNT_ID`
-- `CF_DEFAULT_ZONE_ID`
 - `CF_DEFAULT_PAGES_PROJECT`
 
 如果你在本地还要继续测 Email Routing 的启用、关闭、清理，再额外补进 `.env.local`：
 - `CF_EMAIL`（也兼容旧名字 `CF_AUTH_EMAIL`）
 - `CF_GLOBAL_API_KEY`
+- `CF_DEFAULT_ZONE_ID`（只在你想让 `init` 顺手自动配置某个 Zone 的 catch-all 时需要）
 
 ## 部署
 
@@ -127,9 +129,9 @@ pnpm --dir frontend dev
 最低需要：
 - Cloudflare API Token
 - Cloudflare Account ID
-- Cloudflare Zone ID
 
 按需增强：
+- `CF_DEFAULT_ZONE_ID`：不是本地部署和本地开发的硬必填；只在你想让 `init` 顺手自动配置某个 Zone 的 Email Routing 时再提供
 - `D1_DATABASE_ID`：手动跑 `pnpm render:wrangler` 时必填；跑过一次 `pnpm run init` 后会自动回写到 `.env.local`
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`：做根域名 bootstrap、子域名创建、Email Routing 自动化时应当提供。给了以后，系统能对 Email Routing 走鉴权兜底；不给时，Worker / Pages / D1 初始化还能继续，但域名和 Email Routing 相关动作要手动去 CF 控制台配置
 - `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤

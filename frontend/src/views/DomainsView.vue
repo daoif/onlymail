@@ -13,7 +13,7 @@
             <p class="mt-1 text-sm text-slate-500">启用 Email Routing 并保存根域名状态。</p>
           </div>
           <input v-model="bootstrapForm.rootDomain" class="input-base" type="text" placeholder="root.example.com" />
-          <input v-model="bootstrapForm.zoneId" class="input-base" type="text" placeholder="可选：Cloudflare Zone ID" />
+          <input v-model="bootstrapForm.zoneId" class="input-base" type="text" placeholder="可选：手动覆盖 Zone ID" />
           <button class="button-primary" type="submit">初始化根域名</button>
         </form>
 

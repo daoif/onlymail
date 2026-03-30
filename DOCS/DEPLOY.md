@@ -41,7 +41,6 @@
 最低输入：
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
-- `CF_DEFAULT_ZONE_ID`
 
 到了 Worker 持续部署这一步，还需要：
 - `D1_DATABASE_ID`
@@ -49,6 +48,8 @@
 域名和 Email Routing 自动化时应当提供：
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`
   提供后，AI 可以直接完成 Email Routing 的启用、catch-all、规则创建删除和后续排查；不提供时，AI 仍然可以继续做 Worker / Pages / D1 这类步骤，但域名和 Email Routing 相关动作要改走 Cloudflare 控制台。
+- `CF_DEFAULT_ZONE_ID`
+  这个值不再是本地部署和本地开发的硬必填；只在你想让 `init` 顺手自动配置某个 Zone 的 Email Routing，或要给 GitHub workflow 写默认 Zone 变量时再提供。
 
 按需输入：
 - `gh` CLI
@@ -69,10 +70,11 @@
 先做这一步：
 
 1. 复制 `.env.local.example` 为 `.env.local`
-2. 先填最小必需项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`
+2. 先填最小必需项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`
 3. 如果你要做根域名 bootstrap、子域名创建、Email Routing 自动化，同时填上 `CF_EMAIL`、`CF_GLOBAL_API_KEY`
-4. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
-5. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
+4. 如果你还想让 `init` 顺手自动配置某个 Zone 的 Email Routing，再补 `CF_DEFAULT_ZONE_ID`
+5. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
+6. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`；这条线继续沿用 GitHub workflow 里的 `CF_DEFAULT_ZONE_ID` 变量，所以还要把这个值一并准备好
 
 这几个本地入口都会先读 `.env.local`：
 
@@ -147,8 +149,8 @@
 - Cloudflare API Token
 - Cloudflare Account ID
   获取位置：CF 控制台 → 点进任意已托管域名 → 右下角 API 区域
-- `CF_DEFAULT_ZONE_ID`
-  获取位置：同一处 API 区域里的 Zone ID。这里填的是默认 Zone，不是系统里唯一允许的 Zone；后续根域名 bootstrap 时如果请求里不传 `zoneId`，就用它做默认值。
+- `CF_DEFAULT_ZONE_ID`（按需）
+  获取位置：同一处 API 区域里的 Zone ID。这个值现在不是本地部署的硬必填；只在你想让 `init` 顺手自动配置某个 Zone 的 Email Routing 时再填。
 - Cloudflare 账号邮箱 `CF_EMAIL` 和 Global API Key `CF_GLOBAL_API_KEY`
   如果你只做 Worker / Pages / D1 初始化，可以先不填；如果你接下来要做根域名 bootstrap、子域名创建、Email Routing 自动化，这组值应当提前准备好
 - 以上值已填入项目根目录的 `.env.local`
@@ -185,11 +187,11 @@ pnpm run init
 - ✅ 读取 Worker 默认 `workers.dev` 地址并作为前端 API Base URL
 - ✅ 首次构建并部署前端
 
-如果还提供了 `CF_EMAIL` + `CF_GLOBAL_API_KEY`，脚本还会继续：
+如果还提供了 `CF_EMAIL` + `CF_GLOBAL_API_KEY`，并且能确定要操作的 Zone ID，脚本还会继续：
 - ✅ 启用 Email Routing
 - ✅ 把 catch-all 指到 `mails-worker`
 
-如果没提供 `CF_EMAIL` + `CF_GLOBAL_API_KEY`：
+如果没提供 `CF_EMAIL` + `CF_GLOBAL_API_KEY`，或者这次没提供目标 Zone ID：
 - `init` 仍然会把 D1、Worker、Pages、前端部署这些步骤做完
 - Email Routing 的启用和 catch-all 配置要改为手动去 Cloudflare 控制台完成
 
@@ -265,7 +267,7 @@ Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实
 
 ### 步骤 9：初始化根域名 🧑
 
-进入 **域名** 页面，填入根域名和 Zone ID，点击 **初始化根域名**。之后就可以创建子域名用于收件了。
+进入 **域名** 页面，填入根域名，点击 **初始化根域名**。系统会按域名自动解析 Zone；只有你要手动覆盖时才需要额外填 Zone ID。之后就可以创建子域名用于收件了。
 
 ### 步骤 10：做一次从 0 验证 🧑
 
@@ -496,9 +498,9 @@ pnpm --dir frontend dev   # http://localhost:5173（已代理到 Worker）
 - 只调本地页面和本地 API：
   只需要 `.env.local` 里的 `JWT_SECRET`，再运行 `pnpm sync:dev-vars` 和 `pnpm render:wrangler`。这时不需要先跑 `init`，也不需要先创建线上 D1。
 - 本地还要调 Cloudflare 管理能力：
-  再往 `.env.local` 里补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`、`CF_DEFAULT_PAGES_PROJECT`。
+  再往 `.env.local` 里补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_PAGES_PROJECT`。
 - 本地还要调 Email Routing：
-  再往 `.env.local` 里补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。`CF_AUTH_EMAIL` 这个旧名字也兼容。
+  再往 `.env.local` 里补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。如果你还想让 `init` 顺手自动配置某个 Zone 的 catch-all，再补 `CF_DEFAULT_ZONE_ID`。`CF_AUTH_EMAIL` 这个旧名字也兼容。
 
 ---
 

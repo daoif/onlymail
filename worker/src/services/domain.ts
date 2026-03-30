@@ -79,7 +79,7 @@ export async function bootstrapRootDomain(
 ) {
   const rootDomain = payload.rootDomain.trim().toLowerCase()
   const providers = createProviders(env)
-  const zoneId = await providers.dns.resolveZoneId(rootDomain, payload.zoneId?.trim() || env.CF_DEFAULT_ZONE_ID)
+  const zoneId = await providers.dns.resolveZoneId(rootDomain, payload.zoneId?.trim())
   const settings = await providers.email.getEmailRoutingSettings(zoneId)
 
   if (!settings.enabled) {

@@ -33,6 +33,8 @@
 - `DOCS/DEPLOY.md` 改成“每条部署路线先列准备清单，再进入步骤”，并把 Email Routing 口径统一成“强烈建议提供 `CF_EMAIL` + `CF_GLOBAL_API_KEY`”
 - Email Routing Provider 现在对规则创建/删除也补上了 global auth fallback，不再只给读设置和启用流程做兜底
 - 文档里删掉了 `Zone → Email Routing Rules` 这条 Token 权限说明，并补充 `CF_ACCOUNT_ID` 获取位置和 `CF_DEFAULT_ZONE_ID` 的“默认 Zone”含义
+- 根域名 bootstrap、Worker 自定义域名、Pages 自定义域名现在都按域名自动解析 Zone；`CF_DEFAULT_ZONE_ID` 不再作为这些运行时操作的默认兜底
+- `init` 和 `render:wrangler` 不再把 `CF_DEFAULT_ZONE_ID` 当成本地硬必填；只有要让 `init` 顺手自动配置某个 Zone 的 Email Routing 时才会用到
 - Worker CORS 改为：模板默认来源 + 数据库里的运行时追加来源；设置页新增/删除 Pages 自定义域名时会同步维护
 - Pages 自定义域名绑定继续走：读取 Pages 项目真实 subdomain → 自动创建或更新 CNAME → 重试验证，并在设置页显示验证/证书状态
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署

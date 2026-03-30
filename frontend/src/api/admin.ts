@@ -198,12 +198,12 @@ export function getPagesDomains(token: string) {
   return apiRequest<ApiEnvelope<PagesDomainEntry[]>>('/api/settings/pages-domains', {}, token)
 }
 
-export function addPagesDomain(token: string, domain: string) {
+export function addPagesDomain(token: string, domain: string, zoneId?: string) {
   return apiRequest<ApiEnvelope<PagesDomainEntry>>(
     '/api/settings/pages-domains',
     {
       method: 'POST',
-      body: JSON.stringify({ domain }),
+      body: JSON.stringify({ domain, zoneId: zoneId || undefined }),
     },
     token,
   )

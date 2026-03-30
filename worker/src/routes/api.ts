@@ -244,13 +244,9 @@ apiRoutes.post('/settings/custom-domains', async (c) => {
   }
 
   const { hostname, zoneId } = z.object({ hostname: z.string().min(1), zoneId: z.string().optional() }).parse(await c.req.json())
-  const resolvedZoneId = zoneId || c.env.CF_DEFAULT_ZONE_ID
-  if (!resolvedZoneId) {
-    throw new AppError(400, '请指定 Zone ID 或配置 CF_DEFAULT_ZONE_ID')
-  }
-
   const workerName = c.env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
   const providers = createProviders(c.env)
+  const resolvedZoneId = await providers.dns.resolveZoneId(hostname, zoneId?.trim())
   const result = await providers.domainBinding.addWorkerDomain(accountId, hostname, resolvedZoneId, workerName)
   return jsonSuccess(c, result, 201)
 })
@@ -287,13 +283,9 @@ apiRoutes.post('/settings/pages-domains', async (c) => {
     throw new AppError(500, 'CF_ACCOUNT_ID 或 CF_DEFAULT_PAGES_PROJECT 未配置')
   }
 
-  const { domain } = z.object({ domain: z.string().min(1) }).parse(await c.req.json())
-  const resolvedZoneId = c.env.CF_DEFAULT_ZONE_ID
-  if (!resolvedZoneId) {
-    throw new AppError(500, 'CF_DEFAULT_ZONE_ID 未配置')
-  }
-
   const providers = createProviders(c.env)
+  const { domain, zoneId } = z.object({ domain: z.string().min(1), zoneId: z.string().optional() }).parse(await c.req.json())
+  const resolvedZoneId = await providers.dns.resolveZoneId(domain, zoneId?.trim())
   await providers.domainBinding.addPagesDomain(accountId, projectName, domain)
 
   const pagesSubdomain = await providers.domainBinding.getPagesProjectSubdomain(accountId, projectName)
@@ -325,8 +317,15 @@ apiRoutes.delete('/settings/pages-domains/:domain', async (c) => {
   }
 
   const domainName = decodeURIComponent(c.req.param('domain'))
-  const resolvedZoneId = c.env.CF_DEFAULT_ZONE_ID
   const providers = createProviders(c.env)
+  let resolvedZoneId = ''
+
+  try {
+    resolvedZoneId = await providers.dns.resolveZoneId(domainName)
+  } catch {
+    resolvedZoneId = ''
+  }
+
   const pagesSubdomain = resolvedZoneId
     ? await providers.domainBinding.getPagesProjectSubdomain(accountId, projectName)
     : null
