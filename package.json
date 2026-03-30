@@ -4,6 +4,7 @@
   "packageManager": "pnpm@10.10.0",
   "scripts": {
     "init": "npx tsx scripts/init.ts",
+    "rebuild": "npx tsx scripts/rebuild.ts",
     "render:wrangler": "npx tsx scripts/render-wrangler.ts",
     "setup:github": "npx tsx scripts/setup-github.ts",
     "sync:dev-vars": "tsx scripts/sync-dev-vars.ts",

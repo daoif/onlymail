@@ -59,11 +59,7 @@ function setVariable(repo: string, name: string, value: string) {
   console.log(`已写入 variable: ${name}`)
 }
 
-function buildWorkersDevUrl(workerName: string, accountSubdomain: string) {
-  return `https://${workerName}.${accountSubdomain}.workers.dev`
-}
-
-function buildPagesAllowedOrigins(projectSubdomain: string, existing: string, customDomains: string[] = []) {
+function buildPagesAllowedOrigins(projectSubdomain: string, existing: string) {
   const values = existing
     .split(',')
     .map((item) => item.trim())
@@ -72,7 +68,6 @@ function buildPagesAllowedOrigins(projectSubdomain: string, existing: string, cu
   return Array.from(new Set([
     `https://${projectSubdomain}`,
     `https://*.${projectSubdomain}`,
-    ...customDomains.map((domain) => `https://${domain}`),
     'http://localhost:5173',
     ...values,
   ])).join(',')
@@ -88,24 +83,18 @@ async function inferCloudflareDefaults() {
     return {
       workerName,
       pagesProjectName,
-      apiBaseUrl: '',
       allowedOrigins: '',
     }
   }
 
   const client = new CloudflareApiClient({ token })
-  const [workersSubdomain, pagesProject, pagesDomains] = await Promise.all([
-    client.getWorkersSubdomain(accountId).catch(() => null),
-    client.getPagesProject(accountId, pagesProjectName).catch(() => null),
-    client.listPagesDomains(accountId, pagesProjectName).catch(() => []),
-  ])
+  const pagesProject = await client.getPagesProject(accountId, pagesProjectName).catch(() => null)
 
   return {
     workerName,
     pagesProjectName,
-    apiBaseUrl: workersSubdomain?.subdomain ? buildWorkersDevUrl(workerName, workersSubdomain.subdomain) : '',
     allowedOrigins: pagesProject?.subdomain
-      ? buildPagesAllowedOrigins(pagesProject.subdomain, readValue('ALLOWED_ORIGINS'), pagesDomains.map((item) => item.name))
+      ? buildPagesAllowedOrigins(pagesProject.subdomain, readValue('ALLOWED_ORIGINS'))
       : '',
   }
 }
@@ -159,11 +148,6 @@ async function main() {
     },
     ALLOWED_ORIGINS: {
       value: readValue('ALLOWED_ORIGINS') || inferred.allowedOrigins,
-      required: false,
-      kind: 'variable',
-    },
-    VITE_API_BASE_URL: {
-      value: readValue('VITE_API_BASE_URL') || inferred.apiBaseUrl,
       required: false,
       kind: 'variable',
     },

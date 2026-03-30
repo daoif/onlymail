@@ -25,28 +25,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build frontend
-        working-directory: frontend
-        run: pnpm build
+      - name: Build & Deploy Frontend
+        run: pnpm deploy:frontend
         env:
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-
-      - name: Deploy to Cloudflare Pages
-        shell: bash
-        run: |
-          set -euo pipefail
-          LOG_FILE="$(mktemp)"
-          PROJECT_NAME="${CF_DEFAULT_PAGES_PROJECT:-mails-frontend}"
-          if npx wrangler pages deploy frontend/dist --project-name="$PROJECT_NAME" >"$LOG_FILE" 2>&1; then
-            echo "Frontend 部署完成。"
-          else
-            sed -E \
-              -e 's#https?://[^[:space:]]+\.pages\.dev#https://REDACTED.pages.dev#g' \
-              -e 's#[A-Za-z0-9.-]+\.pages\.dev#REDACTED.pages.dev#g' \
-              "$LOG_FILE"
-            exit 1
-          fi
-        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_DEFAULT_WORKER_NAME: ${{ vars.CF_DEFAULT_WORKER_NAME }}
           CF_DEFAULT_PAGES_PROJECT: ${{ vars.CF_DEFAULT_PAGES_PROJECT }}

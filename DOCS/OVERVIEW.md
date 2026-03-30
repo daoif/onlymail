@@ -24,6 +24,8 @@
 - Cloudflare DNS API 和 Email Routing API 通过 Provider 接口调用，用于根域名初始化、子域名创建和规则回收。
 - Pages 自定义域名通过 Pages Domains API 绑定，再把 CNAME 自动对齐到 Pages 项目的真实 `subdomain`，随后重试验证。
 - `init` 只准备基础设施默认入口：前端走 Pages 默认 `pages.dev`，后端走 Worker 默认 `workers.dev`；正式自定义域名在应用里的设置页处理。
+- 管理面板固定请求 Worker 默认 `workers.dev` API；Worker 自定义域名只作为 SDK、手工访问和品牌化展示的别名，不驱动前端 API 路径。
+- 平台内部状态以 D1 为准；Cloudflare 上存在但没写进 D1 的 DNS、自定义域名和其他外部残留，不会被 `init` 或运行时默认接管。
 - 部署有三条正式路径：本地部署、GitHub-only 部署、混合部署。GitHub-only 首次部署通过 `Bootstrap Cloudflare` workflow，fork 仓库的后续更新通过 `Upstream Sync` workflow。
 
 ## 当前落定的关键实现

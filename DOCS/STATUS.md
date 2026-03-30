@@ -1,7 +1,7 @@
 # 当前状态（STATUS）
 
 ## 当前目标
-- 系统级重构已完成（P0-P6），代码编译全部通过。当前把部署路径定成三条：本地部署、GitHub-only 部署、混合部署；`init` 只准备基础设施默认入口，自定义域名留在应用内流程。
+- 系统级重构已完成（P0-P6），代码编译全部通过。当前把部署路径定成三条：本地部署、GitHub-only 部署、混合部署；`init` 只处理默认入口和基础设施，`rebuild` 只重建 D1 + 重新部署，不碰 Cloudflare 外部入口。
 
 ## 已完成
 - ✅ P0: 平台抽象层 — `lib/cloudflare.ts` 拆分为 `providers/` 接口 + CF 实现
@@ -19,7 +19,7 @@
 
 ## 阻塞/风险
 - Pages 预览域名和正式 `pages.dev` 域名依赖 `ALLOWED_ORIGINS` 默认值，CI 需要跟着 Pages 项目真实 `subdomain` 生成
-- 自定义前端域名现在会写进运行时设置；后续如果再做批量导入，需要保持这条同步逻辑
+- 自定义前端域名现在会写进运行时设置；`init` 不再从 Cloudflare 回读这部分状态，后续如果再做批量导入，需要保持“D1 为事实来源”这条边界
 - `Upstream Sync` 只做 fast-forward，同步策略保守；如果用户默认分支带长期私有改动，仍然需要手动处理
 
 ## 最近变更
@@ -29,7 +29,9 @@
 - `scripts/init.ts` 现在只准备基础设施：D1、Worker、Pages 默认入口和可选 GitHub 配置，不再直接操作 Email Routing
 - 本地参数改成根目录 `.env.local` 单一来源；`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件
 - `init` 会把 `D1_DATABASE_ID`、`JWT_SECRET` 回写到 `.env.local`，再生成 `worker/wrangler.toml` 和 `worker/.dev.vars`
+- 新增 `pnpm run rebuild`：删除并重建 D1，轮换 `JWT_SECRET`，再重跑 `init`；DNS、自定义域名、Email Routing 外部入口不在这条命令里处理
 - 新增 `pnpm deploy:worker`、`pnpm deploy:frontend` 两个本地重部署入口，给本地调试和应急使用
+- 前端管理面板固定请求 Worker 默认 `workers.dev`；`VITE_API_BASE_URL` 不再作为用户配置项暴露，Worker 自定义域名只保留为别名
 - `DOCS/DEPLOY.md` 改成“每条部署路线先列准备清单，再进入步骤”，并把 Email Routing 口径统一成“只要走 Email Routing 自动化，`CF_EMAIL` + `CF_GLOBAL_API_KEY` 就是必填”
 - Email Routing Provider 改成直接走 global auth；根域名 bootstrap、子域名创建删除在进入 Cloudflare 变更前就先校验 `CF_EMAIL` / `CF_GLOBAL_API_KEY`
 - 文档里删掉了 `Zone → Email Routing Rules` 这条 Token 权限说明，并补充 `CF_ACCOUNT_ID` 获取位置

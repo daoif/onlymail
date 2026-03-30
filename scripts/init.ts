@@ -22,10 +22,13 @@
  * 不处理：
  * - Worker / Pages 自定义域名绑定
  *   这部分留给应用内的初始化引导和设置页
+ * - 前端 API 入口选择
+ *   管理面板始终请求 Worker 默认 workers.dev，自定义 API 域名只作为别名保留
  */
 
 import { ROOT_DIR, WORKER_DIR, ensureJwtSecret, writeLocalEnvValues } from './lib/local-config'
 import { execSync } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { CloudflareApiClient } from './lib/cloudflare-api'
@@ -165,18 +168,31 @@ function normalizeOriginList(...groups: string[]) {
   return Array.from(new Set(values)).join(',')
 }
 
-function buildPagesAllowedOrigins(projectSubdomain: string, existing: string, customDomains: string[] = []) {
+function buildPagesAllowedOrigins(projectSubdomain: string, existing: string) {
   return normalizeOriginList(
     existing,
     `https://${projectSubdomain}`,
     `https://*.${projectSubdomain}`,
-    ...customDomains.map((domain) => `https://${domain}`),
     'http://localhost:5173',
   )
 }
 
 function buildWorkersDevUrl(workerName: string, accountSubdomain: string) {
   return `https://${workerName}.${accountSubdomain}.workers.dev`
+}
+
+function shouldRotateJwtSecret() {
+  const value = process.env.MAILS_INIT_ROTATE_JWT_SECRET?.trim().toLowerCase()
+  return value === '1' || value === 'true'
+}
+
+function shouldReuseExistingDatabaseId() {
+  const value = process.env.MAILS_INIT_REUSE_D1?.trim().toLowerCase()
+  return value !== '0' && value !== 'false'
+}
+
+function createJwtSecret() {
+  return randomBytes(32).toString('hex')
 }
 
 // ── 主流程 ────────────────────────────────────────────────────
@@ -200,6 +216,8 @@ async function main() {
   const cfEmail = process.env.CF_EMAIL || process.env.CF_AUTH_EMAIL || ''
   const cfGlobalApiKey = process.env.CF_GLOBAL_API_KEY || ''
   const githubRepo = process.env.GITHUB_REPOSITORY || process.env.GH_REPO || ''
+  const rotateJwtSecret = shouldRotateJwtSecret()
+  const reuseExistingDatabaseId = shouldReuseExistingDatabaseId()
   const client = cfApiToken ? new CloudflareApiClient({ token: cfApiToken, authEmail: cfEmail, globalApiKey: cfGlobalApiKey }) : null
 
   if (!accountId) {
@@ -222,7 +240,9 @@ async function main() {
     }
   } catch (error) {
     console.log('⚠️  创建数据库失败（可能已存在）')
-    databaseId = process.env.D1_DATABASE_ID || process.env.DB_ID || detectExistingDatabaseId() || prompt('请输入已有的 database_id: ')
+    databaseId = reuseExistingDatabaseId
+      ? process.env.D1_DATABASE_ID || process.env.DB_ID || detectExistingDatabaseId() || prompt('请输入已有的 database_id: ')
+      : prompt('请输入已有的 database_id: ')
   }
 
   if (!databaseId) {
@@ -230,25 +250,20 @@ async function main() {
     process.exit(1)
   }
 
-  const jwtSecret = ensureJwtSecret()
+  const jwtSecret = rotateJwtSecret ? createJwtSecret() : ensureJwtSecret()
   let pagesDefaultUrl = ''
   let allowedOrigins = normalizeOriginList(process.env.ALLOWED_ORIGINS || '', 'http://localhost:5173')
-  let apiBaseUrl = process.env.VITE_API_BASE_URL || ''
+  let apiBaseUrl = ''
 
   if (client) {
     console.log('\n🖥️  步骤 2：准备 Pages 项目和默认入口...')
-    const [pagesProject, workersSubdomain, pagesDomains] = await Promise.all([
+    const [pagesProject, workersSubdomain] = await Promise.all([
       client.ensurePagesProject(accountId, pagesProjectName, pagesProductionBranch),
       client.getWorkersSubdomain(accountId).catch(() => null),
-      client.listPagesDomains(accountId, pagesProjectName).catch(() => []),
     ])
 
     pagesDefaultUrl = `https://${pagesProject.subdomain}`
-    allowedOrigins = buildPagesAllowedOrigins(
-      pagesProject.subdomain,
-      process.env.ALLOWED_ORIGINS || '',
-      pagesDomains.map((item) => item.name),
-    )
+    allowedOrigins = buildPagesAllowedOrigins(pagesProject.subdomain, process.env.ALLOWED_ORIGINS || '')
 
     if (!apiBaseUrl && workersSubdomain?.subdomain) {
       apiBaseUrl = buildWorkersDevUrl(workerName, workersSubdomain.subdomain)
@@ -386,7 +401,7 @@ async function main() {
     if (context.apiBaseUrl) {
       deployFrontend(context.pagesProjectName, context.apiBaseUrl)
     } else {
-      console.log('⚠️  未能自动推导前端 API Base URL，跳过前端部署；请先提供 VITE_API_BASE_URL 再重试')
+      console.log('⚠️  未能自动推导 Worker 默认 workers.dev 地址，跳过前端部署；请先检查 CF_API_TOKEN / CF_ACCOUNT_ID 和 workers.dev 是否可用')
     }
   } else {
     console.log('\n⚠️  未检测到 CF_API_TOKEN，跳过 Pages 项目和前端自动部署')
@@ -408,7 +423,6 @@ async function main() {
           CF_DEFAULT_WORKER_NAME: workerName,
           CF_DEFAULT_PAGES_PROJECT: pagesProjectName,
           ALLOWED_ORIGINS: allowedOrigins,
-          VITE_API_BASE_URL: apiBaseUrl,
         },
       })
       console.log('✅ GitHub 仓库配置已写入')
@@ -424,7 +438,7 @@ async function main() {
   console.log('🎉 初始化完成!')
   console.log()
   console.log('当前结果：')
-  console.log(`1. Worker 默认地址: ${context.apiBaseUrl || '未自动探测，请手动提供 VITE_API_BASE_URL'}`)
+  console.log(`1. Worker 默认地址: ${context.apiBaseUrl || '未自动探测，请检查 workers.dev 是否可用'}`)
   console.log(`2. Frontend 默认地址: ${context.pagesDefaultUrl || '未自动准备，请稍后手动部署 Pages'}`)
   console.log(`3. 默认允许来源: ${context.allowedOrigins || '未设置，当前按 Worker 运行时配置为准'}`)
   console.log()

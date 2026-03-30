@@ -33,9 +33,11 @@
 - 不启用 Email Routing
 - 不配置任何 catch-all
 - 不绑定任何 Worker / Pages 自定义域名
+- 不读取 Cloudflare 里已有的自定义域名残留并回写到默认配置
 - 不决定“哪个域名用来收邮件”
 
 这一层完成后，系统有了可用的 API 和前端入口（workers.dev + pages.dev），但还没有任何可收件域名。
+这一层的事实来源是 D1 和本地配置；Cloudflare 上存在但没写进 D1 的外部残留不会被默认接管。
 
 ## 2. 自定义域名（访问入口）
 
@@ -48,6 +50,7 @@
 - 为 Worker API 绑定自定义域名（如 `mails-api.example.com` → Worker）
 - 为前端 Pages 绑定自定义域名（如 `mails.example.com` → Pages）
 - 自动创建/更新对应的 CNAME 记录
+- 提供更好记的访问别名，不改动管理面板固定使用的 `workers.dev` API 主路径
 
 不负责：
 - 不启用 Email Routing
@@ -65,7 +68,7 @@
 - 前端：`frontend/src/views/DomainsView.vue` 根域名初始化表单
 
 负责：
-- 按 `rootDomain` 自动解析对应 Zone ID（必要时可手动覆盖 `zoneId`）
+- 按 `rootDomain` 自动解析对应 Zone ID
 - 检查该 Zone 的 Email Routing 设置，如果未启用则启用
 - 把根域名的 catch-all 规则指向 Worker（让 `abc@rootDomain` 这类地址可以直收）
 - 把根域名写入 `domains` 表，标记 `is_root = 1`、保存 `cf_zone_id`
@@ -150,4 +153,3 @@
 - 根域名 bootstrap 决定“哪些根域名参与收件”，并启用 Email Routing + catch-all。
 - 收件子域名把“能收哪些域名的邮件”细分到子域名层级。
 - 具体邮箱地址和收件处理只在应用内部操作数据库，不再碰 Cloudflare API。
-

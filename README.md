@@ -68,7 +68,7 @@ GitHub 在这条路径里不是必需项。
 ```bash
 pnpm install
 cp .env.local.example .env.local
-pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 Pages，默认入口走 workers.dev + pages.dev
+pnpm run init    # 首次接入或重跑：保留现有 D1，重新部署 Worker / Frontend，默认入口走 workers.dev + pages.dev
 ```
 
 先填 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。如果你接下来要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上；这组值不是 `init` 的硬必填，但只要涉及 Email Routing 就必须有。当前实例按单一 Cloudflare 账号设计，域名相关操作都按域名自动解析 Zone，不再要求手动填写 Zone ID。
@@ -77,11 +77,21 @@ pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 
 
 `worker/wrangler.toml` 是本地运行配置，会由模板生成，不提交 Git。
 
-`init` 只准备基础设施，不会提前绑定 Worker / Pages 自定义域名。自定义域名留给应用里的初始化引导和设置页处理。
+`init` 只准备基础设施默认入口，不会读取、推断或绑定 Worker / Pages 自定义域名。自定义域名留给应用里的初始化引导和设置页处理。
+
+管理面板固定请求 Worker 默认 `workers.dev` API。Worker 自定义域名继续保留，但它只作为 SDK、手工调试和对外展示时可选的别名，不驱动前端 API 路径切换。
 
 如果你不想先拉到本地，可以直接走上面的 GitHub-only 部署，第一次运行 `Bootstrap Cloudflare` workflow 即可。
 
-`init` 可以重复运行，用来重新对齐 D1、Worker、Pages 这些基础设施。默认会复用 `.env.local` 里的 `JWT_SECRET`；只有你手动改掉它，现有后台登录态才会失效。
+`init` 可以重复运行，用来重新对齐 D1、Worker、Pages 这些基础设施。它会保留现有 D1，默认复用 `.env.local` 里的 `JWT_SECRET`，也不会接管 Cloudflare 里已有但没写进 D1 的自定义域名残留。
+
+如果你要把平台内部状态清到接近未安装状态，再重新部署一遍，用：
+
+```bash
+pnpm run rebuild
+```
+
+`rebuild` 会删除并重建 D1，轮换 `JWT_SECRET`，然后重新跑一遍 `init`。它不会处理 Cloudflare 上已有的 DNS、自定义域名和 Email Routing 外部入口。
 
 ### 本地开发
 
@@ -131,10 +141,12 @@ pnpm --dir frontend dev
 - `D1_DATABASE_ID`：手动跑 `pnpm render:wrangler` 时必填；跑过一次 `pnpm run init` 后会自动回写到 `.env.local`
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`：不是 `init` 的硬必填；但只要要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，就是硬必填。当前 Cloudflare API Token 不能覆盖这组接口，所以这里不是兜底鉴权
 - `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤
-- `ALLOWED_ORIGINS`：需要手动覆盖默认来源时再提供；默认会按 Pages 项目的 `pages.dev` 地址和本地开发地址生成
+- `ALLOWED_ORIGINS`：需要手动覆盖默认来源时再提供；默认只按 Pages 项目的 `pages.dev` 地址、预览子域名和本地开发地址生成，不自动接管已有自定义域名
 - `GITHUB_REPOSITORY`：给了以后，`init` 可以顺手调用 `gh` 写 GitHub 仓库配置
 
-推荐做法是先给最低必需项；确定会做 Email Routing 自动化时，再把 `CF_GLOBAL_API_KEY` 和 `CF_EMAIL` 一起填上。
+推荐做法是先给最低必需项；确定会做 Email Routing 自动化时，再把 `CF_GLOBAL_API_KEY` 和 `CF_EMAIL` 一起填上。平台内部状态以 D1 为准，Cloudflare 上存在但没写进 D1 的外部残留不会被默认接管。
+
+前端管理面板的 API 地址不再作为用户配置项暴露。部署时脚本会自动读取当前 Worker 默认 `workers.dev` 地址，并把它写进前端构建结果；设置页里绑定的 Worker 自定义域名不会改变这条主路径。
 
 首次跑完 `init` 后，先用 Pages 默认地址进入后台完成管理员初始化；等系统能用了，再在设置页绑定 `mails-api.你的域名` 和 `mails.你的域名` 这类正式入口。
 

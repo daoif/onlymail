@@ -88,6 +88,19 @@
 - `worker/wrangler.toml`
 - `worker/.dev.vars`
 
+命令边界固定成这三条：
+
+- `pnpm run init`：保留现有 D1，补齐缺的基础设施，然后重新部署 Worker / Frontend。默认入口只认 `workers.dev + pages.dev`，不读取 Cloudflare 上已有的自定义域名残留。
+- `pnpm run rebuild`：删除并重建 D1，轮换 `JWT_SECRET`，然后重新跑一遍 `init`。它只处理平台内部状态，不碰 DNS、自定义域名、Email Routing 外部入口。
+- `pnpm deploy:worker` / `pnpm deploy:frontend`：单独重发代码，给开发和排障用。
+
+前端管理面板的 API 路径也固定成这条设计：
+
+- 页面可以从 `pages.dev` 或 Pages 自定义域名打开
+- 页面里的 API 请求始终打 Worker 默认 `workers.dev`
+- Worker 自定义域名只作为 SDK、人工调试和对外展示的别名
+- 绑定或移除 Worker 自定义域名，不触发前端 API 路径切换
+
 ---
 
 ## 一、先选部署方式
@@ -178,7 +191,7 @@ pnpm run init
 - ✅ 初始化数据库表结构（`db/schema.sql`）
 - ✅ 生成 JWT_SECRET 并设为 wrangler secret
 - ✅ 部署 Worker 到 Cloudflare
-- ✅ 读取 Worker 默认 `workers.dev` 地址并作为前端 API Base URL
+- ✅ 读取 Worker 默认 `workers.dev` 地址并作为管理面板固定 API 入口
 - ✅ 首次构建并部署前端
 
 如果还提供了 `GITHUB_REPOSITORY`，并且本机 `gh` 已登录，脚本还会继续：
@@ -190,7 +203,7 @@ pnpm run init
 >
 > 这里的 `init` 只准备基础设施；Worker / Pages 自定义域名不在这一步处理，留给应用里的设置页。
 >
-> `init` 可以重跑，用于重新对齐基础设施；默认会复用 `.env.local` 里的 `JWT_SECRET`。只有你手动改掉这个值，现有后台登录态才会失效。
+> `init` 可以重跑，用于重新对齐基础设施；默认会复用 `.env.local` 里的 `JWT_SECRET`。Cloudflare 上已有但没写进 D1 的自定义域名、DNS 残留不会被默认接管。
 
 ### 步骤 4：如果后面要接 GitHub 自动部署，再写 GitHub Secrets ⚡
 
@@ -203,7 +216,7 @@ pnpm setup:github
 这个脚本会：
 - 写入 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`，以及按需写入 `CF_EMAIL`、`CF_GLOBAL_API_KEY` 这些 GitHub Secrets
 - 写入 `D1_DATABASE_ID`、`CF_DEFAULT_WORKER_NAME`、`CF_DEFAULT_PAGES_PROJECT` 这些 GitHub Variables
-- 如果能从 Cloudflare 读到 Pages 项目和 Worker 默认地址，还会顺手写入 `ALLOWED_ORIGINS` 和 `VITE_API_BASE_URL`
+- 如果能从 Cloudflare 读到 Pages 项目默认地址，还会顺手写入 `ALLOWED_ORIGINS`
 - 自动跳过没提供的可选项
 
 没有 `gh` CLI 时，去 GitHub → 仓库 → Settings → Secrets and variables → Actions，手动添加：
@@ -223,7 +236,6 @@ Variables：
 | `CF_DEFAULT_WORKER_NAME` | Worker 名，默认 `mails-worker` |
 | `CF_DEFAULT_PAGES_PROJECT` | Pages 项目名，默认 `mails-frontend` |
 | `ALLOWED_ORIGINS` | 可选；默认推荐填当前 Pages 项目的 `pages.dev` 地址、它的预览子域名和 `http://localhost:5173` |
-| `VITE_API_BASE_URL` | 前端请求后端的基础地址，推荐填当前 Worker 的 `workers.dev` 地址 |
 
 > `worker/wrangler.toml` 不需要上传到 GitHub，也不需要再作为整文件 Secret 保存。CI 会按模板自动生成。
 
@@ -277,7 +289,25 @@ pnpm deploy:worker
 pnpm deploy:frontend
 ```
 
-两条命令都会自动读 `.env.local`。如果你后来绑了 Worker 自定义域名，想让前端用它作为 API 地址，在 `.env.local` 里填上 `VITE_API_BASE_URL=https://你的自定义域名`，再跑 `pnpm deploy:frontend`。
+两条命令都会自动读 `.env.local`。`pnpm deploy:frontend` 会自己读取当前 Worker 默认 `workers.dev` 地址，把它写进前端构建结果；Worker 自定义域名不会改变管理面板这条调用路径。
+
+### 平台内部重建
+
+如果版本升级、历史试错或脏数据让平台内部状态已经不可信，用：
+
+```bash
+pnpm run rebuild
+```
+
+这条命令会：
+- 删除并重建 D1
+- 轮换 `JWT_SECRET`，让旧后台登录态失效
+- 重新跑一遍 `init`
+
+这条命令不会处理：
+- DNS 记录
+- Worker / Pages 自定义域名
+- Email Routing 外部入口配置
 
 ---
 
@@ -342,7 +372,7 @@ pnpm deploy:frontend
 - 部署前端到 `pages.dev`
 - 把后续自动部署要用的 GitHub Variables 写回仓库
 
-这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施，但会刷新 `JWT_SECRET`。
+这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施。它会保留现有 D1，默认也会复用现有 `JWT_SECRET`。
 
 ### 步骤 5：初始化管理员 🧑
 
