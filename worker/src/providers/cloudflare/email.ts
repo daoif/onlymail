@@ -7,15 +7,7 @@ import { CloudflareBase } from './base'
 
 export class CloudflareEmailProvider extends CloudflareBase implements EmailProvider {
   async getEmailRoutingSettings(zoneId: string) {
-    try {
-      return await this.request<EmailRoutingSettings>(`/zones/${zoneId}/email/routing`)
-    } catch (error) {
-      if (!this.shouldRetryWithGlobalAuth(error)) {
-        throw error
-      }
-
-      return this.request<EmailRoutingSettings>(`/zones/${zoneId}/email/routing`, undefined, 'global')
-    }
+    return this.request<EmailRoutingSettings>(`/zones/${zoneId}/email/routing`, undefined, 'global')
   }
 
   async enableEmailRouting(zoneId: string) {
@@ -24,15 +16,7 @@ export class CloudflareEmailProvider extends CloudflareBase implements EmailProv
       body: JSON.stringify({}),
     } satisfies RequestInit
 
-    try {
-      return await this.request<EmailRoutingSettings>(`/zones/${zoneId}/email/routing/enable`, init)
-    } catch (error) {
-      if (!this.shouldRetryWithGlobalAuth(error)) {
-        throw error
-      }
-
-      return this.request<EmailRoutingSettings>(`/zones/${zoneId}/email/routing/enable`, init, 'global')
-    }
+    return this.request<EmailRoutingSettings>(`/zones/${zoneId}/email/routing/enable`, init, 'global')
   }
 
   async updateCatchAll(zoneId: string, workerName: string) {
@@ -45,15 +29,7 @@ export class CloudflareEmailProvider extends CloudflareBase implements EmailProv
       }),
     } satisfies RequestInit
 
-    try {
-      return await this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/catch_all`, init)
-    } catch (error) {
-      if (!this.shouldRetryWithGlobalAuth(error)) {
-        throw error
-      }
-
-      return this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/catch_all`, init, 'global')
-    }
+    return this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/catch_all`, init, 'global')
   }
 
   async createEmailRule(zoneId: string, payload: Record<string, unknown>) {
@@ -62,15 +38,7 @@ export class CloudflareEmailProvider extends CloudflareBase implements EmailProv
       body: JSON.stringify(payload),
     } satisfies RequestInit
 
-    try {
-      return await this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules`, init)
-    } catch (error) {
-      if (!this.shouldRetryWithGlobalAuth(error)) {
-        throw error
-      }
-
-      return this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules`, init, 'global')
-    }
+    return this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules`, init, 'global')
   }
 
   async deleteEmailRule(zoneId: string, ruleId: string) {
@@ -78,14 +46,6 @@ export class CloudflareEmailProvider extends CloudflareBase implements EmailProv
       method: 'DELETE',
     } satisfies RequestInit
 
-    try {
-      return await this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/${ruleId}`, init)
-    } catch (error) {
-      if (!this.shouldRetryWithGlobalAuth(error)) {
-        throw error
-      }
-
-      return this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/${ruleId}`, init, 'global')
-    }
+    return this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/${ruleId}`, init, 'global')
   }
 }

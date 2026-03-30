@@ -9,6 +9,13 @@ const MX_TARGETS = [
   { content: 'route3.mx.cloudflare.net', priority: 50 },
 ]
 
+function requireEmailRoutingAuth(env: AppBindings) {
+  const authEmail = env.CF_AUTH_EMAIL || env.CF_EMAIL
+  if (!authEmail || !env.CF_GLOBAL_API_KEY) {
+    throw new AppError(500, '缺少 CF_EMAIL（或旧名字 CF_AUTH_EMAIL）或 CF_GLOBAL_API_KEY，无法执行 Email Routing 操作')
+  }
+}
+
 async function findDomain(env: AppBindings, name: string) {
   return one<DomainRecord>(env.DB.prepare('SELECT * FROM domains WHERE name = ?1').bind(name.toLowerCase()))
 }
@@ -77,6 +84,7 @@ export async function bootstrapRootDomain(
   env: AppBindings,
   payload: { rootDomain: string; zoneId?: string },
 ) {
+  requireEmailRoutingAuth(env)
   const rootDomain = payload.rootDomain.trim().toLowerCase()
   const providers = createProviders(env)
   const zoneId = await providers.dns.resolveZoneId(rootDomain, payload.zoneId?.trim())
@@ -103,6 +111,7 @@ export async function bootstrapRootDomain(
 }
 
 export async function createSubdomain(env: AppBindings, payload: { name: string; rootName?: string; workerName?: string }) {
+  requireEmailRoutingAuth(env)
   const name = payload.name.trim().toLowerCase()
   const existing = await findDomain(env, name)
   if (existing) {
@@ -194,6 +203,7 @@ async function rollbackDomainProvision(
 }
 
 export async function deleteSubdomain(env: AppBindings, name: string) {
+  requireEmailRoutingAuth(env)
   const record = await findDomain(env, name)
   if (!record) {
     return false

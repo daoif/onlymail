@@ -57,22 +57,6 @@ export class CloudflareBase {
 
     return payload.result
   }
-
-  protected shouldRetryWithGlobalAuth(error: unknown) {
-    if (!(error instanceof AppError)) {
-      return false
-    }
-
-    if (!this.auth.authEmail || !this.auth.globalApiKey) {
-      return false
-    }
-
-    if (!Array.isArray(error.details)) {
-      return false
-    }
-
-    return error.details.some((item) => item && typeof item === 'object' && 'code' in item && item.code === 10000)
-  }
 }
 
 export function requireCloudflareAuth(auth: CloudflareAuth) {

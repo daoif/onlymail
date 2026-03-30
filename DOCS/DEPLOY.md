@@ -30,8 +30,7 @@
 
 ### 额外准备项
 
-- Cloudflare 官方权限总表和 Email Routing API 页面在鉴权说明上不完全一致。当前项目对 Email Routing 采用“Token 优先，权限不兼容时回退到 `CF_EMAIL` + `CF_GLOBAL_API_KEY`”的策略。
-- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 对只做 Worker / Pages / D1 初始化不是硬必填；但对根域名 bootstrap、子域名创建、Email Routing 自动化这条链，应当视为必备。不给时，初始化还能继续，但 Email Routing 相关动作要手动去 Cloudflare 控制台完成。
+- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 对只做 Worker / Pages / D1 初始化不是硬必填；但对根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作是硬必填。不给时，初始化还能继续，但 Email Routing 相关动作不能自动化。
 - 纯本地部署不需要 GitHub 仓库。
 - GitHub-only 和混合部署需要 GitHub 仓库。
 - 如果你准备走混合部署，装好 `gh` CLI 会省掉手动填写 GitHub Secrets / Variables 的步骤。
@@ -45,21 +44,20 @@
 到了 Worker 持续部署这一步，还需要：
 - `D1_DATABASE_ID`
 
-域名和 Email Routing 自动化时应当提供（无论是在本地域名页面操作，还是通过 GitHub-only 部署的 workflow 自动化）：
+只要要做 Email Routing 自动化，就应当提前提供：
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`
-  提供后，AI 可以直接完成 Email Routing 的启用、catch-all、规则创建删除和后续排查；不提供时，AI 仍然可以继续做 Worker / Pages / D1 这类步骤，但域名和 Email Routing 相关动作要改走 Cloudflare 控制台或 GitHub workflow。
+  这组值不是 `init` 的硬必填；但只要要做根域名 bootstrap、子域名创建或删除、catch-all、规则创建删除，就必须有。当前 Cloudflare API Token 不能覆盖这组接口，所以这里不是兜底，是主鉴权。
 - `CF_DEFAULT_ZONE_ID`
-  这个值不再是本地部署和本地开发的硬必填；主要用于 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 自动启用某个 Zone 的 Email Routing 和 catch-all，以及给后续 Email Routing 自动化保留一个默认 Zone 变量。
+  这个值不再是本地部署和本地开发的硬必填；主要用于 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写默认 Zone 变量，以及给后续 Email Routing 自动化保留一个默认 Zone 变量。
 
 按需输入：
 - `gh` CLI
   如果 AI 检测到本机有 `gh` 且已经登录，就直接用它写 GitHub Secrets / Variables；没有再提示用户手动去网页设置。
 
 推荐推进方式：
-- 一开始只要求最低输入。
-- AI 先检测 `gh`、`CF_GLOBAL_API_KEY`、`CF_EMAIL` 是否存在。
-- `CF_EMAIL`、`CF_GLOBAL_API_KEY` 这组值优先提前准备好，避免初始化走到 Email Routing 时再停下来补。
-- 检测到就直接用，没检测到再在真正卡住的节点提示，不在开头一次性抛一长串要求。
+- 一开始先准备 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。
+- 确定后面要做 Email Routing 自动化时，再把 `CF_EMAIL`、`CF_GLOBAL_API_KEY` 一起补齐。
+- AI 先检测 `gh` 和这组 Email Routing 凭证；检测到就直接用，缺了就在真正要做 Email Routing 的节点拦住并报清楚。
 
 ---
 
@@ -71,8 +69,8 @@
 
 1. 复制 `.env.local.example` 为 `.env.local`
 2. 先填最小必需项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`
-3. 如果你要做根域名 bootstrap、子域名创建、Email Routing 自动化，同时填上 `CF_EMAIL`、`CF_GLOBAL_API_KEY`
-4. 如果你要用 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 自动启用某个 Zone 的 Email Routing 和 catch-all，再补 `CF_DEFAULT_ZONE_ID`
+3. 如果你要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，同时填上 `CF_EMAIL`、`CF_GLOBAL_API_KEY`
+4. 如果你要用 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写默认 Zone 变量，再补 `CF_DEFAULT_ZONE_ID`
 5. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
 6. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`；这条线继续沿用 GitHub workflow 里的 `CF_DEFAULT_ZONE_ID` 变量，所以还要把这个值一并准备好
 
@@ -150,9 +148,9 @@
 - Cloudflare Account ID
   获取位置：CF 控制台 → 点进任意已托管域名 → 右下角 API 区域
 - `CF_DEFAULT_ZONE_ID`（按需）
-  获取位置：同一处 API 区域里的 Zone ID。这个值现在不是本地部署的硬必填；主要用于 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 自动启用某个 Zone 的 Email Routing 和 catch-all。
+  获取位置：同一处 API 区域里的 Zone ID。这个值现在不是本地部署的硬必填；主要用于 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写默认 Zone 变量。
 - Cloudflare 账号邮箱 `CF_EMAIL` 和 Global API Key `CF_GLOBAL_API_KEY`
-  如果你只做 Worker / Pages / D1 初始化，可以先不填；如果你接下来要做根域名 bootstrap、子域名创建、Email Routing 自动化，这组值应当提前准备好
+  如果你只做 Worker / Pages / D1 初始化，可以先不填；如果你接下来要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，这组值必须提前准备好
 - 以上值已填入项目根目录的 `.env.local`
 - 已执行 `npx wrangler login` 完成浏览器授权
 
@@ -333,8 +331,8 @@ pnpm deploy:frontend
 |------|----------|------|
 | `CLOUDFLARE_ACCOUNT_ID` | 必需 | Cloudflare Account ID |
 | `CLOUDFLARE_API_TOKEN` | 必需 | Cloudflare API Token |
-| `CF_EMAIL` | 域名和 Email Routing 自动化时应当提供 | 提供后 workflow 能自动启用 Email Routing、配置 catch-all，并给后续规则操作保留鉴权兜底 |
-| `CF_GLOBAL_API_KEY` | 域名和 Email Routing 自动化时应当提供 | 提供后 workflow 能自动启用 Email Routing、配置 catch-all，并给后续规则操作保留鉴权兜底 |
+| `CF_EMAIL` | 做 Email Routing 自动化时必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
+| `CF_GLOBAL_API_KEY` | 做 Email Routing 自动化时必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
 
 ### 步骤 4：运行首次初始化 workflow 🧑
 
@@ -349,7 +347,6 @@ pnpm deploy:frontend
 - 部署 Worker
 - 创建或确认 Pages 项目
 - 部署前端到 `pages.dev`
-- 如果提供了 `CF_EMAIL` + `CF_GLOBAL_API_KEY`，自动启用 Email Routing 并配置 catch-all
 - 把后续自动部署要用的 GitHub Variables 写回仓库
 
 这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施，但会刷新 `JWT_SECRET`。
@@ -386,7 +383,7 @@ pnpm deploy:frontend
 - 本地部署那一套前置条件已经准备好，尤其是 `.env.local`
 - GitHub 账号和一个你能控制的仓库
 - 如果想自动写 GitHub Secrets / Variables，准备好 `gh` CLI 并完成登录
-- 如果你要在混合部署里继续做根域名 bootstrap、子域名创建、Email Routing 自动化，`CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 最好在一开始就写进 `.env.local`
+- 如果你要在混合部署里继续做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，`CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一开始就写进 `.env.local`
 
 这条路径的顺序是：
 
@@ -492,7 +489,7 @@ pnpm --dir frontend dev   # http://localhost:5173（已代理到 Worker）
 - 本地还要调 Cloudflare 管理能力：
   再往 `.env.local` 里补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_PAGES_PROJECT`。
 - 本地还要调 Email Routing：
-  再往 `.env.local` 里补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。`CF_AUTH_EMAIL` 这个旧名字也兼容。`CF_DEFAULT_ZONE_ID` 只在你要跑 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 时需要。
+  再往 `.env.local` 里补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。`CF_AUTH_EMAIL` 这个旧名字也兼容。`CF_DEFAULT_ZONE_ID` 只在你要跑 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写默认 Zone 变量时需要。
 
 ---
 

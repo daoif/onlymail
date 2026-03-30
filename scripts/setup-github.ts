@@ -132,6 +132,16 @@ async function main() {
       required: true,
       kind: 'secret',
     },
+    CF_EMAIL: {
+      value: readValue('CF_EMAIL', 'CF_AUTH_EMAIL'),
+      required: false,
+      kind: 'secret',
+    },
+    CF_GLOBAL_API_KEY: {
+      value: readValue('CF_GLOBAL_API_KEY'),
+      required: false,
+      kind: 'secret',
+    },
     CF_DEFAULT_ZONE_ID: {
       value: readValue('CF_DEFAULT_ZONE_ID'),
       required: true,
