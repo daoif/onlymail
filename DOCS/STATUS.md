@@ -29,6 +29,8 @@
 - `scripts/init.ts` 现在只准备基础设施：D1、Worker、Pages 默认入口、可选 Email Routing 和可选 GitHub 配置
 - 本地参数改成根目录 `.env.local` 单一来源；`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件
 - `init` 会把 `D1_DATABASE_ID`、`JWT_SECRET` 回写到 `.env.local`，再生成 `worker/wrangler.toml` 和 `worker/.dev.vars`
+- 新增 `pnpm deploy:worker`、`pnpm deploy:frontend` 两个本地重部署入口，给本地调试和应急使用
+- `DOCS/DEPLOY.md` 改成“每条部署路线先列准备清单，再进入步骤”，并把 Email Routing 口径统一成“强烈建议提供 `CF_EMAIL` + `CF_GLOBAL_API_KEY`”
 - Worker CORS 改为：模板默认来源 + 数据库里的运行时追加来源；设置页新增/删除 Pages 自定义域名时会同步维护
 - Pages 自定义域名绑定继续走：读取 Pages 项目真实 subdomain → 自动创建或更新 CNAME → 重试验证，并在设置页显示验证/证书状态
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署

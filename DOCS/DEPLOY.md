@@ -2,17 +2,14 @@
 
 ## 前置条件
 
-以下是部署前**最低要准备**的内容：
+以下是所有部署方式都共用的基础前置条件：
 
 | 条件 | 操作方式 | 说明 |
 |------|---------|------|
 | Cloudflare 账户 | 🧑 手动 | 需要有至少一个域名托管在 CF |
 | Node.js >= 20 | 🧑 手动 | 本地开发和 init 脚本需要 |
 | pnpm >= 10 | 🧑 手动 | `npm i -g pnpm` |
-| GitHub 仓库 | 🧑 手动 | 私有或公开都可以 |
 | Cloudflare API Token | 🧑 手动 | 见下方「创建 API Token」 |
-| `gh` CLI（可选） | 🧑 手动 | 装了以后，AI 可以直接写 GitHub Secrets / Variables |
-| Cloudflare Global API Key + Email（可选） | 🧑 手动 | 装了以后，AI 可以直接处理 Email Routing 的启用、关闭、清理和排查 |
 
 ### 创建 Cloudflare API Token
 
@@ -32,6 +29,13 @@
 - 创建后**立即复制**，只显示一次
 - 这个 Token 是给系统自动化和直接调用 Cloudflare REST API 用的；`wrangler login` 只给 Wrangler CLI 自己用，不能替代这个 Token
 
+### 额外准备项
+
+- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` **强烈建议提供**。提供后，`init` 会自动启用 Email Routing 并配置 catch-all 规则。如果不提供，`init` 仍然可以完成其他所有步骤，但你需要手动去 Cloudflare 控制台完成 Email Routing 的启用和 catch-all 配置。
+- 纯本地部署不需要 GitHub 仓库。
+- GitHub-only 和混合部署需要 GitHub 仓库。
+- 如果你准备走混合部署，装好 `gh` CLI 会省掉手动填写 GitHub Secrets / Variables 的步骤。
+
 ### AI 读者的输入规则
 
 最低输入：
@@ -42,15 +46,18 @@
 到了 Worker 持续部署这一步，还需要：
 - `D1_DATABASE_ID`
 
-可选输入：
+强烈建议输入：
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`
-  到了 Email Routing、批量清理或高级排查这一步时，如果给了这组值，AI 可以直接继续；没给时，再提示用户补或者改走控制台。
+  提供后，AI 可以直接完成 Email Routing 的启用、catch-all 配置和后续排查；不提供时，AI 仍然可以继续做其他步骤，但 Email Routing 相关动作要改走 Cloudflare 控制台。
+
+按需输入：
 - `gh` CLI
   如果 AI 检测到本机有 `gh` 且已经登录，就直接用它写 GitHub Secrets / Variables；没有再提示用户手动去网页设置。
 
 推荐推进方式：
 - 一开始只要求最低输入。
 - AI 先检测 `gh`、`CF_GLOBAL_API_KEY`、`CF_EMAIL` 是否存在。
+- `CF_EMAIL`、`CF_GLOBAL_API_KEY` 这组值优先提前准备好，避免初始化走到 Email Routing 时再停下来补。
 - 检测到就直接用，没检测到再在真正卡住的节点提示，不在开头一次性抛一长串要求。
 
 ---
@@ -63,8 +70,9 @@
 
 1. 复制 `.env.local.example` 为 `.env.local`
 2. 先填最小必需项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`
-3. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
-4. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
+3. 强烈建议同时填上 `CF_EMAIL`、`CF_GLOBAL_API_KEY`
+4. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
+5. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
 
 这几个本地入口都会先读 `.env.local`：
 
@@ -72,6 +80,8 @@
 - `pnpm render:wrangler`
 - `pnpm setup:github`
 - `pnpm sync:dev-vars`
+- `pnpm deploy:worker`
+- `pnpm deploy:frontend`
 
 如果 shell 里已经有同名环境变量，shell 的值优先，`.env.local` 不会覆盖它。
 
@@ -119,11 +129,29 @@
 - 再用 `setup:github` 把仓库配置写进去
 - 后续 push 到 GitHub 自动部署
 
+推荐工作方式：
+- 日常开发和调试放在本地
+- push 到 GitHub 后交给 CI 自动部署到 Cloudflare
+- `pnpm deploy:worker`、`pnpm deploy:frontend` 作为本地调试和应急通道保留，不当成主路径
+
 ---
 
 ## 二、本地部署（无 GitHub）
 
 > 图例：🤖 = CLI/脚本可自动  |  🧑 = 必须手动  |  ⚡ = `gh` CLI 可自动（否则手动）
+
+**开始前请准备好：**
+
+- CF 账号，且至少有一个域名已托管在 Cloudflare
+- Node.js >= 20，pnpm >= 10
+- Cloudflare API Token
+- Cloudflare Account ID
+- Cloudflare Zone ID
+- Cloudflare 账号邮箱 `CF_EMAIL` 和 Global API Key `CF_GLOBAL_API_KEY`，这组值强烈建议提前准备好
+- 以上值已填入项目根目录的 `.env.local`
+- 已执行 `npx wrangler login` 完成浏览器授权
+
+不需要 GitHub 账号或仓库。
 
 ### 步骤 1：安装依赖 🤖
 
@@ -158,6 +186,10 @@ pnpm run init
 - ✅ 启用 Email Routing
 - ✅ 把 catch-all 指到 `mails-worker`
 
+如果没提供 `CF_EMAIL` + `CF_GLOBAL_API_KEY`：
+- `init` 仍然会把 D1、Worker、Pages、前端部署这些步骤做完
+- Email Routing 的启用和 catch-all 配置要改为手动去 Cloudflare 控制台完成
+
 如果还提供了 `GITHUB_REPOSITORY`，并且本机 `gh` 已登录，脚本还会继续：
 - ✅ 写 GitHub Secrets / Variables
 
@@ -169,7 +201,7 @@ pnpm run init
 >
 > `init` 可以重跑，用于重新对齐基础设施；默认会复用 `.env.local` 里的 `JWT_SECRET`。只有你手动改掉这个值，现有后台登录态才会失效。
 
-### 步骤 4：设置 GitHub Secrets（CI/CD 自动部署）⚡
+### 步骤 4：如果后面要接 GitHub 自动部署，再写 GitHub Secrets ⚡
 
 有 `gh` CLI 时可以自动设置：
 
@@ -243,11 +275,36 @@ Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实
 5. 用 **地址** 页面创建一个真实地址
 6. 往这个地址发一封测试邮件，确认能在 **邮件** 页面看到
 
+### 后续重部署
+
+首次 `init` 完成后，你改了代码想重新部署，不需要再跑 `init`，用下面两条命令：
+
+```bash
+# 重部署 Worker（改了 worker/ 下的代码后）
+pnpm deploy:worker
+
+# 重部署前端（改了 frontend/ 下的代码后）
+pnpm deploy:frontend
+```
+
+两条命令都会自动读 `.env.local`。如果你后来绑了 Worker 自定义域名，想让前端用它作为 API 地址，在 `.env.local` 里填上 `VITE_API_BASE_URL=https://你的自定义域名`，再跑 `pnpm deploy:frontend`。
+
 ---
 
 ---
 
 ## 三、GitHub-only 部署（无需先拉本地）
+
+**开始前请准备好：**
+
+- CF 账号，且至少有一个域名已托管在 Cloudflare
+- GitHub 账号和一个你能控制的仓库
+- 仓库已启用 GitHub Actions
+- Cloudflare API Token
+- Cloudflare Account ID
+- Cloudflare Zone ID
+- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY`，这组值强烈建议提前准备好
+- 你已经知道要填进 workflow 的 Worker 名和 Pages 项目名，或者准备接受默认值
 
 ### 步骤 1：准备自己的仓库 🧑
 
@@ -278,8 +335,8 @@ Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实
 |------|----------|------|
 | `CLOUDFLARE_ACCOUNT_ID` | 必需 | Cloudflare Account ID |
 | `CLOUDFLARE_API_TOKEN` | 必需 | Cloudflare API Token |
-| `CF_EMAIL` | 可选 | 给 Email Routing 自动化用 |
-| `CF_GLOBAL_API_KEY` | 可选 | 给 Email Routing 自动化用 |
+| `CF_EMAIL` | 强烈建议 | 提供后 workflow 能自动启用 Email Routing 并配置 catch-all |
+| `CF_GLOBAL_API_KEY` | 强烈建议 | 提供后 workflow 能自动启用 Email Routing 并配置 catch-all |
 
 ### 步骤 4：运行首次初始化 workflow 🧑
 
@@ -294,7 +351,7 @@ Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实
 - 部署 Worker
 - 创建或确认 Pages 项目
 - 部署前端到 `pages.dev`
-- 可选启用 Email Routing
+- 如果提供了 `CF_EMAIL` + `CF_GLOBAL_API_KEY`，自动启用 Email Routing 并配置 catch-all
 - 把后续自动部署要用的 GitHub Variables 写回仓库
 
 这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施，但会刷新 `JWT_SECRET`。
@@ -326,6 +383,13 @@ Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实
 
 ## 四、混合部署（先本地，后 GitHub）
 
+**开始前请准备好：**
+
+- 本地部署那一套前置条件已经准备好，尤其是 `.env.local`
+- GitHub 账号和一个你能控制的仓库
+- 如果想自动写 GitHub Secrets / Variables，准备好 `gh` CLI 并完成登录
+- 如果想让混合部署真正顺手，`CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 最好在一开始就写进 `.env.local`
+
 这条路径的顺序是：
 
 1. 本地按上面的“本地部署”跑通一次  
@@ -333,8 +397,7 @@ Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实
 3. 把代码 push 到自己的 GitHub 仓库  
 4. 后续交给 `Deploy Worker` / `Deploy Frontend`
 
-混合部署的意义只有一个：  
-第一次调试和排错更顺手，后面上线和更新更省事。
+混合部署推荐的日常工作方式是：本地开发和调试，push 到 GitHub 后由 CI 自动部署到 Cloudflare。本地重部署命令 `pnpm deploy:worker`、`pnpm deploy:frontend` 保留给调试和应急，不当成主路径。
 
 ---
 
@@ -452,6 +515,10 @@ GitHub-only 部署：
 🧑 运行 Bootstrap Cloudflare
 🧑 打开 Pages 默认地址，创建管理员
 🧑 在设置页绑定 Worker / Pages 自定义域名
+
+本地重部署：
+🤖 pnpm deploy:worker      # 改了 Worker 代码后
+🤖 pnpm deploy:frontend    # 改了前端代码后
 
 长期更新：
 ⚡ push 到自己的 GitHub 仓库，自动部署
