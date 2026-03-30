@@ -27,6 +27,8 @@
 - API 路由固定为 `/api/*`（JWT）+ `/call/*`（API Key）
 - `wrangler.toml` 不再提交 Git，本地和 CI/CD 都按模板现场生成
 - `scripts/init.ts` 现在只准备基础设施：D1、Worker、Pages 默认入口、可选 Email Routing 和可选 GitHub 配置
+- 本地参数改成根目录 `.env.local` 单一来源；`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件
+- `init` 会把 `D1_DATABASE_ID`、`JWT_SECRET` 回写到 `.env.local`，再生成 `worker/wrangler.toml` 和 `worker/.dev.vars`
 - Worker CORS 改为：模板默认来源 + 数据库里的运行时追加来源；设置页新增/删除 Pages 自定义域名时会同步维护
 - Pages 自定义域名绑定继续走：读取 Pages 项目真实 subdomain → 自动创建或更新 CNAME → 重试验证，并在设置页显示验证/证书状态
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署

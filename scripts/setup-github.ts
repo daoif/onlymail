@@ -1,3 +1,4 @@
+import './lib/local-config'
 import { execSync } from 'node:child_process'
 import { CloudflareApiClient } from './lib/cloudflare-api'
 

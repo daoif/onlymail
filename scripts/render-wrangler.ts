@@ -1,3 +1,4 @@
+import './lib/local-config'
 import { resolveWranglerConfigFromEnv, writeWranglerToml } from './lib/wrangler-config'
 
 function main() {

@@ -67,8 +67,11 @@ GitHub 在这条路径里不是必需项。
 
 ```bash
 pnpm install
+cp .env.local.example .env.local
 pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 Pages，默认入口走 workers.dev + pages.dev
 ```
+
+本地参数统一放在项目根目录的 `.env.local`。`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件；如果 shell 里已经有同名环境变量，shell 的值优先。
 
 `worker/wrangler.toml` 是本地运行配置，会由模板生成，不提交 Git。
 
@@ -76,17 +79,16 @@ pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 
 
 如果你不想先拉到本地，可以直接走上面的 GitHub-only 部署，第一次运行 `Bootstrap Cloudflare` workflow 即可。
 
-`init` 可以重复运行，用来重新对齐 D1、Worker、Pages 这些基础设施；但它会刷新 `JWT_SECRET`，现有后台登录态会失效。
+`init` 可以重复运行，用来重新对齐 D1、Worker、Pages 这些基础设施。默认会复用 `.env.local` 里的 `JWT_SECRET`；只有你手动改掉它，现有后台登录态才会失效。
 
 ### 本地开发
 
-先复制 `worker/.dev.vars.example` 为 `worker/.dev.vars`，至少填好 `JWT_SECRET`。
+先复制 `.env.local.example` 为 `.env.local`，填好本地需要的参数，再生成 `worker/.dev.vars`。
 
 ```bash
-# 先生成 worker/wrangler.toml
-CF_DEFAULT_ZONE_ID="你的ZoneID" \
-CF_ACCOUNT_ID="你的AccountID" \
-D1_DATABASE_ID="你的database_id" \
+pnpm sync:dev-vars
+
+# 再生成 worker/wrangler.toml
 pnpm render:wrangler
 
 # 启动后端
@@ -98,15 +100,15 @@ pnpm --dir frontend dev
 
 首次打开登录页时，如果系统还没有管理员账号，页面会先进入初始化流程。
 
-只调本地页面和本地 API 时，不需要先跑 `init`。`init` 是给第一次接到真实 Cloudflare 环境时用的。
+只调本地页面和本地 API 时，不需要先跑 `init`。`init` 是给第一次接到真实 Cloudflare 环境时用的；本地开发只要 `.env.local` 已填好，再跑 `pnpm sync:dev-vars` 和 `pnpm render:wrangler`。
 
-如果你在本地还要测试域名、Pages、自定义域名这些 Cloudflare 管理能力，再把下面这些补进 `worker/.dev.vars`：
+如果你在本地还要测试域名、Pages、自定义域名这些 Cloudflare 管理能力，再把下面这些补进 `.env.local`：
 - `CF_API_TOKEN`
 - `CF_ACCOUNT_ID`
 - `CF_DEFAULT_ZONE_ID`
 - `CF_DEFAULT_PAGES_PROJECT`
 
-如果你在本地还要继续测 Email Routing 的启用、关闭、清理，再额外补：
+如果你在本地还要继续测 Email Routing 的启用、关闭、清理，再额外补进 `.env.local`：
 - `CF_EMAIL`（也兼容旧名字 `CF_AUTH_EMAIL`）
 - `CF_GLOBAL_API_KEY`
 
@@ -124,9 +126,9 @@ pnpm --dir frontend dev
 - Cloudflare API Token
 - Cloudflare Account ID
 - Cloudflare Zone ID
-- D1 Database ID
 
 可选增强：
+- `D1_DATABASE_ID`：手动跑 `pnpm render:wrangler` 时必填；跑过一次 `pnpm run init` 后会自动回写到 `.env.local`
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`：让 AI 或脚本继续处理 Email Routing 的启用、关闭、清理和排查
 - `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤
 - `ALLOWED_ORIGINS`：需要手动覆盖默认来源时再提供；默认会按 Pages 项目的 `pages.dev` 地址和本地开发地址生成

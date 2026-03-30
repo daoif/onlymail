@@ -6,12 +6,13 @@
  * 自动完成：
  * 1. 创建 D1 数据库 → 拿到 database_id
  * 2. 创建或确认 Pages 项目，准备默认 pages.dev 入口
- * 3. 从模板生成 wrangler.toml
- * 4. 设置 Worker secrets
- * 5. 部署 Worker，准备默认 workers.dev 入口
- * 6. 构建并部署前端
- * 7. 如果提供全局鉴权，则启用 Email Routing 并配置 catch-all
- * 8. 如果检测到 gh 和仓库名，则写 GitHub Secrets / Variables
+ * 3. 把本地参数回写到 .env.local，并从模板生成 wrangler.toml
+ * 4. 生成 worker/.dev.vars
+ * 5. 设置 Worker secrets
+ * 6. 部署 Worker，准备默认 workers.dev 入口
+ * 7. 构建并部署前端
+ * 8. 如果提供全局鉴权，则启用 Email Routing 并配置 catch-all
+ * 9. 如果检测到 gh 和仓库名，则写 GitHub Secrets / Variables
  *
  * 前置条件：
  * - pnpm、wrangler CLI 已安装
@@ -24,18 +25,15 @@
  *   这部分留给应用内的初始化引导和设置页
  */
 
+import { ROOT_DIR, WORKER_DIR, ensureJwtSecret, writeLocalEnvValues } from './lib/local-config'
 import { execSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { randomBytes } from 'node:crypto'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import { CloudflareApiClient } from './lib/cloudflare-api'
+import { writeWorkerDevVars } from './lib/dev-vars'
 import { writeWranglerToml } from './lib/wrangler-config'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const ROOT_DIR = resolve(__dirname, '..')
 const FRONTEND_DIR = resolve(ROOT_DIR, 'frontend')
-const WORKER_DIR = resolve(__dirname, '../worker')
 const TOML_PATH = resolve(WORKER_DIR, 'wrangler.toml')
 const SCHEMA_PATH = resolve(WORKER_DIR, 'db/schema.sql')
 const DB_NAME = 'mails-db'
@@ -77,10 +75,6 @@ function prompt(message: string): string {
     // 非交互模式
   }
   return input
-}
-
-function generateSecret(length = 32): string {
-  return randomBytes(length).toString('hex')
 }
 
 function detectExistingDatabaseId() {
@@ -244,6 +238,7 @@ async function main() {
     process.exit(1)
   }
 
+  const jwtSecret = ensureJwtSecret()
   let pagesDefaultUrl = ''
   let allowedOrigins = normalizeOriginList(process.env.ALLOWED_ORIGINS || '', 'http://localhost:5173')
   let apiBaseUrl = process.env.VITE_API_BASE_URL || ''
@@ -276,8 +271,20 @@ async function main() {
     console.log('\n⚠️  未检测到 CF_API_TOKEN，跳过 Pages 项目和默认入口自动探测')
   }
 
-  // 4. 从模板生成 wrangler.toml
-  console.log('\n📝 步骤 3：生成 wrangler.toml...')
+  // 4. 同步本地配置并生成 wrangler.toml
+  console.log('\n📝 步骤 3：同步 .env.local 并生成 wrangler.toml...')
+  const envLocalPath = writeLocalEnvValues({
+    CF_API_TOKEN: cfApiToken,
+    CF_ACCOUNT_ID: accountId,
+    CF_DEFAULT_ZONE_ID: zoneId,
+    CF_EMAIL: cfEmail,
+    CF_GLOBAL_API_KEY: cfGlobalApiKey,
+    D1_DATABASE_ID: databaseId,
+    CF_DEFAULT_WORKER_NAME: workerName,
+    CF_DEFAULT_PAGES_PROJECT: pagesProjectName,
+    GITHUB_REPOSITORY: githubRepo,
+    JWT_SECRET: jwtSecret,
+  })
   writeWranglerToml({
     zoneId,
     accountId,
@@ -287,10 +294,16 @@ async function main() {
     pagesProjectName,
     allowedOrigins,
   })
+  console.log(`✅ 已同步: ${envLocalPath}`)
   console.log(`✅ 已生成: ${TOML_PATH}`)
 
-  // 5. 初始化数据库 schema
-  console.log('\n🗃️  步骤 4：初始化数据库 schema...')
+  // 5. 生成 worker/.dev.vars
+  console.log('\n🧩 步骤 4：生成 worker/.dev.vars...')
+  const devVarsPath = writeWorkerDevVars()
+  console.log(`✅ 已生成: ${devVarsPath}`)
+
+  // 6. 初始化数据库 schema
+  console.log('\n🗃️  步骤 5：初始化数据库 schema...')
   try {
     run(`npx wrangler d1 execute ${DB_NAME} --remote --file=db/schema.sql`)
     console.log('✅ Schema 初始化完成')
@@ -304,9 +317,8 @@ async function main() {
     }
   }
 
-  // 6. 设置 Secrets
-  console.log('\n🔐 步骤 5：设置 Secrets...')
-  const jwtSecret = generateSecret()
+  // 7. 设置 Secrets
+  console.log('\n🔐 步骤 6：设置 Secrets...')
   console.log('生成 JWT_SECRET...')
 
   try {
@@ -346,8 +358,8 @@ async function main() {
     }
   }
 
-  // 7. 部署 Worker
-  console.log('\n🚀 步骤 6：部署 Worker...')
+  // 8. 部署 Worker
+  console.log('\n🚀 步骤 7：部署 Worker...')
   try {
     run('npx wrangler deploy')
     console.log('✅ Worker 部署完成')
@@ -372,7 +384,7 @@ async function main() {
   }
 
   if (client) {
-    console.log('\n🌐 步骤 7：确认默认入口并部署前端...')
+    console.log('\n🌐 步骤 8：确认默认入口并部署前端...')
     try {
       await client.ensureWorkerSubdomain(context.accountId, context.workerName)
       if (context.apiBaseUrl) {
@@ -392,7 +404,7 @@ async function main() {
   }
 
   if (cfEmail && cfGlobalApiKey && client) {
-    console.log('\n📮 步骤 8：启用 Email Routing...')
+    console.log('\n📮 步骤 9：启用 Email Routing...')
     try {
       await client.enableEmailRouting(context.zoneId)
       await client.updateCatchAll(context.zoneId, context.workerName)
@@ -405,7 +417,7 @@ async function main() {
   }
 
   if (canUseGhSetup(githubRepo)) {
-    console.log('\n🔧 步骤 9：写入 GitHub Secrets / Variables...')
+    console.log('\n🔧 步骤 10：写入 GitHub Secrets / Variables...')
     try {
       execSync('pnpm setup:github', {
         cwd: ROOT_DIR,

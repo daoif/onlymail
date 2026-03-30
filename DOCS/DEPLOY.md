@@ -55,6 +55,33 @@
 
 ---
 
+## 本地参数统一配置
+
+本地开发和本地脚本现在统一读项目根目录的 `.env.local`。
+
+先做这一步：
+
+1. 复制 `.env.local.example` 为 `.env.local`
+2. 先填最小必需项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`
+3. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
+4. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
+
+这几个本地入口都会先读 `.env.local`：
+
+- `pnpm run init`
+- `pnpm render:wrangler`
+- `pnpm setup:github`
+- `pnpm sync:dev-vars`
+
+如果 shell 里已经有同名环境变量，shell 的值优先，`.env.local` 不会覆盖它。
+
+`init` 首次跑完后会自动把 `D1_DATABASE_ID` 和 `JWT_SECRET` 回写到 `.env.local`，并顺手生成：
+
+- `worker/wrangler.toml`
+- `worker/.dev.vars`
+
+---
+
 ## 一、先选部署方式
 
 ### 方式 A：本地部署
@@ -113,9 +140,6 @@ npx wrangler login    # 浏览器弹出授权页面，供 Wrangler CLI 自己使
 ### 步骤 3：运行初始化脚本 🤖
 
 ```bash
-CF_DEFAULT_ZONE_ID="你的ZoneID" \
-CF_ACCOUNT_ID="你的AccountID" \
-CF_API_TOKEN="你的cfut_xxx" \
 pnpm run init
 ```
 
@@ -143,20 +167,13 @@ pnpm run init
 >
 > 这里的 `init` 只准备基础设施；Worker / Pages 自定义域名不在这一步处理，留给应用里的设置页。
 >
-> `init` 可以重跑，用于重新对齐基础设施；但会刷新 `JWT_SECRET`，现有后台登录态会失效。
+> `init` 可以重跑，用于重新对齐基础设施；默认会复用 `.env.local` 里的 `JWT_SECRET`。只有你手动改掉这个值，现有后台登录态才会失效。
 
 ### 步骤 4：设置 GitHub Secrets（CI/CD 自动部署）⚡
 
 有 `gh` CLI 时可以自动设置：
 
 ```bash
-GITHUB_REPOSITORY='你的用户名/mails' \
-CLOUDFLARE_ACCOUNT_ID='你的AccountID' \
-CLOUDFLARE_API_TOKEN='你创建的cfut_xxx' \
-CF_DEFAULT_ZONE_ID='你的ZoneID' \
-D1_DATABASE_ID='你的database_id' \
-CF_DEFAULT_WORKER_NAME='mails-worker' \
-CF_DEFAULT_PAGES_PROJECT='mails-frontend' \
 pnpm setup:github
 ```
 
@@ -392,13 +409,12 @@ wrangler deploy / pages deploy
 
 ## 八、本地开发
 
-先复制 `worker/.dev.vars.example` 为 `worker/.dev.vars`，至少填好 `JWT_SECRET`。
+先确保 `.env.local` 已填好，然后生成 `worker/.dev.vars` 和 `worker/wrangler.toml`。
 
 ```bash
-# 配置
-CF_DEFAULT_ZONE_ID="你的ZoneID" \
-CF_ACCOUNT_ID="你的AccountID" \
-D1_DATABASE_ID="你的database_id" \
+pnpm sync:dev-vars
+
+# 生成 worker/wrangler.toml
 pnpm render:wrangler
 
 # 启动后端
@@ -411,11 +427,11 @@ pnpm --dir frontend dev   # http://localhost:5173（已代理到 Worker）
 本地开发分两档：
 
 - 只调本地页面和本地 API：
-  只需要 `worker/wrangler.toml` + `worker/.dev.vars` 里的 `JWT_SECRET`。这时不需要先跑 `init`，也不需要先创建线上 D1。
+  只需要 `.env.local` 里的 `JWT_SECRET`，再运行 `pnpm sync:dev-vars` 和 `pnpm render:wrangler`。这时不需要先跑 `init`，也不需要先创建线上 D1。
 - 本地还要调 Cloudflare 管理能力：
-  再补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`、`CF_DEFAULT_PAGES_PROJECT`。
+  再往 `.env.local` 里补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`、`CF_DEFAULT_PAGES_PROJECT`。
 - 本地还要调 Email Routing：
-  再补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。`CF_AUTH_EMAIL` 这个旧名字也兼容。
+  再往 `.env.local` 里补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。`CF_AUTH_EMAIL` 这个旧名字也兼容。
 
 ---
 
@@ -424,6 +440,7 @@ pnpm --dir frontend dev   # http://localhost:5173（已代理到 Worker）
 ```
 🧑 创建 CF API Token（带正确权限）
 本地部署：
+🧑 复制 .env.local.example 为 .env.local，并填好参数
 🧑 wrangler login
 🤖 pnpm install
 🤖 pnpm run init

@@ -41,6 +41,7 @@ export function renderWranglerToml(input: WranglerConfigInput): string {
   const template = readFileSync(TEMPLATE_PATH, 'utf-8')
   const rendered = template
     .replace(/name = "mails-worker"/, `name = "${input.workerName || 'mails-worker'}"`)
+    .replace(/CF_DEFAULT_WORKER_NAME = "mails-worker"/, `CF_DEFAULT_WORKER_NAME = "${input.workerName || 'mails-worker'}"`)
     .replace('__ZONE_ID__', input.zoneId)
     .replace('__ACCOUNT_ID__', input.accountId)
     .replace('__PAGES_PROJECT_NAME__', input.pagesProjectName || 'mails-frontend')

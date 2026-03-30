@@ -6,6 +6,7 @@
     "init": "npx tsx scripts/init.ts",
     "render:wrangler": "npx tsx scripts/render-wrangler.ts",
     "setup:github": "npx tsx scripts/setup-github.ts",
+    "sync:dev-vars": "tsx scripts/sync-dev-vars.ts",
     "build": "pnpm --dir worker run build && pnpm --dir frontend run build && pnpm --dir sdk/nodejs run build",
     "build:worker": "pnpm --dir worker run build",
     "build:frontend": "pnpm --dir frontend run build",
@@ -14,6 +15,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "dotenv": "^17.3.1",
     "tsx": "^4.21.0"
   }
 }
