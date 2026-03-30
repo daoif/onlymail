@@ -142,11 +142,6 @@ async function main() {
       required: false,
       kind: 'secret',
     },
-    CF_DEFAULT_ZONE_ID: {
-      value: readValue('CF_DEFAULT_ZONE_ID'),
-      required: true,
-      kind: 'variable',
-    },
     D1_DATABASE_ID: {
       value: readValue('D1_DATABASE_ID', 'DB_ID'),
       required: true,

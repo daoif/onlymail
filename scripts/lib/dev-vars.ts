@@ -7,7 +7,6 @@ const DEV_VAR_KEYS = [
   'CF_EMAIL',
   'CF_GLOBAL_API_KEY',
   'CF_ACCOUNT_ID',
-  'CF_DEFAULT_ZONE_ID',
   'CF_DEFAULT_WORKER_NAME',
   'CF_DEFAULT_PAGES_PROJECT',
 ] as const
@@ -42,7 +41,6 @@ export function resolveDevVars(env: NodeJS.ProcessEnv = process.env) {
     CF_EMAIL: readValue(env, 'CF_EMAIL', 'CF_AUTH_EMAIL'),
     CF_GLOBAL_API_KEY: readValue(env, 'CF_GLOBAL_API_KEY'),
     CF_ACCOUNT_ID: readValue(env, 'CF_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID'),
-    CF_DEFAULT_ZONE_ID: readValue(env, 'CF_DEFAULT_ZONE_ID'),
     CF_DEFAULT_WORKER_NAME: readValue(env, 'CF_DEFAULT_WORKER_NAME') || 'mails-worker',
     CF_DEFAULT_PAGES_PROJECT: readValue(env, 'CF_DEFAULT_PAGES_PROJECT') || 'mails-frontend',
   }

@@ -8,9 +8,7 @@ import { CloudflareBase } from './base'
 type ZoneResult = { id: string; name: string; status: string; name_servers: string[] }
 
 export class CloudflareDnsProvider extends CloudflareBase implements DnsProvider {
-  async resolveZoneId(zoneName: string, zoneId?: string) {
-    if (zoneId) return zoneId
-
+  async resolveZoneId(zoneName: string) {
     const authMode = this.auth.token ? 'token' : 'global'
     const normalized = zoneName.trim().toLowerCase().replace(/\.+$/, '')
     const labels = normalized.split('.').filter(Boolean)

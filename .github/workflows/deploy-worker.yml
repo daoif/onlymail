@@ -29,7 +29,6 @@ jobs:
         run: pnpm render:wrangler
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CF_DEFAULT_ZONE_ID: ${{ vars.CF_DEFAULT_ZONE_ID }}
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
           CF_DEFAULT_WORKER_NAME: ${{ vars.CF_DEFAULT_WORKER_NAME }}
           CF_DEFAULT_PAGES_PROJECT: ${{ vars.CF_DEFAULT_PAGES_PROJECT }}

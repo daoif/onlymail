@@ -3,10 +3,6 @@ name: Bootstrap Cloudflare
 on:
   workflow_dispatch:
     inputs:
-      cf_default_zone_id:
-        description: Cloudflare Zone ID
-        required: true
-        type: string
       cf_default_worker_name:
         description: Worker 名称
         required: false
@@ -49,6 +45,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_EMAIL: ${{ secrets.CF_EMAIL }}
           CF_GLOBAL_API_KEY: ${{ secrets.CF_GLOBAL_API_KEY }}
-          CF_DEFAULT_ZONE_ID: ${{ inputs.cf_default_zone_id }}
           CF_DEFAULT_WORKER_NAME: ${{ inputs.cf_default_worker_name }}
           CF_DEFAULT_PAGES_PROJECT: ${{ inputs.cf_default_pages_project }}

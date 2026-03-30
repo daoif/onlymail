@@ -70,7 +70,7 @@
         <div class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
           <div>
             <h2 class="text-lg font-semibold text-slate-900">Worker API 域名</h2>
-            <p class="mt-1 text-sm text-slate-500">为后端 API 绑定自定义域名（如 mails-api.你的域名 → Worker）。默认会按域名自动解析 Zone；只有你要手动覆盖时才填 Zone ID。</p>
+            <p class="mt-1 text-sm text-slate-500">为后端 API 绑定自定义域名（如 mails-api.你的域名 → Worker）。系统会按域名自动解析 Zone，并按当前 Cloudflare 账号完成绑定。</p>
           </div>
 
           <div v-if="workerDomainsLoading" class="py-4 text-center text-sm text-slate-500">加载中…</div>
@@ -100,8 +100,7 @@
 
           <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="submitAddWorkerDomain">
             <input v-model="newWorkerHostname" class="input-base flex-1" type="text" placeholder="mails-api.你的域名" />
-            <input v-model="newWorkerZoneId" class="input-base sm:w-56" type="text" placeholder="Zone ID（可选）" />
-            <button class="button-primary whitespace-nowrap" type="submit">绑定</button>
+            <button class="button-primary whitespace-nowrap sm:w-28" type="submit">绑定</button>
           </form>
           <p v-if="workerDomainMsg" class="text-sm text-slate-500">{{ workerDomainMsg }}</p>
           <p v-if="workerDomainErr" class="text-sm text-rose-600">{{ workerDomainErr }}</p>
@@ -146,8 +145,7 @@
 
           <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="submitAddPagesDomain">
             <input v-model="newPagesDomain" class="input-base flex-1" type="text" placeholder="mails.你的域名" />
-            <input v-model="newPagesZoneId" class="input-base sm:w-56" type="text" placeholder="Zone ID（可选）" />
-            <button class="button-primary whitespace-nowrap" type="submit">绑定</button>
+            <button class="button-primary whitespace-nowrap sm:w-28" type="submit">绑定</button>
           </form>
           <p class="text-sm text-slate-500">如果这个域名之前已经有旧的 CNAME，系统会自动改到当前 Pages 项目的真实 subdomain。</p>
           <p v-if="pagesDomainMsg" class="text-sm text-slate-500">{{ pagesDomainMsg }}</p>
@@ -224,7 +222,6 @@ const passwordSubmitting = ref(false)
 const workerDomains = ref<CustomDomainEntry[]>([])
 const workerDomainsLoading = ref(true)
 const newWorkerHostname = ref('')
-const newWorkerZoneId = ref('')
 const workerDomainMsg = ref('')
 const workerDomainErr = ref('')
 const pendingRemoveWorkerDomain = ref<CustomDomainEntry | null>(null)
@@ -233,7 +230,6 @@ const pendingRemoveWorkerDomain = ref<CustomDomainEntry | null>(null)
 const pagesDomains = ref<PagesDomainEntry[]>([])
 const pagesDomainsLoading = ref(true)
 const newPagesDomain = ref('')
-const newPagesZoneId = ref('')
 
 const pagesDomainMsg = ref('')
 const pagesDomainErr = ref('')
@@ -370,10 +366,9 @@ async function submitAddWorkerDomain() {
   workerDomainErr.value = ''
   if (!newWorkerHostname.value.trim()) { workerDomainErr.value = '请输入域名'; return }
   try {
-    const r = await addCustomDomain(authStore.token, newWorkerHostname.value.trim(), newWorkerZoneId.value.trim() || undefined)
+    const r = await addCustomDomain(authStore.token, newWorkerHostname.value.trim())
     workerDomainMsg.value = `域名 ${r.data.hostname} 已绑定。`
     newWorkerHostname.value = ''
-    newWorkerZoneId.value = ''
     await loadWorkerDomains()
   } catch (err) {
     workerDomainErr.value = err instanceof ApiError ? err.message : '绑定域名失败'
@@ -413,10 +408,9 @@ async function submitAddPagesDomain() {
   pagesDomainErr.value = ''
   if (!newPagesDomain.value.trim()) { pagesDomainErr.value = '请输入域名'; return }
   try {
-    const r = await addPagesDomain(authStore.token, newPagesDomain.value.trim(), newPagesZoneId.value.trim() || undefined)
+    const r = await addPagesDomain(authStore.token, newPagesDomain.value.trim())
     pagesDomainMsg.value = `Pages 域名 ${r.data.name} 已提交，系统已对齐 CNAME 并触发重试验证。HTTP 先通过后，证书再等 5 到 10 分钟都算正常。`
     newPagesDomain.value = ''
-    newPagesZoneId.value = ''
     await loadPagesDomains()
   } catch (err) {
     pagesDomainErr.value = err instanceof ApiError ? err.message : '绑定 Pages 域名失败'

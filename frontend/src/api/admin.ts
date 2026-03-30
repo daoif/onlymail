@@ -97,12 +97,12 @@ export function getDomains(token: string, params?: URLSearchParams | Record<stri
   return apiRequest<ApiEnvelope<DomainRecord[]>>(`/api/domains${toSearchString(params)}`, {}, token)
 }
 
-export function bootstrapDomain(token: string, rootDomain: string, zoneId?: string) {
+export function bootstrapDomain(token: string, rootDomain: string) {
   return apiRequest<ApiEnvelope<DomainRecord>>(
     '/api/domains/bootstrap',
     {
       method: 'POST',
-      body: JSON.stringify({ rootDomain, zoneId: zoneId || undefined }),
+      body: JSON.stringify({ rootDomain }),
     },
     token,
   )
@@ -159,12 +159,12 @@ export function getCustomDomains(token: string) {
   return apiRequest<ApiEnvelope<CustomDomainEntry[]>>('/api/settings/custom-domains', {}, token)
 }
 
-export function addCustomDomain(token: string, hostname: string, zoneId?: string) {
+export function addCustomDomain(token: string, hostname: string) {
   return apiRequest<ApiEnvelope<CustomDomainEntry>>(
     '/api/settings/custom-domains',
     {
       method: 'POST',
-      body: JSON.stringify({ hostname, zoneId: zoneId || undefined }),
+      body: JSON.stringify({ hostname }),
     },
     token,
   )
@@ -198,12 +198,12 @@ export function getPagesDomains(token: string) {
   return apiRequest<ApiEnvelope<PagesDomainEntry[]>>('/api/settings/pages-domains', {}, token)
 }
 
-export function addPagesDomain(token: string, domain: string, zoneId?: string) {
+export function addPagesDomain(token: string, domain: string) {
   return apiRequest<ApiEnvelope<PagesDomainEntry>>(
     '/api/settings/pages-domains',
     {
       method: 'POST',
-      body: JSON.stringify({ domain, zoneId: zoneId || undefined }),
+      body: JSON.stringify({ domain }),
     },
     token,
   )

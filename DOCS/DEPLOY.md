@@ -30,6 +30,7 @@
 
 ### 额外准备项
 
+- 当前实例按单一 Cloudflare 账号设计。域名相关操作都按域名自动解析 Zone，不支持靠手填 Zone ID 跨账号混用凭证。
 - `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 对只做 Worker / Pages / D1 初始化不是硬必填；但对根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作是硬必填。不给时，初始化还能继续，但 Email Routing 相关动作不能自动化。
 - 纯本地部署不需要 GitHub 仓库。
 - GitHub-only 和混合部署需要 GitHub 仓库。
@@ -47,8 +48,6 @@
 只要要做 Email Routing 自动化，就应当提前提供：
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`
   这组值不是 `init` 的硬必填；但只要要做根域名 bootstrap、子域名创建或删除、catch-all、规则创建删除，就必须有。当前 Cloudflare API Token 不能覆盖这组接口，所以这里不是兜底，是主鉴权。
-- `CF_DEFAULT_ZONE_ID`
-  这个值不再是本地部署和本地开发的硬必填；主要用于 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写默认 Zone 变量，以及给后续 Email Routing 自动化保留一个默认 Zone 变量。
 
 按需输入：
 - `gh` CLI
@@ -70,9 +69,8 @@
 1. 复制 `.env.local.example` 为 `.env.local`
 2. 先填最小必需项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`
 3. 如果你要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，同时填上 `CF_EMAIL`、`CF_GLOBAL_API_KEY`
-4. 如果你要用 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写默认 Zone 变量，再补 `CF_DEFAULT_ZONE_ID`
-5. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
-6. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`；这条线继续沿用 GitHub workflow 里的 `CF_DEFAULT_ZONE_ID` 变量，所以还要把这个值一并准备好
+4. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
+5. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
 
 这几个本地入口都会先读 `.env.local`：
 
@@ -147,8 +145,6 @@
 - Cloudflare API Token
 - Cloudflare Account ID
   获取位置：CF 控制台 → 点进任意已托管域名 → 右下角 API 区域
-- `CF_DEFAULT_ZONE_ID`（按需）
-  获取位置：同一处 API 区域里的 Zone ID。这个值现在不是本地部署的硬必填；主要用于 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写默认 Zone 变量。
 - Cloudflare 账号邮箱 `CF_EMAIL` 和 Global API Key `CF_GLOBAL_API_KEY`
   如果你只做 Worker / Pages / D1 初始化，可以先不填；如果你接下来要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，这组值必须提前准备好
 - 以上值已填入项目根目录的 `.env.local`
@@ -188,7 +184,7 @@ pnpm run init
 如果还提供了 `GITHUB_REPOSITORY`，并且本机 `gh` 已登录，脚本还会继续：
 - ✅ 写 GitHub Secrets / Variables
 
-> 如果你的 Account ID 或 Zone ID 不确定，可以在 CF 控制台 → 点进任意已托管域名 → 右下角「API」区域找到。
+> 如果你的 Account ID 不确定，可以在 CF 控制台 → 点进任意已托管域名 → 右下角「API」区域找到。
 >
 > 这里的 `init` 是“第一次接入真实 Cloudflare 环境”的脚本，不是“为了本地把项目跑起来”的前置步骤。
 >
@@ -205,8 +201,8 @@ pnpm setup:github
 ```
 
 这个脚本会：
-- 写入 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN` 两个 GitHub Secrets
-- 写入 `CF_DEFAULT_ZONE_ID`、`D1_DATABASE_ID`、`CF_DEFAULT_WORKER_NAME`、`CF_DEFAULT_PAGES_PROJECT` 这些 GitHub Variables
+- 写入 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`，以及按需写入 `CF_EMAIL`、`CF_GLOBAL_API_KEY` 这些 GitHub Secrets
+- 写入 `D1_DATABASE_ID`、`CF_DEFAULT_WORKER_NAME`、`CF_DEFAULT_PAGES_PROJECT` 这些 GitHub Variables
 - 如果能从 Cloudflare 读到 Pages 项目和 Worker 默认地址，还会顺手写入 `ALLOWED_ORIGINS` 和 `VITE_API_BASE_URL`
 - 自动跳过没提供的可选项
 
@@ -223,7 +219,6 @@ Variables：
 
 | 名称 | 值 |
 |------|------|
-| `CF_DEFAULT_ZONE_ID` | Zone ID |
 | `D1_DATABASE_ID` | `mails-db` 的 database id |
 | `CF_DEFAULT_WORKER_NAME` | Worker 名，默认 `mails-worker` |
 | `CF_DEFAULT_PAGES_PROJECT` | Pages 项目名，默认 `mails-frontend` |
@@ -257,7 +252,7 @@ Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实
 
 ### 步骤 9：初始化根域名 🧑
 
-进入 **域名** 页面，填入根域名，点击 **初始化根域名**。系统会按域名自动解析 Zone；只有你要手动覆盖时才需要额外填 Zone ID。之后就可以创建子域名用于收件了。
+进入 **域名** 页面，填入根域名，点击 **初始化根域名**。系统会按域名自动解析 Zone。之后就可以创建子域名用于收件了。
 
 ### 步骤 10：做一次从 0 验证 🧑
 
@@ -297,9 +292,8 @@ pnpm deploy:frontend
 - 仓库已启用 GitHub Actions
 - Cloudflare API Token
 - Cloudflare Account ID
-- Cloudflare Zone ID
 - `CF_EMAIL` 和 `CF_GLOBAL_API_KEY`
-  如果你要让 workflow 自动完成 Email Routing 的启用、catch-all 和后续规则操作，这组值应当提前准备好
+  如果你要让应用后续完成根域名 bootstrap、catch-all 和后续规则操作，这组值应当提前准备好
 - 你已经知道要填进 workflow 的 Worker 名和 Pages 项目名，或者准备接受默认值
 
 ### 步骤 1：准备自己的仓库 🧑
@@ -337,7 +331,6 @@ pnpm deploy:frontend
 ### 步骤 4：运行首次初始化 workflow 🧑
 
 进入 `Actions -> Bootstrap Cloudflare -> Run workflow`，填：
-- `cf_default_zone_id`
 - `cf_default_worker_name`（不填默认 `mails-worker`）
 - `cf_default_pages_project`（不填默认 `mails-frontend`）
 
@@ -489,7 +482,7 @@ pnpm --dir frontend dev   # http://localhost:5173（已代理到 Worker）
 - 本地还要调 Cloudflare 管理能力：
   再往 `.env.local` 里补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_PAGES_PROJECT`。
 - 本地还要调 Email Routing：
-  再往 `.env.local` 里补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。`CF_AUTH_EMAIL` 这个旧名字也兼容。`CF_DEFAULT_ZONE_ID` 只在你要跑 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写默认 Zone 变量时需要。
+  再往 `.env.local` 里补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。`CF_AUTH_EMAIL` 这个旧名字也兼容。
 
 ---
 

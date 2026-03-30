@@ -23,7 +23,7 @@ export interface ZoneInfo {
 }
 
 export interface DnsProvider {
-  resolveZoneId(zoneName: string, zoneId?: string): Promise<string>
+  resolveZoneId(zoneName: string): Promise<string>
   createZone(zoneName: string, accountId: string): Promise<ZoneInfo>
   getZoneStatus(zoneId: string): Promise<ZoneInfo>
   listDnsRecords(zoneId: string, params?: { type?: string; name?: string }): Promise<DnsRecord[]>

@@ -192,7 +192,6 @@ async function main() {
   }
 
   // 2. 收集配置
-  const zoneId = process.env.CF_DEFAULT_ZONE_ID?.trim() || ''
   const workerName = process.env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
   const pagesProjectName = process.env.CF_DEFAULT_PAGES_PROJECT || 'mails-frontend'
   const pagesProductionBranch = process.env.CF_PAGES_PRODUCTION_BRANCH || 'master'
@@ -269,7 +268,6 @@ async function main() {
   const envLocalPath = writeLocalEnvValues({
     CF_API_TOKEN: cfApiToken,
     CF_ACCOUNT_ID: accountId,
-    CF_DEFAULT_ZONE_ID: zoneId,
     CF_EMAIL: cfEmail,
     CF_GLOBAL_API_KEY: cfGlobalApiKey,
     D1_DATABASE_ID: databaseId,
@@ -279,7 +277,6 @@ async function main() {
     JWT_SECRET: jwtSecret,
   })
   writeWranglerToml({
-    zoneId,
     accountId,
     databaseId,
     databaseName: DB_NAME,
@@ -395,7 +392,7 @@ async function main() {
     console.log('\n⚠️  未检测到 CF_API_TOKEN，跳过 Pages 项目和前端自动部署')
   }
 
-  if (canUseGhSetup(githubRepo) && zoneId) {
+  if (canUseGhSetup(githubRepo)) {
     console.log('\n🔧 步骤 8：写入 GitHub Secrets / Variables...')
     try {
       execSync('pnpm setup:github', {
@@ -407,7 +404,6 @@ async function main() {
           GITHUB_REPOSITORY: githubRepo,
           CLOUDFLARE_ACCOUNT_ID: accountId,
           CLOUDFLARE_API_TOKEN: cfApiToken,
-          CF_DEFAULT_ZONE_ID: zoneId,
           D1_DATABASE_ID: databaseId,
           CF_DEFAULT_WORKER_NAME: workerName,
           CF_DEFAULT_PAGES_PROJECT: pagesProjectName,
@@ -419,8 +415,6 @@ async function main() {
     } catch {
       console.log('⚠️  GitHub 配置写入失败，请稍后手动执行 pnpm setup:github')
     }
-  } else if (githubRepo && !zoneId) {
-    console.log('\n⚠️  检测到仓库名，但当前未提供 CF_DEFAULT_ZONE_ID，跳过 GitHub 自动配置')
   } else if (githubRepo) {
     console.log('\n⚠️  检测到仓库名，但当前 gh 不可用，跳过 GitHub 自动配置')
   }

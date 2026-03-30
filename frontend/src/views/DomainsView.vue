@@ -13,7 +13,6 @@
             <p class="mt-1 text-sm text-slate-500">启用 Email Routing，把根域名 catch-all 指到 Worker，并保存根域名状态。初始化后可以直接创建 `abc@根域名` 这样的地址。</p>
           </div>
           <input v-model="bootstrapForm.rootDomain" class="input-base" type="text" placeholder="root.example.com" />
-          <input v-model="bootstrapForm.zoneId" class="input-base" type="text" placeholder="可选：手动覆盖 Zone ID" />
           <button class="button-primary" type="submit">初始化根域名</button>
         </form>
 
@@ -94,7 +93,7 @@ import { useSWR } from '../composables/useSWR'
 import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
-const bootstrapForm = reactive({ rootDomain: '', zoneId: '' })
+const bootstrapForm = reactive({ rootDomain: '' })
 const createForm = reactive({ name: '', rootName: '', workerName: '' })
 const message = ref('')
 const pendingDelete = ref('')
@@ -113,10 +112,9 @@ function formatDate(value: string) {
 async function submitBootstrap() {
   message.value = ''
   try {
-    const response = await bootstrapDomain(authStore.token, bootstrapForm.rootDomain, bootstrapForm.zoneId)
+    const response = await bootstrapDomain(authStore.token, bootstrapForm.rootDomain)
     message.value = `根域名 ${response.data.name} 已初始化，现在可以直接创建 ${`abc@${response.data.name}`} 这样的地址。`
     bootstrapForm.rootDomain = ''
-    bootstrapForm.zoneId = ''
     await mutate()
   } catch (err) {
     message.value = err instanceof ApiError ? err.message : '初始化根域名失败'

@@ -50,7 +50,6 @@ const createAddressSchema = z.object({
 
 const bootstrapSchema = z.object({
   rootDomain: z.string().min(1),
-  zoneId: z.string().min(1).optional(),
 })
 
 const createDomainSchema = z.object({
@@ -243,10 +242,10 @@ apiRoutes.post('/settings/custom-domains', async (c) => {
     throw new AppError(500, 'CF_ACCOUNT_ID 未配置')
   }
 
-  const { hostname, zoneId } = z.object({ hostname: z.string().min(1), zoneId: z.string().optional() }).parse(await c.req.json())
+  const { hostname } = z.object({ hostname: z.string().min(1) }).parse(await c.req.json())
   const workerName = c.env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
   const providers = createProviders(c.env)
-  const resolvedZoneId = await providers.dns.resolveZoneId(hostname, zoneId?.trim())
+  const resolvedZoneId = await providers.dns.resolveZoneId(hostname)
   const result = await providers.domainBinding.addWorkerDomain(accountId, hostname, resolvedZoneId, workerName)
   return jsonSuccess(c, result, 201)
 })
@@ -284,8 +283,8 @@ apiRoutes.post('/settings/pages-domains', async (c) => {
   }
 
   const providers = createProviders(c.env)
-  const { domain, zoneId } = z.object({ domain: z.string().min(1), zoneId: z.string().optional() }).parse(await c.req.json())
-  const resolvedZoneId = await providers.dns.resolveZoneId(domain, zoneId?.trim())
+  const { domain } = z.object({ domain: z.string().min(1) }).parse(await c.req.json())
+  const resolvedZoneId = await providers.dns.resolveZoneId(domain)
   await providers.domainBinding.addPagesDomain(accountId, projectName, domain)
 
   const pagesSubdomain = await providers.domainBinding.getPagesProjectSubdomain(accountId, projectName)

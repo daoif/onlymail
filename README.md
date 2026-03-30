@@ -71,7 +71,7 @@ cp .env.local.example .env.local
 pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 Pages，默认入口走 workers.dev + pages.dev
 ```
 
-先填 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。如果你接下来要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上；这组值不是 `init` 的硬必填，但只要涉及 Email Routing 就必须有。`CF_DEFAULT_ZONE_ID` 只在 GitHub-only 部署里给 `Bootstrap Cloudflare` workflow 写默认 Zone 变量时需要。
+先填 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。如果你接下来要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上；这组值不是 `init` 的硬必填，但只要涉及 Email Routing 就必须有。当前实例按单一 Cloudflare 账号设计，域名相关操作都按域名自动解析 Zone，不再要求手动填写 Zone ID。
 
 本地参数统一放在项目根目录的 `.env.local`。`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件；如果 shell 里已经有同名环境变量，shell 的值优先。
 
@@ -128,7 +128,6 @@ pnpm --dir frontend dev
 - Cloudflare Account ID
 
 按需增强：
-- `CF_DEFAULT_ZONE_ID`：不是本地部署和本地开发的硬必填；主要用于 GitHub-only 部署里的 `Bootstrap Cloudflare` workflow 写入默认 Zone 变量
 - `D1_DATABASE_ID`：手动跑 `pnpm render:wrangler` 时必填；跑过一次 `pnpm run init` 后会自动回写到 `.env.local`
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`：不是 `init` 的硬必填；但只要要做根域名 bootstrap、子域名创建或删除、catch-all、Email Routing 规则操作，就是硬必填。当前 Cloudflare API Token 不能覆盖这组接口，所以这里不是兜底鉴权
 - `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤

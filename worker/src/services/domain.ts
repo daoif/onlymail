@@ -82,12 +82,12 @@ export async function getDomainDetail(env: AppBindings, name: string) {
 
 export async function bootstrapRootDomain(
   env: AppBindings,
-  payload: { rootDomain: string; zoneId?: string },
+  payload: { rootDomain: string },
 ) {
   requireEmailRoutingAuth(env)
   const rootDomain = payload.rootDomain.trim().toLowerCase()
   const providers = createProviders(env)
-  const zoneId = await providers.dns.resolveZoneId(rootDomain, payload.zoneId?.trim())
+  const zoneId = await providers.dns.resolveZoneId(rootDomain)
   const settings = await providers.email.getEmailRoutingSettings(zoneId)
   const workerName = env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
 
