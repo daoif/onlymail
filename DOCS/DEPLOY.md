@@ -21,7 +21,6 @@
 | Account → D1 | Edit |
 | Account → Cloudflare Pages | Edit |
 | Zone → DNS | Edit |
-| Zone → Email Routing Rules | Write |
 | Zone → Zone | Read |
 
 - Account Resources: `All accounts`
@@ -31,7 +30,8 @@
 
 ### 额外准备项
 
-- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` **强烈建议提供**。提供后，`init` 会自动启用 Email Routing 并配置 catch-all 规则。如果不提供，`init` 仍然可以完成其他所有步骤，但你需要手动去 Cloudflare 控制台完成 Email Routing 的启用和 catch-all 配置。
+- Cloudflare 官方权限总表和 Email Routing API 页面在鉴权说明上不完全一致。当前项目对 Email Routing 采用“Token 优先，权限不兼容时回退到 `CF_EMAIL` + `CF_GLOBAL_API_KEY`”的策略。
+- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 对只做 Worker / Pages / D1 初始化不是硬必填；但对根域名 bootstrap、子域名创建、Email Routing 自动化这条链，应当视为必备。不给时，初始化还能继续，但 Email Routing 相关动作要手动去 Cloudflare 控制台完成。
 - 纯本地部署不需要 GitHub 仓库。
 - GitHub-only 和混合部署需要 GitHub 仓库。
 - 如果你准备走混合部署，装好 `gh` CLI 会省掉手动填写 GitHub Secrets / Variables 的步骤。
@@ -46,9 +46,9 @@
 到了 Worker 持续部署这一步，还需要：
 - `D1_DATABASE_ID`
 
-强烈建议输入：
+域名和 Email Routing 自动化时应当提供：
 - `CF_GLOBAL_API_KEY` + `CF_EMAIL`
-  提供后，AI 可以直接完成 Email Routing 的启用、catch-all 配置和后续排查；不提供时，AI 仍然可以继续做其他步骤，但 Email Routing 相关动作要改走 Cloudflare 控制台。
+  提供后，AI 可以直接完成 Email Routing 的启用、catch-all、规则创建删除和后续排查；不提供时，AI 仍然可以继续做 Worker / Pages / D1 这类步骤，但域名和 Email Routing 相关动作要改走 Cloudflare 控制台。
 
 按需输入：
 - `gh` CLI
@@ -70,7 +70,7 @@
 
 1. 复制 `.env.local.example` 为 `.env.local`
 2. 先填最小必需项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`
-3. 强烈建议同时填上 `CF_EMAIL`、`CF_GLOBAL_API_KEY`
+3. 如果你要做根域名 bootstrap、子域名创建、Email Routing 自动化，同时填上 `CF_EMAIL`、`CF_GLOBAL_API_KEY`
 4. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
 5. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
 
@@ -146,8 +146,11 @@
 - Node.js >= 20，pnpm >= 10
 - Cloudflare API Token
 - Cloudflare Account ID
-- Cloudflare Zone ID
-- Cloudflare 账号邮箱 `CF_EMAIL` 和 Global API Key `CF_GLOBAL_API_KEY`，这组值强烈建议提前准备好
+  获取位置：CF 控制台 → 点进任意已托管域名 → 右下角 API 区域
+- `CF_DEFAULT_ZONE_ID`
+  获取位置：同一处 API 区域里的 Zone ID。这里填的是默认 Zone，不是系统里唯一允许的 Zone；后续根域名 bootstrap 时如果请求里不传 `zoneId`，就用它做默认值。
+- Cloudflare 账号邮箱 `CF_EMAIL` 和 Global API Key `CF_GLOBAL_API_KEY`
+  如果你只做 Worker / Pages / D1 初始化，可以先不填；如果你接下来要做根域名 bootstrap、子域名创建、Email Routing 自动化，这组值应当提前准备好
 - 以上值已填入项目根目录的 `.env.local`
 - 已执行 `npx wrangler login` 完成浏览器授权
 
@@ -193,7 +196,7 @@ pnpm run init
 如果还提供了 `GITHUB_REPOSITORY`，并且本机 `gh` 已登录，脚本还会继续：
 - ✅ 写 GitHub Secrets / Variables
 
-> 如果你的 Zone ID 不确定，可以在 CF 控制台 → 你的域名 → 右下角「API」找到。
+> 如果你的 Account ID 或 Zone ID 不确定，可以在 CF 控制台 → 点进任意已托管域名 → 右下角「API」区域找到。
 >
 > 这里的 `init` 是“第一次接入真实 Cloudflare 环境”的脚本，不是“为了本地把项目跑起来”的前置步骤。
 >
@@ -303,7 +306,8 @@ pnpm deploy:frontend
 - Cloudflare API Token
 - Cloudflare Account ID
 - Cloudflare Zone ID
-- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY`，这组值强烈建议提前准备好
+- `CF_EMAIL` 和 `CF_GLOBAL_API_KEY`
+  如果你要让 workflow 自动完成 Email Routing 的启用、catch-all 和后续规则操作，这组值应当提前准备好
 - 你已经知道要填进 workflow 的 Worker 名和 Pages 项目名，或者准备接受默认值
 
 ### 步骤 1：准备自己的仓库 🧑
@@ -335,8 +339,8 @@ pnpm deploy:frontend
 |------|----------|------|
 | `CLOUDFLARE_ACCOUNT_ID` | 必需 | Cloudflare Account ID |
 | `CLOUDFLARE_API_TOKEN` | 必需 | Cloudflare API Token |
-| `CF_EMAIL` | 强烈建议 | 提供后 workflow 能自动启用 Email Routing 并配置 catch-all |
-| `CF_GLOBAL_API_KEY` | 强烈建议 | 提供后 workflow 能自动启用 Email Routing 并配置 catch-all |
+| `CF_EMAIL` | 域名和 Email Routing 自动化时应当提供 | 提供后 workflow 能自动启用 Email Routing、配置 catch-all，并给后续规则操作保留鉴权兜底 |
+| `CF_GLOBAL_API_KEY` | 域名和 Email Routing 自动化时应当提供 | 提供后 workflow 能自动启用 Email Routing、配置 catch-all，并给后续规则操作保留鉴权兜底 |
 
 ### 步骤 4：运行首次初始化 workflow 🧑
 
@@ -388,7 +392,7 @@ pnpm deploy:frontend
 - 本地部署那一套前置条件已经准备好，尤其是 `.env.local`
 - GitHub 账号和一个你能控制的仓库
 - 如果想自动写 GitHub Secrets / Variables，准备好 `gh` CLI 并完成登录
-- 如果想让混合部署真正顺手，`CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 最好在一开始就写进 `.env.local`
+- 如果你要在混合部署里继续做根域名 bootstrap、子域名创建、Email Routing 自动化，`CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 最好在一开始就写进 `.env.local`
 
 这条路径的顺序是：
 

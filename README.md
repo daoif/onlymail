@@ -71,7 +71,7 @@ cp .env.local.example .env.local
 pnpm run init    # 首次接入 Cloudflare：创建 D1、部署 Worker、准备 Pages，默认入口走 workers.dev + pages.dev
 ```
 
-填入 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`，以及强烈建议的 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY`。
+填入 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_ZONE_ID`。如果你接下来要做根域名 bootstrap、子域名创建、Email Routing 自动化，再把 `CF_EMAIL` 和 `CF_GLOBAL_API_KEY` 一起填上。
 
 本地参数统一放在项目根目录的 `.env.local`。`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件；如果 shell 里已经有同名环境变量，shell 的值优先。
 
@@ -129,14 +129,14 @@ pnpm --dir frontend dev
 - Cloudflare Account ID
 - Cloudflare Zone ID
 
-可选增强：
+按需增强：
 - `D1_DATABASE_ID`：手动跑 `pnpm render:wrangler` 时必填；跑过一次 `pnpm run init` 后会自动回写到 `.env.local`
-- `CF_GLOBAL_API_KEY` + `CF_EMAIL`：强烈建议提供。给了以后，`init` 能自动启用 Email Routing 并配置 catch-all；不给时，其他步骤还能继续，但 Email Routing 要手动去 CF 控制台配置
+- `CF_GLOBAL_API_KEY` + `CF_EMAIL`：做根域名 bootstrap、子域名创建、Email Routing 自动化时应当提供。给了以后，系统能对 Email Routing 走鉴权兜底；不给时，Worker / Pages / D1 初始化还能继续，但域名和 Email Routing 相关动作要手动去 CF 控制台配置
 - `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤
 - `ALLOWED_ORIGINS`：需要手动覆盖默认来源时再提供；默认会按 Pages 项目的 `pages.dev` 地址和本地开发地址生成
 - `GITHUB_REPOSITORY`：给了以后，`init` 可以顺手调用 `gh` 写 GitHub 仓库配置
 
-推荐做法是先给最低必需项，再把 `CF_GLOBAL_API_KEY` 和 `CF_EMAIL` 一起补上。AI 检测到 `gh` 或额外 Cloudflare 凭证时，可以直接继续，不需要再走手工说明。
+推荐做法是先给最低必需项；如果你会继续做域名和 Email Routing 自动化，再把 `CF_GLOBAL_API_KEY` 和 `CF_EMAIL` 一起补上。AI 检测到 `gh` 或额外 Cloudflare 凭证时，可以直接继续，不需要再走手工说明。
 
 首次跑完 `init` 后，先用 Pages 默认地址进入后台完成管理员初始化；等系统能用了，再在设置页绑定 `mails-api.你的域名` 和 `mails.你的域名` 这类正式入口。
 
