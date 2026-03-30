@@ -32,12 +32,12 @@ import { randomBytes } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { CloudflareApiClient } from './lib/cloudflare-api'
+import { applyD1Migrations, ensureD1MigrationsExist } from './lib/d1-migrations'
 import { writeWorkerDevVars } from './lib/dev-vars'
 import { writeWranglerToml } from './lib/wrangler-config'
 
 const FRONTEND_DIR = resolve(ROOT_DIR, 'frontend')
 const TOML_PATH = resolve(WORKER_DIR, 'wrangler.toml')
-const SCHEMA_PATH = resolve(WORKER_DIR, 'db/schema.sql')
 const DB_NAME = 'mails-db'
 
 type SetupContext = {
@@ -202,8 +202,15 @@ async function main() {
   console.log()
 
   // 1. 检查前置条件
-  if (!existsSync(SCHEMA_PATH)) {
-    console.error(`❌ 找不到数据库 schema: ${SCHEMA_PATH}`)
+  if (!existsSync(WORKER_DIR)) {
+    console.error(`❌ 找不到 worker 目录: ${WORKER_DIR}`)
+    process.exit(1)
+  }
+
+  try {
+    ensureD1MigrationsExist()
+  } catch (error) {
+    console.error(error instanceof Error ? `❌ ${error.message}` : String(error))
     process.exit(1)
   }
 
@@ -307,18 +314,17 @@ async function main() {
   const devVarsPath = writeWorkerDevVars()
   console.log(`✅ 已生成: ${devVarsPath}`)
 
-  // 6. 初始化数据库 schema
-  console.log('\n🗃️  步骤 5：初始化数据库 schema...')
+  // 6. 执行数据库 migration
+  console.log('\n🗃️  步骤 5：执行数据库 migration...')
   try {
-    run(`npx wrangler d1 execute ${DB_NAME} --remote --file=db/schema.sql`)
-    console.log('✅ Schema 初始化完成')
+    applyD1Migrations({ databaseName: DB_NAME, mode: 'remote' })
   } catch {
-    console.log('⚠️  远程 schema 初始化失败，尝试本地初始化...')
+    console.log('⚠️  远程 migration 失败，尝试本地 migration...')
     try {
-      run(`npx wrangler d1 execute ${DB_NAME} --local --file=db/schema.sql`)
-      console.log('✅ 本地 Schema 初始化完成')
+      applyD1Migrations({ databaseName: DB_NAME, mode: 'local' })
     } catch {
-      console.log('⚠️  跳过 schema 初始化（可能已经存在）')
+      console.log('⚠️  D1 migration 执行失败，请检查数据库状态后重试')
+      process.exit(1)
     }
   }
 

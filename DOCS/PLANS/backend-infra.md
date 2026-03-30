@@ -31,11 +31,14 @@ worker/
 │   │   └── pagination.ts
 │   └── types.ts
 ├── db/
-│   └── schema.sql
+│   └── migrations/
+│       └── 0001_initial.sql
 └── wrangler.toml
 ```
 
 ## 数据表
+
+数据库结构不再靠单个 `schema.sql` 初始化，而是通过 `worker/db/migrations/` 里的 SQL migration 递增维护；`init` 和 `deploy:worker` 都会自动补齐未执行的 migration。
 
 ### `address`
 | 字段 | 说明 |

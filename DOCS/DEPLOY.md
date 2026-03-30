@@ -181,7 +181,7 @@ pnpm run init
 - ✅ 创建或确认 Pages 项目
 - ✅ 读取 Pages 默认 `pages.dev` 地址并写入默认前端来源
 - ✅ 从 `wrangler.toml.template` 生成 `wrangler.toml`
-- ✅ 初始化数据库表结构（`db/schema.sql`）
+- ✅ 执行 D1 migration（`worker/db/migrations/`）
 - ✅ 生成 JWT_SECRET 并设为 wrangler secret
 - ✅ 部署 Worker 到 Cloudflare
 - ✅ 读取 Worker 默认 `workers.dev` 地址并作为管理面板固定 API 入口

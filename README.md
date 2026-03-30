@@ -1,268 +1,153 @@
 # mails
 
-基于 Cloudflare Workers + D1 + Email Routing 的个人邮箱系统，支持注册机自动化调用和后台管理。
+> 自部署的个人邮箱系统 —— 基于 Cloudflare Workers + D1 + Email Routing + Pages，开箱即用。
 
-## 功能
+创建临时邮箱、接收邮件、管理域名，全部跑在 Cloudflare 免费套餐上。
+附带后台面板、自动化域名配置和多语言 SDK，适合个人开发者与小团队。
 
-- 📧 **临时邮箱**：创建临时邮箱地址，自动收件，TTL 过期自动清理
-- 🔑 **双路认证**：JWT（前端完整权限）+ API Key（SDK 受控子集）
-- 🖥️ **管理面板**：Vue 3 管理界面，骨架屏加载 + SWR 缓存策略
-- 🌐 **域名管理**：自动化 DNS 和 Email Routing 规则的创建与回收
-- 📦 **多语言 SDK**：Node.js 和 Python SDK，封装 `waitForMail` 和域名操作
-- 🔌 **平台抽象**：Provider 接口层，后续可脱离 Cloudflare
+---
 
-## 项目结构
+## ✨ 核心能力
+
+| 能力 | 说明 |
+|------|------|
+| **临时邮箱** | 一键创建地址 → 接收邮件 → 查看详情 → 自动清理 |
+| **管理面板** | Vue 3 前端，覆盖地址、邮件、域名与系统设置 |
+| **域名自动化** | 根域名 bootstrap、子域名创建、DNS 与 Email Routing 全自动 |
+| **双路认证** | 面板走 JWT (`/api/*`)，SDK 走 API Key (`/call/*`)，互不干扰 |
+| **多语言 SDK** | Node.js + Python，封装地址创建与收件轮询 |
+
+---
+
+## 📂 项目结构
+
+```text
+worker/        Cloudflare Worker 后端
+frontend/      Vue 3 + Tailwind 管理面板
+sdk/nodejs/    Node.js SDK
+sdk/python/    Python SDK
+scripts/       初始化、迁移与部署脚本
+DOCS/          部署、架构、决策与运维文档
+```
+
+---
+
+## 🚀 快速开始
+
+**1. 配置凭据**
+
+复制 `.env.local.example` → `.env.local`，填入以下 4 个 Cloudflare 必填项：
 
 ```
-worker/              # Cloudflare Worker 后端（Hono + D1）
-  src/providers/     # 平台抽象层（Provider 接口 + CF 实现）
-  src/routes/        # API 路由（/api JWT + /call API Key）
-  src/services/      # 业务逻辑
-frontend/            # Vue 3 + Tailwind 管理面板
-sdk/nodejs/          # Node.js SDK
-sdk/python/          # Python SDK
-scripts/             # 初始化脚本
-DOCS/                # 项目文档
+CF_API_TOKEN
+CF_ACCOUNT_ID
+CF_EMAIL
+CF_GLOBAL_API_KEY
 ```
 
-## 部署方式
-
-### 1. 本地部署
-
-适合先调试、先确认环境，或者你根本不想接 GitHub Actions。
-
-这条路径里：
-- 把仓库拉到本地
-- 本地跑 `pnpm run init`
-- 后续继续用本地命令部署 Worker 和 Pages
-
-GitHub 在这条路径里不是必需项。
-
-### 2. GitHub-only 部署
-
-适合不想先拉到本地，想直接在自己的 GitHub 仓库里完成首次部署。
-
-这条路径里：
-- fork 本仓库，或新建一个自己的仓库后把代码放进去
-- 在 GitHub 仓库里配置 Cloudflare secrets
-- 手动运行 `Bootstrap Cloudflare` workflow
-- 后续 push 代码后，Worker 和 Pages 自动更新
-
-这条路径的首次初始化不依赖本地 `init`。
-
-### 3. 混合部署
-
-适合先在本地把环境调通，后面再切到 GitHub 自动更新。
-
-这条路径里：
-- 先在本地跑一次 `pnpm run init`
-- 再执行 `pnpm setup:github`，把后续自动部署需要的仓库配置写进去
-- 后续 push 到自己的 GitHub 仓库，交给 Actions 自动部署
-
-如果你需要改代码、调试 Cloudflare 现场、排查域名问题，这条路径最顺手。
-
-## 快速开始
-
-### 首次部署
+**2. 一键初始化**
 
 ```bash
 pnpm install
-cp .env.local.example .env.local
-pnpm run init    # 首次接入或重跑：保留现有 D1，重新部署 Worker / Frontend，默认入口走 workers.dev + pages.dev
+pnpm run init
 ```
 
-先把 4 个 Cloudflare 值都填上：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`。当前实例按单一 Cloudflare 账号设计，域名相关操作都按域名自动解析 Zone，不再要求手动填写 Zone ID。虽然只填前 2 个值也能把 Worker / Pages / D1 搭起来，但根域名 bootstrap、子域名创建删除、catch-all 和 Email Routing 规则这些核心自动化都离不开后 2 个值，所以这里统一按 4 个值作为正常可用部署的必填项。
+`init` 是幂等的，会自动完成：
 
-本地参数统一放在项目根目录的 `.env.local`。`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件；如果 shell 里已经有同名环境变量，shell 的值优先。
+- 创建或复用 D1 数据库，执行未完成的 migration
+- 创建或复用 Worker 与 Pages 默认入口并部署
+- 回写 `D1_DATABASE_ID` 与 `JWT_SECRET` 到本地配置
 
-`worker/wrangler.toml` 是本地运行配置，会由模板生成，不提交 Git。
+**3. 打开面板**
 
-`init` 只准备基础设施默认入口，不会读取、推断或绑定 Worker / Pages 自定义域名。自定义域名留给应用里的初始化引导和设置页处理。
+首次部署完成后，用 Pages 默认地址打开管理面板，创建管理员账号，即可在应用内绑定正式域名。
 
-管理面板固定请求 Worker 默认 `workers.dev` API。Worker 自定义域名继续保留，但它只作为 SDK、手工调试和对外展示时可选的别名，不驱动前端 API 路径切换。
+---
 
-如果你不想先拉到本地，可以直接走上面的 GitHub-only 部署，第一次运行 `Bootstrap Cloudflare` workflow 即可。
-
-`init` 可以重复运行，用来重新对齐 D1、Worker、Pages 这些基础设施。它会保留现有 D1，默认复用 `.env.local` 里的 `JWT_SECRET`，也不会接管 Cloudflare 里已有但没写进 D1 的自定义域名残留。
-
-如果你要把平台内部状态清到接近未安装状态，再重新部署一遍，用：
-
-```bash
-pnpm run rebuild
-```
-
-`rebuild` 会删除并重建 D1，轮换 `JWT_SECRET`，然后重新跑一遍 `init`。它不会处理 Cloudflare 上已有的 DNS、自定义域名和 Email Routing 外部入口。
-
-### 本地开发
-
-先复制 `.env.local.example` 为 `.env.local`，填好本地需要的参数，再生成 `worker/.dev.vars`。
+## 🛠 本地开发
 
 ```bash
 pnpm sync:dev-vars
-
-# 再生成 worker/wrangler.toml
 pnpm render:wrangler
-
-# 启动后端
-pnpm --dir worker dev
-
-# 启动前端
-pnpm --dir frontend dev
+pnpm --dir worker dev       # 启动 Worker
+pnpm --dir frontend dev     # 启动前端
 ```
 
-首次打开登录页时，如果系统还没有管理员账号，页面会先进入初始化流程。
+> 纯本地调试不需要先跑 `init`；如需对接真实 Cloudflare 资源，按 [部署文档](DOCS/DEPLOY.md) 准备 `.env.local` 即可。
 
-只调本地页面和本地 API 时，不需要先跑 `init`。`init` 是给第一次接到真实 Cloudflare 环境时用的；本地开发只要 `.env.local` 已填好，再跑 `pnpm sync:dev-vars` 和 `pnpm render:wrangler`。
+---
 
-如果你在本地还要测试域名、Pages、自定义域名这些 Cloudflare 管理能力，再把下面这些补进 `.env.local`：
-- `CF_API_TOKEN`
-- `CF_ACCOUNT_ID`
-- `CF_DEFAULT_PAGES_PROJECT`
+## 📦 部署方式
 
-## 部署
+| 方式 | 适用场景 |
+|------|----------|
+| **本地部署** | `pnpm run init`，后续继续用本地命令重部署 |
+| **GitHub-only** | 通过 `Bootstrap Cloudflare` workflow 完成首次部署 |
+| **混合部署** | 先本地跑通，再用 `pnpm setup:github` 切到 CI 自动部署 |
 
-- Worker 通过 GitHub Actions 自动部署到 Cloudflare
-- `wrangler.toml` 不提交 Git，CI 会按模板和 GitHub Secrets / Variables 现场生成
-- 前端通过 Cloudflare Pages 自动部署
-- 首次如果走 GitHub-only 部署，使用 `Bootstrap Cloudflare` workflow 做基础设施初始化
-- 如果你维护自己的 fork，还可以启用 `Upstream Sync` workflow 定时同步上游更新
+完整步骤 → [DOCS/DEPLOY.md](DOCS/DEPLOY.md)
 
-## 配置输入
+---
 
-正常可用部署默认需要这 4 个 Cloudflare 值：
-- Cloudflare API Token
-- Cloudflare Account ID
-- Cloudflare 账号邮箱（`CF_EMAIL`，也兼容旧名字 `CF_AUTH_EMAIL`）
-- Cloudflare Global API Key
+## 🔌 SDK
 
-按需增强：
-- `D1_DATABASE_ID`：手动跑 `pnpm render:wrangler` 时必填；跑过一次 `pnpm run init` 后会自动回写到 `.env.local`
-- `gh` CLI：让 AI 或脚本直接写 GitHub Secrets / Variables，少走网页步骤
-- `ALLOWED_ORIGINS`：需要手动覆盖默认来源时再提供；默认只按 Pages 项目的 `pages.dev` 地址、预览子域名和本地开发地址生成，不自动接管已有自定义域名
-- `GITHUB_REPOSITORY`：给了以后，`init` 可以顺手调用 `gh` 写 GitHub 仓库配置
-
-如果你要让 GitHub 参与首次或后续部署，再补 `GITHUB_REPOSITORY`。平台内部状态以 D1 为准，Cloudflare 上存在但没写进 D1 的外部残留不会被默认接管。
-
-前端管理面板的 API 地址不再作为用户配置项暴露。部署时脚本会自动读取当前 Worker 默认 `workers.dev` 地址，并把它写进前端构建结果；设置页里绑定的 Worker 自定义域名不会改变这条主路径。
-
-首次跑完 `init` 后，先用 Pages 默认地址进入后台完成管理员初始化；等系统能用了，再在设置页绑定 `mails-api.你的域名` 和 `mails.你的域名` 这类正式入口。
-
-如果你走 GitHub-only 路径，第一次 `Bootstrap Cloudflare` workflow 跑完后的顺序也一样：先用 `pages.dev` 默认地址初始化管理员，再在设置页绑定正式域名。
-
-## SDK 接入
-
-SDK 只面向你自己部署的实例，不提供公共服务地址。
-
-### Node.js SDK
-
-主推荐方式是用 `pnpm` 直接从 GitHub 安装子目录包：
-
-```bash
-pnpm add "git+https://github.com/<owner>/<repo>.git#master&path:/sdk/nodejs"
-```
-
-如果你想把依赖直接写进 `package.json`：
-
-```json
-{
-  "dependencies": {
-    "@mails/sdk-nodejs": "git+https://github.com/<owner>/<repo>.git#master&path:/sdk/nodejs"
-  }
-}
-```
-
-然后在项目里这样用：
+**Node.js**
 
 ```ts
 import { MailsClient } from '@mails/sdk-nodejs'
 
-const client = new MailsClient('https://your-worker.your-account.workers.dev', process.env.MAILS_API_KEY!)
+const client = new MailsClient(
+  'https://your-worker.your-account.workers.dev',
+  process.env.MAILS_API_KEY!
+)
 ```
 
-### Python SDK
-
-主推荐方式是用 `pip` 直接从 GitHub 安装子目录包：
-
-```bash
-python -m pip install "git+https://github.com/<owner>/<repo>.git@master#subdirectory=sdk/python"
-```
-
-如果你想把依赖写进 `requirements.txt`：
-
-```txt
-git+https://github.com/<owner>/<repo>.git@master#subdirectory=sdk/python
-```
-
-然后在项目里这样用：
+**Python**
 
 ```python
 from mails_sdk import MailsClient
 
-client = MailsClient('https://your-worker.your-account.workers.dev', api_key='YOUR_API_KEY')
+client = MailsClient(
+  'https://your-worker.your-account.workers.dev',
+  api_key='YOUR_API_KEY'
+)
 ```
 
-### 当前边界
+> SDK 仅调用 `/call/*` 受控接口，不提供删除能力。
 
-- Node SDK 当前主支持 `pnpm` 的 Git 子目录安装
-- Python SDK 主支持 `pip` 的 Git 子目录安装
-- 现在不发 npm，也不发 PyPI
-- 后面是否发包，等仓库外复用频率和版本维护需求都更明确后再决定
+---
 
-### 实际接入顺序
+## 📖 文档
 
-1. 先部署自己的实例
-2. 登录后台，在设置页生成 API Key
-3. 选择一个后端地址作为 `baseUrl`
-   - 正式环境优先用你自己绑定的 Worker API 自定义域名
-   - 没绑自定义域名时，用默认 `workers.dev` 地址
-4. 再在业务项目里安装 SDK
-5. 用 SDK 调 `createAddress -> waitForMail -> getMail`
+| 文档 | 链接 |
+|------|------|
+| 部署与运维 | [DEPLOY.md](DOCS/DEPLOY.md) |
+| 系统全貌 | [OVERVIEW.md](DOCS/OVERVIEW.md) |
+| 文档目录 | [SUMMARY.md](DOCS/SUMMARY.md) |
+| 当前状态 | [STATUS.md](DOCS/STATUS.md) |
+| 发布规则 | [RELEASING.md](DOCS/RELEASING.md) |
+| 贡献说明 | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| 安全反馈 | [SECURITY.md](SECURITY.md) |
+| 变更记录 | [CHANGELOG.md](CHANGELOG.md) |
 
-## API 概览
+---
 
-### `/api/*` — 管理 API（Bearer JWT）
+## 🏗 运行模型
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/init-status` | 查询管理员是否已初始化 |
-| POST | `/api/init` | 首次初始化管理员账号 |
-| POST | `/api/login` | 管理员登录 |
-| GET | `/api/dashboard` | 统计概览 |
-| POST | `/api/address` | 创建邮箱地址 |
-| GET | `/api/addresses` | 地址列表（支持 domain/project 过滤） |
-| DELETE | `/api/address/:name` | 删除地址 |
-| GET | `/api/mails` | 邮件列表（支持 address 过滤） |
-| GET | `/api/mail/:id` | 邮件详情 |
-| DELETE | `/api/mail/:id` | 删除邮件 |
-| POST | `/api/domains/bootstrap` | 根域名初始化 |
-| GET | `/api/domains` | 域名列表（支持 type/root/limit 过滤） |
-| GET | `/api/domains/:name` | 域名详情（含地址统计） |
-| POST | `/api/domains` | 创建子域名 |
-| DELETE | `/api/domains/:name` | 删除子域名 |
-| GET | `/api/settings/api-key` | API Key 状态 |
-| POST | `/api/settings/api-key/rotate` | 轮换 API Key |
-| POST | `/api/settings/change-password` | 修改密码 |
-| GET | `/api/settings/custom-domains` | Worker 自定义域名列表 |
-| POST | `/api/settings/custom-domains` | 绑定 Worker 自定义域名 |
-| DELETE | `/api/settings/custom-domains/:id` | 移除 Worker 自定义域名 |
-| GET | `/api/settings/pages-domains` | Pages 自定义域名列表 |
-| POST | `/api/settings/pages-domains` | 绑定 Pages 自定义域名（自动对齐 CNAME 并重试验证） |
-| DELETE | `/api/settings/pages-domains/:domain` | 移除 Pages 自定义域名 |
+<details>
+<summary>点击展开：系统设计约定</summary>
 
-### `/call/*` — SDK API（Bearer API Key）
+- 当前实例按**单一 Cloudflare 账号**设计
+- `init` 幂等初始化：保留现有 D1，补齐基础设施并重新部署
+- `rebuild` 平台重建：删除并重建 D1，然后重跑 `init`
+- 管理面板固定请求 Worker 默认 `workers.dev` 地址
+- Worker / Pages 自定义域名是对外别名，不改变面板的默认调用路径
+- 平台状态以 D1 为准；Cloudflare 上的外部残留不会被默认接管
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/call/address` | 创建邮箱地址 |
-| GET | `/call/mails/:address` | 按地址查邮件列表 |
-| GET | `/call/mail/:id` | 邮件详情 |
-| GET | `/call/domains` | 可用域名列表 |
-| GET | `/call/domains/:name` | 域名详情 |
-| POST | `/call/domains` | 创建子域名 |
+</details>
 
-> `/call/*` 只支持创建+只读，无 DELETE，Key 泄露不会造成数据丢失。
+---
 
 ## License
 
-暂未附带开源许可证。准备公开仓库时，再按你的发布方式补 `LICENSE`。
-
+[MIT](LICENSE)

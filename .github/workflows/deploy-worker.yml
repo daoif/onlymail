@@ -25,30 +25,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate wrangler.toml
-        run: pnpm render:wrangler
+      - name: Migrate & Deploy Worker
+        run: pnpm deploy:worker
         env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
           CF_DEFAULT_WORKER_NAME: ${{ vars.CF_DEFAULT_WORKER_NAME }}
           CF_DEFAULT_PAGES_PROJECT: ${{ vars.CF_DEFAULT_PAGES_PROJECT }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
-
-      - name: Deploy Worker
-        working-directory: worker
-        shell: bash
-        run: |
-          set -euo pipefail
-          LOG_FILE="$(mktemp)"
-          if pnpm wrangler deploy >"$LOG_FILE" 2>&1; then
-            echo "Worker 部署完成。"
-          else
-            sed -E \
-              -e 's#https?://[^[:space:]]+\.workers\.dev#https://REDACTED.workers.dev#g' \
-              -e 's#[A-Za-z0-9.-]+\.workers\.dev#REDACTED.workers.dev#g' \
-              "$LOG_FILE"
-            exit 1
-          fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

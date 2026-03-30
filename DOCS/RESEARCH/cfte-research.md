@@ -18,7 +18,7 @@
 - `worker/src/common.ts` 里的 `newAddress()`、`handleListQuery()`、`cleanup()` 说明地址创建、分页和清理可以拆成独立服务函数。
 - `worker/src/common.ts` 已经在用 PostalMime 解析 MIME，说明我们不需要把邮件解析放到浏览器里。
 - `worker/src/common.ts` 用了 `waitUntil` 更新地址时间，说明收件后异步更新 `updated_at` 是合适的做法。
-- `db/schema.sql` 里保留了 `settings` 表，这一点对我们很重要，因为可轮换的 API Key 需要持久化配置，不适合只放环境变量。
+- D1 migration 基线里保留了 `settings` 表，这一点对我们很重要，因为可轮换的 API Key 需要持久化配置，不适合只放环境变量。
 - `worker/wrangler.toml.template` 说明这个类型的项目本来就依赖 D1、Cron 和一组环境变量绑定。
 
 ## 可以直接借鉴的部分
