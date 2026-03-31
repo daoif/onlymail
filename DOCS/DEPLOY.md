@@ -63,7 +63,6 @@
 1. 复制 `.env.local.example` 为 `.env.local`
 2. 先填 4 个 Cloudflare 必填项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`
 3. 如果你已经有现成 D1，再填 `D1_DATABASE_ID`
-4. 如果你要后面直接写 GitHub 仓库配置，再填 `GITHUB_REPOSITORY`
 
 这几个本地入口都会先读 `.env.local`：
 
@@ -75,6 +74,8 @@
 - `pnpm deploy:frontend`
 
 如果 shell 里已经有同名环境变量，shell 的值优先，`.env.local` 不会覆盖它。
+
+`setup:github` 和 `init` 在需要写 GitHub Secrets / Variables 时，会优先使用 GitHub Actions 自带的仓库上下文；本地运行时则直接从当前 git 的 `origin` 远程仓库推导目标仓库，不再额外要求填写仓库名。
 
 `init` 首次跑完后会自动把 `D1_DATABASE_ID` 和 `JWT_SECRET` 回写到 `.env.local`，并顺手生成：
 
@@ -130,7 +131,7 @@
 
 特点：
 - 第一次用本地 `init`
-- 再用 `setup:github` 把仓库配置写进去
+- 再用 `setup:github` 把当前 `origin` 仓库配置写进去
 - 后续 push 到 GitHub 自动部署
 
 推荐工作方式：
@@ -187,7 +188,7 @@ pnpm run init
 - ✅ 读取 Worker 默认 `workers.dev` 地址并作为管理面板固定 API 入口
 - ✅ 首次构建并部署前端
 
-如果还提供了 `GITHUB_REPOSITORY`，并且本机 `gh` 已登录，脚本还会继续：
+如果当前仓库的 `origin` 已指向 GitHub，并且本机 `gh` 已登录，脚本还会继续：
 - ✅ 写 GitHub Secrets / Variables
 
 > 如果你的 Account ID 不确定，可以在 CF 控制台 → 点进任意已托管域名 → 右下角「API」区域找到。
@@ -211,6 +212,7 @@ pnpm setup:github
 - 写入 `D1_DATABASE_ID`、`CF_DEFAULT_WORKER_NAME`、`CF_DEFAULT_PAGES_PROJECT` 这些 GitHub Variables
 - 如果能从 Cloudflare 读到 Pages 项目默认地址，还会顺手写入 `ALLOWED_ORIGINS`
 - 缺少正常可用部署所需的关键值时直接报错，不再写半套 GitHub 配置
+- 本地运行时会把当前 git `origin` 当成目标仓库，不再额外要求填写仓库名
 
 没有 `gh` CLI 时，去 GitHub → 仓库 → Settings → Secrets and variables → Actions，手动添加：
 
@@ -411,6 +413,8 @@ pnpm run rebuild
 2. 在本地执行 `pnpm setup:github`  
 3. 把代码 push 到自己的 GitHub 仓库  
 4. 后续交给 `Deploy Worker` / `Deploy Frontend`
+
+这里默认当前 git `origin` 就是你要接入自动部署的仓库；`setup:github` 会按这个远程地址写 GitHub 配置。
 
 混合部署推荐的日常工作方式是：本地开发和调试，push 到 GitHub 后由 CI 自动部署到 Cloudflare。本地重部署命令 `pnpm deploy:worker`、`pnpm deploy:frontend` 保留给调试和应急，不当成主路径。
 

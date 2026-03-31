@@ -83,7 +83,7 @@ pnpm --dir frontend dev     # 启动前端
 |------|----------|
 | **本地部署** | `pnpm run init`，后续继续用本地命令重部署 |
 | **GitHub-only** | 通过 `Bootstrap Cloudflare` workflow 完成首次部署 |
-| **混合部署** | 先本地跑通，再用 `pnpm setup:github` 切到 CI 自动部署 |
+| **混合部署** | 先本地跑通，再用 `pnpm setup:github` 把当前 `origin` 仓库接到 CI 自动部署 |
 
 完整步骤 → [DOCS/DEPLOY.md](DOCS/DEPLOY.md)
 

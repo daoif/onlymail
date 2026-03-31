@@ -34,6 +34,7 @@ import { resolve } from 'node:path'
 import { CloudflareApiClient } from './lib/cloudflare-api'
 import { applyD1Migrations, ensureD1MigrationsExist } from './lib/d1-migrations'
 import { writeWorkerDevVars } from './lib/dev-vars'
+import { inferGitHubRepository } from './lib/github-repo'
 import { writeWranglerToml } from './lib/wrangler-config'
 
 const FRONTEND_DIR = resolve(ROOT_DIR, 'frontend')
@@ -239,7 +240,7 @@ async function main() {
   const cfApiToken = process.env.CF_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || ''
   const cfEmail = process.env.CF_EMAIL || process.env.CF_AUTH_EMAIL || ''
   const cfGlobalApiKey = process.env.CF_GLOBAL_API_KEY || ''
-  const githubRepo = process.env.GITHUB_REPOSITORY || process.env.GH_REPO || ''
+  const githubRepo = inferGitHubRepository()
   const rotateJwtSecret = shouldRotateJwtSecret()
   const reuseExistingDatabaseId = shouldReuseExistingDatabaseId()
   const requireGitHubSync = shouldRequireGitHubSync()
@@ -251,7 +252,7 @@ async function main() {
   }
 
   if (requireGitHubSync && !githubRepo) {
-    console.error('❌ 需要 GITHUB_REPOSITORY 才能完成严格 GitHub 同步')
+    console.error('❌ 无法自动推导 GitHub 仓库，请先给当前仓库设置 origin 到 GitHub')
     process.exit(1)
   }
 
@@ -318,7 +319,6 @@ async function main() {
     D1_DATABASE_ID: databaseId,
     CF_DEFAULT_WORKER_NAME: workerName,
     CF_DEFAULT_PAGES_PROJECT: pagesProjectName,
-    GITHUB_REPOSITORY: githubRepo,
     JWT_SECRET: jwtSecret,
   })
   writeWranglerToml({
@@ -452,7 +452,6 @@ async function main() {
         encoding: 'utf-8',
         env: {
           ...process.env,
-          GITHUB_REPOSITORY: githubRepo,
           CLOUDFLARE_ACCOUNT_ID: accountId,
           CLOUDFLARE_API_TOKEN: cfApiToken,
           D1_DATABASE_ID: databaseId,

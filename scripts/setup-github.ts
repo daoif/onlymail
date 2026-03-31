@@ -1,6 +1,7 @@
 import './lib/local-config'
 import { execSync } from 'node:child_process'
 import { CloudflareApiClient } from './lib/cloudflare-api'
+import { inferGitHubRepository } from './lib/github-repo'
 
 type ConfigValue = {
   value: string
@@ -100,9 +101,9 @@ async function inferCloudflareDefaults() {
 }
 
 async function main() {
-  const repo = readValue('GITHUB_REPOSITORY', 'GH_REPO')
+  const repo = inferGitHubRepository()
   if (!repo) {
-    console.error('缺少 GITHUB_REPOSITORY 或 GH_REPO，例如 daoif/mails')
+    console.error('无法自动推导 GitHub 仓库。请先给当前仓库设置 origin 到 GitHub，或在 GitHub Actions 上下文里运行')
     process.exit(1)
   }
 
