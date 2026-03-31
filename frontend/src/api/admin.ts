@@ -108,12 +108,12 @@ export function bootstrapDomain(token: string, rootDomain: string) {
   )
 }
 
-export function createSubdomain(token: string, name: string, rootName?: string) {
+export function createSubdomain(token: string, name: string) {
   return apiRequest<ApiEnvelope<DomainRecord>>(
     '/api/domains',
     {
       method: 'POST',
-      body: JSON.stringify({ name, rootName: rootName || undefined }),
+      body: JSON.stringify({ name }),
     },
     token,
   )
@@ -121,6 +121,17 @@ export function createSubdomain(token: string, name: string, rootName?: string) 
 
 export function deleteDomain(token: string, name: string) {
   return apiRequest<{ message: string }>(`/api/domains/${encodeURIComponent(name)}`, { method: 'DELETE' }, token)
+}
+
+export function batchDeleteDomains(token: string, names: string[]) {
+  return apiRequest<ApiEnvelope<{ deleted: string[]; skippedRoots: string[]; skippedMissing: string[] }>>(
+    '/api/domains/batch-delete',
+    {
+      method: 'POST',
+      body: JSON.stringify({ names }),
+    },
+    token,
+  )
 }
 
 export function getApiKeyState(token: string) {

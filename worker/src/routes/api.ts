@@ -15,7 +15,7 @@ import { DEFAULT_PAGES_PROJECT, DEFAULT_WORKER_NAME } from '../lib/project-defau
 import { getPageParams, toPagination } from '../lib/pagination'
 
 import { createOrInspectAddress, deleteAddress, listAddresses } from '../services/address'
-import { bootstrapRootDomain, createSubdomain, deleteSubdomain, getDomainDetail, listDomains } from '../services/domain'
+import { bootstrapRootDomain, createSubdomain, deleteSubdomain, deleteSubdomains, getDomainDetail, listDomains } from '../services/domain'
 import { deleteMail, getMailById, listMails } from '../services/mail'
 import {
   addAllowedOriginPattern,
@@ -56,6 +56,10 @@ const bootstrapSchema = z.object({
 const createDomainSchema = z.object({
   name: z.string().min(1),
   rootName: z.string().min(1).optional(),
+})
+
+const batchDeleteDomainsSchema = z.object({
+  names: z.array(z.string().min(1)).min(1).max(200),
 })
 
 const changePasswordSchema = z.object({
@@ -199,6 +203,11 @@ apiRoutes.delete('/domains/:name', async (c) => {
   }
 
   return jsonMessage(c, '域名已删除')
+})
+
+apiRoutes.post('/domains/batch-delete', async (c) => {
+  const payload = batchDeleteDomainsSchema.parse(await c.req.json())
+  return jsonSuccess(c, await deleteSubdomains(c.env, payload.names))
 })
 
 // ── 系统设置 ──────────────────────────────────────────────────

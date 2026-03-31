@@ -3,7 +3,7 @@ import { createProviders } from '../providers/index'
 import { AppError } from '../lib/http'
 import { DEFAULT_WORKER_NAME } from '../lib/project-defaults'
 import type { AppBindings, DomainRecord } from '../types'
-import { getManagedSubdomainConstants, planSubdomainProvision } from './domain-reconciliation'
+import { findNearestRootDomainName, getManagedSubdomainConstants, planSubdomainProvision } from './domain-reconciliation'
 
 function requireEmailRoutingAuth(env: AppBindings) {
   const authEmail = env.CF_AUTH_EMAIL || env.CF_EMAIL
@@ -14,6 +14,26 @@ function requireEmailRoutingAuth(env: AppBindings) {
 
 async function findDomain(env: AppBindings, name: string) {
   return one<DomainRecord>(env.DB.prepare('SELECT * FROM domains WHERE name = ?1').bind(name.toLowerCase()))
+}
+
+async function findRootDomains(env: AppBindings) {
+  return many<DomainRecord>(
+    env.DB.prepare('SELECT * FROM domains WHERE is_root = 1 ORDER BY length(name) DESC, created_at ASC'),
+  )
+}
+
+async function resolveRootDomainRecord(env: AppBindings, name: string, explicitRootName?: string) {
+  if (explicitRootName) {
+    const explicit = await findDomain(env, explicitRootName)
+    if (explicit?.is_root === 1) {
+      return explicit
+    }
+    return null
+  }
+
+  const roots = await findRootDomains(env)
+  const matchedRootName = findNearestRootDomainName(name, roots.map((root) => root.name))
+  return roots.find((root) => root.name === matchedRootName) ?? null
 }
 
 export async function listDomains(
@@ -113,11 +133,11 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
     return existing
   }
 
-  const rootName = payload.rootName?.trim().toLowerCase() ?? name.split('.').slice(1).join('.')
-  const rootRecord = await findDomain(env, rootName)
-  if (!rootRecord || rootRecord.is_root !== 1) {
+  const rootRecord = await resolveRootDomainRecord(env, name, payload.rootName?.trim().toLowerCase())
+  if (!rootRecord) {
     throw new AppError(400, '请先初始化根域名，再创建子域名')
   }
+  const rootName = rootRecord.name
 
   const providers = createProviders(env)
   const { mxTargets, spfContent } = getManagedSubdomainConstants()
@@ -192,6 +212,35 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
   }
 
   return (await findDomain(env, name))!
+}
+
+export async function deleteSubdomains(env: AppBindings, names: string[]) {
+  const normalizedNames = Array.from(new Set(names.map((name) => name.trim().toLowerCase()).filter(Boolean)))
+  const deleted: string[] = []
+  const skippedRoots: string[] = []
+  const skippedMissing: string[] = []
+
+  for (const name of normalizedNames) {
+    const record = await findDomain(env, name)
+    if (!record) {
+      skippedMissing.push(name)
+      continue
+    }
+
+    if (record.is_root === 1) {
+      skippedRoots.push(name)
+      continue
+    }
+
+    await deleteSubdomain(env, name)
+    deleted.push(name)
+  }
+
+  return {
+    deleted,
+    skippedRoots,
+    skippedMissing,
+  }
 }
 
 async function rollbackDomainProvision(

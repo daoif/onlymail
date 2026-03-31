@@ -12,6 +12,14 @@ function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\.+$/, '')
 }
 
+export function findNearestRootDomainName(name: string, rootNames: string[]) {
+  const normalizedName = normalizeName(name)
+  const normalizedRoots = Array.from(new Set(rootNames.map(normalizeName))).sort((left, right) => right.length - left.length)
+  return normalizedRoots.find((rootName) => (
+    normalizedName === rootName || normalizedName.endsWith(`.${rootName}`)
+  )) ?? null
+}
+
 function hasWorkerAction(rule: EmailRule, workerName: string) {
   return (rule.actions ?? []).some((action) => {
     if (action.type !== 'worker') {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { planSubdomainProvision } from '../src/services/domain-reconciliation'
+import { findNearestRootDomainName, planSubdomainProvision } from '../src/services/domain-reconciliation'
 
 test('planSubdomainProvision 会复用已经就绪的 DNS 和 Email Routing 资源', () => {
   const plan = planSubdomainProvision(
@@ -58,4 +58,18 @@ test('planSubdomainProvision 会识别缺失资源和冲突规则', () => {
   assert.equal(plan.routeRuleId, null)
   assert.equal(plan.needsRouteRule, true)
   assert.equal(plan.conflictingRouteRuleId, 'rule-2')
+})
+
+test('findNearestRootDomainName 会匹配最近的已初始化根域名', () => {
+  assert.equal(
+    findNearestRootDomainName('m1.m1.ainiaini.xyz', ['ainiaini.xyz', 'other.com']),
+    'ainiaini.xyz',
+  )
+
+  assert.equal(
+    findNearestRootDomainName('a.deep.example.com', ['example.com', 'deep.example.com']),
+    'deep.example.com',
+  )
+
+  assert.equal(findNearestRootDomainName('isolated.test', ['example.com']), null)
 })

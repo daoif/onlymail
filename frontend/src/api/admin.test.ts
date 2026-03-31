@@ -9,6 +9,7 @@ vi.mock('./client', () => ({
 }))
 
 import {
+  batchDeleteDomains,
   bootstrapDomain,
   createSubdomain,
   getDomains,
@@ -39,19 +40,29 @@ describe('admin api helpers', () => {
     )
   })
 
-  it('createSubdomain 会保留 rootName', () => {
-    createSubdomain('token-3', 'mail.example.com', 'example.com')
+  it('createSubdomain 只发送完整域名', () => {
+    createSubdomain('token-3', 'mail.example.com')
 
     expect(apiRequest).toHaveBeenCalledWith(
       '/api/domains',
       {
         method: 'POST',
-        body: JSON.stringify({
-          name: 'mail.example.com',
-          rootName: 'example.com',
-        }),
+        body: JSON.stringify({ name: 'mail.example.com' }),
       },
       'token-3',
+    )
+  })
+
+  it('batchDeleteDomains 会发送 names 数组', () => {
+    batchDeleteDomains('token-5', ['m1.example.com', 'm2.example.com'])
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/domains/batch-delete',
+      {
+        method: 'POST',
+        body: JSON.stringify({ names: ['m1.example.com', 'm2.example.com'] }),
+      },
+      'token-5',
     )
   })
 
