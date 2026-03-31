@@ -1,5 +1,5 @@
 {
-  "name": "@mails/sdk-nodejs",
+  "name": "@onlymail/sdk-nodejs",
   "version": "0.1.0",
   "private": true,
   "type": "module",

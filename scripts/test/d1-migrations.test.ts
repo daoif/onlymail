@@ -11,7 +11,7 @@ import {
 } from '../lib/d1-migrations'
 
 test('listD1MigrationFiles 会排序并过滤非 migration 文件', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'mails-migrations-test-'))
+  const dir = mkdtempSync(join(tmpdir(), 'onlymail-migrations-test-'))
   writeFileSync(join(dir, '0002_add_index.sql'), '-- second', 'utf-8')
   writeFileSync(join(dir, '0001_initial.sql'), '-- first', 'utf-8')
   writeFileSync(join(dir, 'notes.txt'), 'ignore', 'utf-8')

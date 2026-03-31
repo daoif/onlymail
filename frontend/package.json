@@ -1,5 +1,5 @@
 {
-  "name": "@mails/frontend",
+  "name": "@onlymail/frontend",
   "private": true,
   "type": "module",
   "scripts": {

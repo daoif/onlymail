@@ -34,7 +34,7 @@
 - 本地参数改成根目录 `.env.local` 单一来源；`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件
 - `init` 会把 `D1_DATABASE_ID`、`JWT_SECRET` 回写到 `.env.local`，再生成 `worker/wrangler.toml` 和 `worker/.dev.vars`
 - `ALLOWED_ORIGINS` 已从本地 env、GitHub Variables、`wrangler.toml` 和 workflow 输入中移除；Worker 运行时只从 D1 `settings.allowed_origins` 读取默认 Pages 来源、自定义前端域名和开发白名单
-- Worker 名和 Pages 项目名已固定为 `mails-worker`、`mails-frontend`，不再暴露成用户配置项，也不再通过 GitHub Variables 传递
+- Worker 名和 Pages 项目名已固定为 `onlymail-worker`、`onlymail-frontend`，不再暴露成用户配置项，也不再通过 GitHub Variables 传递
 - 新增 `pnpm run rebuild`：删除并重建 D1，轮换 `JWT_SECRET`，再重跑 `init`；DNS、自定义域名、Email Routing 外部入口不在这条命令里处理
 - 新增 `pnpm deploy:worker`、`pnpm deploy:frontend` 两个本地重部署入口，给本地调试和应急使用
 - 新增 `worker/db/migrations/` 和 `schema_migrations`；`init`、`deploy:worker`、`pnpm migrate:d1` 现在都按 migration 机制补齐数据库结构

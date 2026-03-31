@@ -201,7 +201,7 @@ pnpm run init
 ```
 
 脚本自动完成：
-- ✅ 创建 D1 数据库 `mails-db`
+- ✅ 创建 D1 数据库 `onlymail-db`
 - ✅ 创建或确认 Pages 项目
 - ✅ 读取 Pages 默认 `pages.dev` 地址并同步到 D1 `settings.allowed_origins`
 - ✅ 从 `wrangler.toml.template` 生成 `wrangler.toml`
@@ -252,7 +252,7 @@ Variables：
 
 | 名称 | 值 |
 |------|------|
-| `D1_DATABASE_ID` | `mails-db` 的 database id |
+| `D1_DATABASE_ID` | `onlymail-db` 的 database id |
 
 > `worker/wrangler.toml` 不需要上传到 GitHub，也不需要再作为整文件 Secret 保存。CI 会按模板自动生成。
 
@@ -269,8 +269,8 @@ Variables：
 ### 步骤 7：在设置页绑定正式入口 🧑
 
 登录后进入 **设置** 页面：
-- 绑定 Worker API 自定义域名，例如 `mails-api.你的域名`
-- 绑定 Pages 自定义域名，例如 `mails.你的域名`
+- 绑定 Worker API 自定义域名，例如 `onlymail-api.你的域名`
+- 绑定 Pages 自定义域名，例如 `onlymail.你的域名`
 
 Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实 `subdomain`，然后重试验证。  
 如果状态显示“HTTP 已生效、证书验证等待中”，继续等 5 到 10 分钟。
@@ -289,7 +289,7 @@ Pages 自定义域名这一步会自动把 CNAME 对齐到 Pages 项目的真实
 
 1. 打开 `https://你的-pages-subdomain.pages.dev`，确认前端能访问
 2. 打开 `https://你的-worker.你的-account-subdomain.workers.dev/`，确认 Worker 健康检查能访问
-3. 在设置页绑定 `mails-api.你的域名` 和 `mails.你的域名`
+3. 在设置页绑定 `onlymail-api.你的域名` 和 `onlymail.你的域名`
 4. 在 **域名** 页面创建一个子域名
 5. 用 **地址** 页面创建一个真实地址
 6. 往这个地址发一封测试邮件，确认能在 **邮件** 页面看到

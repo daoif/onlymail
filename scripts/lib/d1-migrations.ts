@@ -88,7 +88,7 @@ function getAppliedMigrationNames(options: ApplyD1MigrationsOptions) {
 }
 
 function createTempMigrationFile(name: string, sql: string) {
-  const dir = mkdtempSync(join(tmpdir(), 'mails-d1-migration-'))
+  const dir = mkdtempSync(join(tmpdir(), 'onlymail-d1-migration-'))
   const path = join(dir, `${name}.sql`)
   writeFileSync(path, buildMigrationWrapperSql(name, sql), 'utf-8')
   return { dir, path }

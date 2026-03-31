@@ -22,7 +22,7 @@ pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"
 ```json
 {
   "dependencies": {
-    "@mails/sdk-nodejs": "git+https://github.com/<owner>/<repo>.git#master&path:/sdk/nodejs"
+    "@onlymail/sdk-nodejs": "git+https://github.com/<owner>/<repo>.git#master&path:/sdk/nodejs"
   }
 }
 ```
@@ -30,9 +30,9 @@ pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"
 ## 用法
 
 ```ts
-import { MailsClient } from '@mails/sdk-nodejs'
+import { OnlyMailClient } from '@onlymail/sdk-nodejs'
 
-const client = new MailsClient('https://your-worker.your-account.workers.dev', process.env.MAILS_API_KEY!)
+const client = new OnlyMailClient('https://your-worker.your-account.workers.dev', process.env.ONLYMAIL_API_KEY!)
 const created = await client.createAddress('demo@m1.example.com', 'demo', 24)
 const mail = await client.waitForMail(created.address.name, 60_000, 3_000)
 console.log(mail.subject)

@@ -41,7 +41,7 @@ import { writeWranglerToml } from './lib/wrangler-config'
 
 const FRONTEND_DIR = resolve(ROOT_DIR, 'frontend')
 const TOML_PATH = resolve(WORKER_DIR, 'wrangler.toml')
-const DB_NAME = 'mails-db'
+const DB_NAME = 'onlymail-db'
 
 type SetupContext = {
   accountId: string
@@ -195,7 +195,7 @@ function createJwtSecret() {
 // ── 主流程 ────────────────────────────────────────────────────
 
 async function main() {
-  console.log('=== Mails Worker 初始化脚本 ===')
+  console.log('=== OnlyMail 初始化脚本 ===')
   console.log()
 
   // 1. 检查前置条件

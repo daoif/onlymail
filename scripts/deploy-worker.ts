@@ -39,12 +39,12 @@ async function syncDefaultAllowedOrigins() {
     throw new Error('无法读取 Pages 项目默认域名，无法同步默认允许来源')
   }
 
-  syncAllowedOriginsSetting('mails-db', 'remote', pagesProject.subdomain)
+  syncAllowedOriginsSetting('onlymail-db', 'remote', pagesProject.subdomain)
 }
 
 async function main() {
   run('pnpm render:wrangler', ROOT_DIR)
-  applyD1Migrations({ databaseName: 'mails-db', mode: 'remote' })
+  applyD1Migrations({ databaseName: 'onlymail-db', mode: 'remote' })
   await syncDefaultAllowedOrigins()
   run('npx wrangler deploy', WORKER_DIR)
 }

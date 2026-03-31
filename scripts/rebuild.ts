@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto'
 
 import { ROOT_DIR, writeLocalEnvValues } from './lib/local-config'
 
-const DB_NAME = 'mails-db'
+const DB_NAME = 'onlymail-db'
 
 function run(command: string, env?: NodeJS.ProcessEnv) {
   console.log(`> ${command}`)
@@ -49,7 +49,7 @@ function createJwtSecret() {
 }
 
 async function main() {
-  console.log('=== Mails Worker 重建脚本 ===')
+  console.log('=== OnlyMail 重建脚本 ===')
   console.log()
   console.log('这会重建 D1、轮换 JWT_SECRET，并重新部署 Worker / Frontend。')
   console.log('Cloudflare 上已有的 DNS、自定义域名和 Email Routing 外部入口不会处理。')

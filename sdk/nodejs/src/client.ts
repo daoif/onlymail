@@ -1,4 +1,4 @@
-import { MailsSdkError } from './errors.js'
+import { OnlyMailSdkError } from './errors.js'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ export interface Paginated<T> {
 
 // ── Client ────────────────────────────────────────────────────
 
-export class MailsApiClient {
+export class OnlyMailApiClient {
   constructor(private readonly baseUrl: string, private readonly apiKey: string) {}
 
   private async request<T>(path: string, init: RequestInit = {}) {
@@ -73,7 +73,7 @@ export class MailsApiClient {
 
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      throw new MailsSdkError(payload?.error?.message ?? '请求失败', response.status, payload?.error?.details)
+      throw new OnlyMailSdkError(payload?.error?.message ?? '请求失败', response.status, payload?.error?.details)
     }
 
     return payload as T

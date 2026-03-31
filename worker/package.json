@@ -1,5 +1,5 @@
 {
-  "name": "@mails/worker",
+  "name": "@onlymail/worker",
   "private": true,
   "type": "module",
   "scripts": {

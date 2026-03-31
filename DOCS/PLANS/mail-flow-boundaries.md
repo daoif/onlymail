@@ -47,8 +47,8 @@
 - 前端：`frontend/src/views/SettingsView.vue`
 
 负责：
-- 为 Worker API 绑定自定义域名（如 `mails-api.example.com` → Worker）
-- 为前端 Pages 绑定自定义域名（如 `mails.example.com` → Pages）
+- 为 Worker API 绑定自定义域名（如 `onlymail-api.example.com` → Worker）
+- 为前端 Pages 绑定自定义域名（如 `onlymail.example.com` → Pages）
 - 自动创建/更新对应的 CNAME 记录
 - 提供更好记的访问别名，不改动管理面板固定使用的 `workers.dev` API 主路径
 

@@ -1,4 +1,4 @@
-# mails
+# OnlyMail
 
 > 自部署的个人邮箱系统 —— 基于 Cloudflare Workers + D1 + Email Routing + Pages，开箱即用。
 
@@ -99,20 +99,20 @@ pnpm --dir frontend dev     # 启动前端
 **Node.js**
 
 ```ts
-import { MailsClient } from '@mails/sdk-nodejs'
+import { OnlyMailClient } from '@onlymail/sdk-nodejs'
 
-const client = new MailsClient(
+const client = new OnlyMailClient(
   'https://your-worker.your-account.workers.dev',
-  process.env.MAILS_API_KEY!
+  process.env.ONLYMAIL_API_KEY!
 )
 ```
 
 **Python**
 
 ```python
-from mails_sdk import MailsClient
+from onlymail_sdk import OnlyMailClient
 
-client = MailsClient(
+client = OnlyMailClient(
   'https://your-worker.your-account.workers.dev',
   api_key='YOUR_API_KEY'
 )

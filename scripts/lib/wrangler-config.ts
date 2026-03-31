@@ -25,7 +25,7 @@ export function resolveWranglerConfigFromEnv(env: NodeJS.ProcessEnv): WranglerCo
   return {
     accountId: requireValue(env.CF_ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID, 'CF_ACCOUNT_ID / CLOUDFLARE_ACCOUNT_ID'),
     databaseId: requireValue(env.D1_DATABASE_ID || env.DB_ID, 'D1_DATABASE_ID / DB_ID'),
-    databaseName: env.D1_DATABASE_NAME?.trim() || 'mails-db',
+    databaseName: env.D1_DATABASE_NAME?.trim() || 'onlymail-db',
   }
 }
 
@@ -34,7 +34,7 @@ export function renderWranglerToml(input: WranglerConfigInput): string {
   const rendered = template
     .replace('__ACCOUNT_ID__', input.accountId)
     .replace('__DATABASE_ID__', input.databaseId)
-    .replace(/database_name = "mails-db"/, `database_name = "${input.databaseName || 'mails-db'}"`)
+    .replace(/database_name = "onlymail-db"/, `database_name = "${input.databaseName || 'onlymail-db'}"`)
 
   if (rendered.includes('__')) {
     throw new Error('wrangler.toml 模板还有未替换的占位符')

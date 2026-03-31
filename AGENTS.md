@@ -22,7 +22,7 @@
 ### 部署状态约定
 - 手动配置只保留 4 个 Cloudflare 凭据：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`。
 - 自动维护只保留 2 个内部状态：`D1_DATABASE_ID`、`JWT_SECRET`。
-- Worker 名固定为 `mails-worker`，Pages 项目名固定为 `mails-frontend`，不再作为用户配置项暴露。
+- Worker 名固定为 `onlymail-worker`，Pages 项目名固定为 `onlymail-frontend`，不再作为用户配置项暴露。
 - `ALLOWED_ORIGINS` 不再走 env / GitHub Variables 链；Worker CORS 运行时只认 D1 `settings.allowed_origins`，再固定补一个本地开发来源 `http://localhost:5173`。
 
 ### 风险清单

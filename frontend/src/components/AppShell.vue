@@ -3,7 +3,7 @@
     <header class="border-b border-slate-200">
       <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <div>
-          <p class="text-lg font-semibold text-slate-900">Mails</p>
+          <p class="text-lg font-semibold text-slate-900">OnlyMail</p>
           <p class="text-sm text-slate-500">个人邮箱管理后台</p>
         </div>
         <div class="flex items-center gap-4">

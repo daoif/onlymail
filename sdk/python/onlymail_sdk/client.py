@@ -5,10 +5,10 @@ from typing import Any
 
 import requests
 
-from .exceptions import MailsSdkError, TimeoutError
+from .exceptions import OnlyMailSdkError, TimeoutError
 
 
-class MailsClient:
+class OnlyMailClient:
     def __init__(self, base_url: str, api_key: str, timeout: int = 30):
         self.base_url = base_url.rstrip('/')
         self.api_key = api_key
@@ -29,11 +29,11 @@ class MailsClient:
         try:
             payload = response.json()
         except ValueError as exc:
-            raise MailsSdkError("响应不是合法 JSON", response.status_code) from exc
+            raise OnlyMailSdkError("响应不是合法 JSON", response.status_code) from exc
 
         if not response.ok:
             error = payload.get("error", {})
-            raise MailsSdkError(error.get("message", "请求失败"), response.status_code, error.get("details"))
+            raise OnlyMailSdkError(error.get("message", "请求失败"), response.status_code, error.get("details"))
 
         return payload
 

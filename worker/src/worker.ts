@@ -50,7 +50,7 @@ app.use('*', async (c, next) => {
 
 app.onError((error, c) => jsonError(c, error))
 
-app.get('/', (c) => jsonSuccess(c, { ok: true, service: 'mails-worker' }))
+app.get('/', (c) => jsonSuccess(c, { ok: true, service: 'onlymail-worker' }))
 app.get('/health', (c) => jsonSuccess(c, { ok: true }))
 
 // ── /api/* — JWT 认证 ─────────────────────────────────────────

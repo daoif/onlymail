@@ -8,14 +8,14 @@ test('mergeAllowedOriginsForTest 会替换旧的 pages.dev 默认来源并保留
     [
       'https://old-project.pages.dev',
       'https://*.old-project.pages.dev',
-      'https://mails.ainiaini.xyz',
+      'https://onlymail.ainiaini.xyz',
     ],
-    'mails-frontend-arl.pages.dev',
+    'onlymail-frontend-arl.pages.dev',
   )
 
   assert.deepEqual(merged, [
-    'https://*.mails-frontend-arl.pages.dev',
-    'https://mails-frontend-arl.pages.dev',
-    'https://mails.ainiaini.xyz',
+    'https://*.onlymail-frontend-arl.pages.dev',
+    'https://onlymail-frontend-arl.pages.dev',
+    'https://onlymail.ainiaini.xyz',
   ])
 })

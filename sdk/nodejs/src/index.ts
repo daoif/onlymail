@@ -1,7 +1,7 @@
-import { MailsApiClient, type MailDetail } from './client.js'
+import { OnlyMailApiClient, type MailDetail } from './client.js'
 import { TimeoutError } from './errors.js'
 
-export class MailsClient extends MailsApiClient {
+export class OnlyMailClient extends OnlyMailApiClient {
   async waitForMail(address: string, timeoutMs = 60_000, intervalMs = 3_000): Promise<MailDetail> {
     const start = Date.now()
     const initial = await this.getMailList(address, 1, 50)

@@ -2,7 +2,7 @@ import './lib/local-config'
 
 import { applyD1Migrations, type D1MigrationMode } from './lib/d1-migrations'
 
-const DB_NAME = 'mails-db'
+const DB_NAME = 'onlymail-db'
 
 function detectMode(): D1MigrationMode {
   if (process.argv.includes('--local')) {

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 
-const TOKEN_KEY = 'mails_admin_token'
-const USERNAME_KEY = 'mails_admin_user'
+const TOKEN_KEY = 'onlymail_admin_token'
+const USERNAME_KEY = 'onlymail_admin_user'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({

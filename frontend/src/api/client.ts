@@ -1,6 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
-const TOKEN_KEY = 'mails_admin_token'
-const USERNAME_KEY = 'mails_admin_user'
+const TOKEN_KEY = 'onlymail_admin_token'
+const USERNAME_KEY = 'onlymail_admin_user'
 
 export class ApiError extends Error {
   status: number

@@ -70,7 +70,7 @@
         <div class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
           <div>
             <h2 class="text-lg font-semibold text-slate-900">Worker API 域名</h2>
-            <p class="mt-1 text-sm text-slate-500">为后端 API 绑定自定义域名（如 mails-api.你的域名 → Worker）。系统会按域名自动解析 Zone，并按当前 Cloudflare 账号完成绑定。</p>
+            <p class="mt-1 text-sm text-slate-500">为后端 API 绑定自定义域名（如 onlymail-api.你的域名 → Worker）。系统会按域名自动解析 Zone，并按当前 Cloudflare 账号完成绑定。</p>
           </div>
 
           <div v-if="workerDomainsLoading" class="py-4 text-center text-sm text-slate-500">加载中…</div>
@@ -99,7 +99,7 @@
           </template>
 
           <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="submitAddWorkerDomain">
-            <input v-model="newWorkerHostname" class="input-base flex-1" type="text" placeholder="mails-api.你的域名" />
+            <input v-model="newWorkerHostname" class="input-base flex-1" type="text" placeholder="onlymail-api.你的域名" />
             <button class="button-primary whitespace-nowrap sm:w-28" type="submit">绑定</button>
           </form>
           <p v-if="workerDomainMsg" class="text-sm text-slate-500">{{ workerDomainMsg }}</p>
@@ -110,7 +110,7 @@
         <div class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
           <div>
             <h2 class="text-lg font-semibold text-slate-900">前端 Pages 域名</h2>
-            <p class="mt-1 text-sm text-slate-500">为前端面板绑定自定义域名（如 mails.你的域名 → Pages）。系统会按域名自动解析 Zone、把 CNAME 指到 Pages 项目的真实 subdomain，并立即重试验证。HTTP 验证先变成已生效后，证书验证再等 5 到 10 分钟都算正常。</p>
+            <p class="mt-1 text-sm text-slate-500">为前端面板绑定自定义域名（如 onlymail.你的域名 → Pages）。系统会按域名自动解析 Zone、把 CNAME 指到 Pages 项目的真实 subdomain，并立即重试验证。HTTP 验证先变成已生效后，证书验证再等 5 到 10 分钟都算正常。</p>
           </div>
 
           <div v-if="pagesDomainsLoading" class="py-4 text-center text-sm text-slate-500">加载中…</div>
@@ -144,7 +144,7 @@
           </template>
 
           <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="submitAddPagesDomain">
-            <input v-model="newPagesDomain" class="input-base flex-1" type="text" placeholder="mails.你的域名" />
+            <input v-model="newPagesDomain" class="input-base flex-1" type="text" placeholder="onlymail.你的域名" />
             <button class="button-primary whitespace-nowrap sm:w-28" type="submit">绑定</button>
           </form>
           <p class="text-sm text-slate-500">如果这个域名之前已经有旧的 CNAME，系统会自动改到当前 Pages 项目的真实 subdomain。</p>

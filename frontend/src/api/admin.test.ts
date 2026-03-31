@@ -56,10 +56,10 @@ describe('admin api helpers', () => {
   })
 
   it('removePagesDomain 会编码域名参数', () => {
-    removePagesDomain('token-4', 'mails.example.com')
+    removePagesDomain('token-4', 'onlymail.example.com')
 
     expect(apiRequest).toHaveBeenCalledWith(
-      '/api/settings/pages-domains/mails.example.com',
+      '/api/settings/pages-domains/onlymail.example.com',
       { method: 'DELETE' },
       'token-4',
     )

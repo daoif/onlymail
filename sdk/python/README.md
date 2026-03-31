@@ -23,9 +23,9 @@ git+https://github.com/<owner>/<repo>.git@master#subdirectory=sdk/python
 ## 用法
 
 ```python
-from mails_sdk import MailsClient
+from onlymail_sdk import OnlyMailClient
 
-client = MailsClient('https://your-worker.your-account.workers.dev', api_key='YOUR_API_KEY')
+client = OnlyMailClient('https://your-worker.your-account.workers.dev', api_key='YOUR_API_KEY')
 created = client.create_address('demo@m1.example.com', 'demo', ttl_hours=24)
 mail = client.wait_for_mail(created['address']['name'], timeout_ms=60000, interval_ms=3000)
 print(mail['subject'])

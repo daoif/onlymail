@@ -4,14 +4,14 @@
 
 ### 命名规则
 
-- API: `mails-api.{根域名}`
-- 前端: `mails.{根域名}`
+- API: `onlymail-api.{根域名}`
+- 前端: `onlymail.{根域名}`
 
-例如：`mails-api.example.com` 和 `mails.example.com`
+例如：`onlymail-api.example.com` 和 `onlymail.example.com`
 
 ### 设计要求
 
-- `mails-api`和`mails`前缀是**默认值**，用户可在应用内的初始化引导或设置页里修改
+- `onlymail-api`和`onlymail`前缀是**默认值**，用户可在应用内的初始化引导或设置页里修改
 - 根域名不能写死，随用户实际域名而定
 - 在前端引导和设置页中作为推荐值，但允许自定义输入
 

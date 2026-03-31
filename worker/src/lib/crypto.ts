@@ -16,7 +16,7 @@ export function generateApiKey() {
   const bytes = new Uint8Array(24)
   crypto.getRandomValues(bytes)
   const suffix = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
-  return `mails_${suffix}`
+  return `onlymail_${suffix}`
 }
 
 export function getApiKeyPreview(apiKey: string) {
