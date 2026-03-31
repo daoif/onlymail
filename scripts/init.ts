@@ -35,6 +35,7 @@ import { CloudflareApiClient } from './lib/cloudflare-api'
 import { syncAllowedOriginsSetting } from './lib/d1-allowed-origins'
 import { applyD1Migrations, ensureD1MigrationsExist } from './lib/d1-migrations'
 import { writeWorkerDevVars } from './lib/dev-vars'
+import { extractDatabaseIdFromCreateOutput } from './lib/d1-output'
 import { inferGitHubRepository } from './lib/github-repo'
 import { DEFAULT_PAGES_PROJECT, DEFAULT_WORKER_NAME } from './lib/project-defaults'
 import { writeWranglerToml } from './lib/wrangler-config'
@@ -240,9 +241,8 @@ async function main() {
   let databaseId = ''
   try {
     const output = run(`npx wrangler d1 create ${DB_NAME}`)
-    const match = output.match(/database_id\s*=\s*"([^"]+)"/)
-    if (match) {
-      databaseId = match[1]
+    databaseId = extractDatabaseIdFromCreateOutput(output)
+    if (databaseId) {
       console.log(`✅ 数据库已创建: ${databaseId}`)
     } else {
       console.log('⚠️  数据库可能已存在，请手动填入 database_id')

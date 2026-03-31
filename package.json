@@ -12,7 +12,7 @@
     "deploy:worker": "tsx scripts/deploy-worker.ts",
     "deploy:frontend": "tsx scripts/deploy-frontend.ts",
     "test": "pnpm test:scripts && pnpm test:worker && pnpm --dir frontend test",
-    "test:scripts": "node --import tsx --test scripts/test/d1-migrations.test.ts scripts/test/d1-allowed-origins.test.ts scripts/test/github-repo.test.ts",
+    "test:scripts": "node --import tsx --test scripts/test/d1-migrations.test.ts scripts/test/d1-allowed-origins.test.ts scripts/test/d1-output.test.ts scripts/test/github-repo.test.ts",
     "test:worker": "node --import tsx --test worker/test/worker.test.ts",
     "check:scripts": "pnpm --dir worker exec tsc -p ../scripts/tsconfig.json --noEmit",
     "build": "pnpm --dir worker run build && pnpm --dir frontend run build && pnpm --dir sdk/nodejs run build",
