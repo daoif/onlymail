@@ -37,6 +37,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           MAILS_REQUIRE_GITHUB_SYNC: 'true'
+          SETUP_GITHUB_SKIP_SECRETS: 'true'
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_EMAIL: ${{ secrets.CF_EMAIL }}
