@@ -16,7 +16,7 @@
 3. 安装依赖：`pnpm install`
 4. 生成本地配置：`pnpm render:wrangler`、`pnpm sync:dev-vars`
 
-`D1_DATABASE_ID` 和 `JWT_SECRET` 不是手动配置项。`init` / `rebuild` 会自动回写到 `.env.local`，混合部署时再由 `pnpm setup:github` 同步到 GitHub。
+`D1_DATABASE_ID` 不是手动配置项。`init` / `rebuild` 会自动回写到 `.env.local`，混合部署时再由 `pnpm setup:github` 同步到 GitHub。
 
 ## 常用命令
 
