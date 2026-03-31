@@ -58,6 +58,11 @@ pnpm run init
 - 创建或复用 Worker 与 Pages 默认入口并部署
 - 回写 `D1_DATABASE_ID` 与 `JWT_SECRET` 到本地配置
 
+这套部署模型固定成 `4 + 2`：
+
+- 手动准备 4 个 Cloudflare 凭据：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`
+- 系统自动维护 2 个内部状态：`D1_DATABASE_ID`、`JWT_SECRET`
+
 **3. 打开面板**
 
 首次部署完成后，用 Pages 默认地址打开管理面板，创建管理员账号，即可在应用内绑定正式域名。

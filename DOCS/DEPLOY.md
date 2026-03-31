@@ -58,6 +58,11 @@
 
 本地开发和本地脚本现在统一读项目根目录的 `.env.local`。
 
+这里的配置模型固定成 `4 + 2`：
+
+- 手动准备 4 个 Cloudflare 凭据：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`
+- 系统自动维护 2 个内部状态：`D1_DATABASE_ID`、`JWT_SECRET`
+
 先做这一步：
 
 1. 复制 `.env.local.example` 为 `.env.local`
@@ -81,6 +86,24 @@
 
 - `worker/wrangler.toml`
 - `worker/.dev.vars`
+
+这 6 个值在三条部署路径里的落点固定如下：
+
+| 值 | 本地部署 | GitHub-only | 混合部署 |
+|------|------|------|------|
+| `CF_API_TOKEN` | `.env.local` 手填 | GitHub Secret | 先在 `.env.local` 手填，再用 `setup:github` 写进 GitHub Secret |
+| `CF_ACCOUNT_ID` | `.env.local` 手填 | GitHub Secret | 先在 `.env.local` 手填，再用 `setup:github` 写进 GitHub Secret |
+| `CF_EMAIL` | `.env.local` 手填 | GitHub Secret | 先在 `.env.local` 手填，再用 `setup:github` 写进 GitHub Secret |
+| `CF_GLOBAL_API_KEY` | `.env.local` 手填 | GitHub Secret | 先在 `.env.local` 手填，再用 `setup:github` 写进 GitHub Secret |
+| `D1_DATABASE_ID` | `init` / `rebuild` 自动回写到 `.env.local` | `Bootstrap Cloudflare` 自动写回 GitHub Variable | 本地先回写到 `.env.local`，再由 `setup:github` 写进 GitHub Variable |
+| `JWT_SECRET` | `init` / `rebuild` 自动回写到 `.env.local` | `Bootstrap Cloudflare` 自动写回 GitHub Secret | 本地先回写到 `.env.local`，再由 `setup:github` 写进 GitHub Secret |
+
+运行时实际读取规则也固定了：
+
+- 本地命令先读 `.env.local`
+- GitHub workflow 先读 GitHub Secrets / Variables
+- Worker 运行时只读已经部署进 Cloudflare 的 secrets、`wrangler.toml` 和 D1
+- `D1_DATABASE_ID` 和 `JWT_SECRET` 不放进 D1；一个是数据库指针，一个是运行时签名密钥，都必须在读 D1 之前先可用
 
 命令边界固定成这三条：
 
@@ -318,7 +341,6 @@ pnpm run rebuild
 - Cloudflare Account ID
 - `CF_EMAIL` 和 `CF_GLOBAL_API_KEY`
   如果你要让应用后续完成根域名 bootstrap、catch-all 和后续规则操作，这组值应当提前准备好
-- 你已经知道要填进 workflow 的 Worker 名和 Pages 项目名，或者准备接受默认值
 
 ### 步骤 1：准备自己的仓库 🧑
 
@@ -355,9 +377,7 @@ pnpm run rebuild
 
 ### 步骤 4：运行首次初始化 workflow 🧑
 
-进入 `Actions -> Bootstrap Cloudflare -> Run workflow`，填：
-- `cf_default_worker_name`（不填默认 `mails-worker`）
-- `cf_default_pages_project`（不填默认 `mails-frontend`）
+进入 `Actions -> Bootstrap Cloudflare -> Run workflow`，直接运行即可。
 
 这个 workflow 会直接跑仓库里的 `pnpm run init`，自动完成：
 - 创建或确认 D1
