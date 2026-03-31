@@ -4,18 +4,20 @@ import test from 'node:test'
 import { mergeAllowedOriginsForTest } from '../lib/d1-allowed-origins'
 
 test('mergeAllowedOriginsForTest 会替换旧的 pages.dev 默认来源并保留自定义域名', () => {
+  const actualProjectSubdomain = 'actual-project-subdomain.pages.dev'
+
   const merged = mergeAllowedOriginsForTest(
     [
       'https://old-project.pages.dev',
       'https://*.old-project.pages.dev',
       'https://onlymail.ainiaini.xyz',
     ],
-    'onlymail-frontend-arl.pages.dev',
+    actualProjectSubdomain,
   )
 
   assert.deepEqual(merged, [
-    'https://*.onlymail-frontend-arl.pages.dev',
-    'https://onlymail-frontend-arl.pages.dev',
+    `https://*.${actualProjectSubdomain}`,
+    `https://${actualProjectSubdomain}`,
     'https://onlymail.ainiaini.xyz',
   ])
 })

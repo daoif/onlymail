@@ -32,6 +32,10 @@ export class CloudflareEmailProvider extends CloudflareBase implements EmailProv
     return this.request<EmailRule>(`/zones/${zoneId}/email/routing/rules/catch_all`, init, 'global')
   }
 
+  async listEmailRules(zoneId: string) {
+    return this.request<EmailRule[]>(`/zones/${zoneId}/email/routing/rules`, undefined, 'global')
+  }
+
   async createEmailRule(zoneId: string, payload: Record<string, unknown>) {
     const init = {
       method: 'POST',

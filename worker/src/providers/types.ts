@@ -43,12 +43,23 @@ export interface EmailRoutingSettings {
 export interface EmailRule {
   id: string
   name?: string
+  enabled?: boolean
+  actions?: Array<{
+    type?: string
+    value?: string[]
+  }>
+  matchers?: Array<{
+    type?: string
+    field?: string
+    value?: string
+  }>
 }
 
 export interface EmailProvider {
   getEmailRoutingSettings(zoneId: string): Promise<EmailRoutingSettings>
   enableEmailRouting(zoneId: string): Promise<EmailRoutingSettings>
   updateCatchAll(zoneId: string, workerName: string): Promise<EmailRule>
+  listEmailRules(zoneId: string): Promise<EmailRule[]>
   createEmailRule(zoneId: string, payload: Record<string, unknown>): Promise<EmailRule>
   deleteEmailRule(zoneId: string, ruleId: string): Promise<EmailRule>
 }

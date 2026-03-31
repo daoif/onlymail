@@ -3,12 +3,7 @@ import { createProviders } from '../providers/index'
 import { AppError } from '../lib/http'
 import { DEFAULT_WORKER_NAME } from '../lib/project-defaults'
 import type { AppBindings, DomainRecord } from '../types'
-
-const MX_TARGETS = [
-  { content: 'route1.mx.cloudflare.net', priority: 86 },
-  { content: 'route2.mx.cloudflare.net', priority: 23 },
-  { content: 'route3.mx.cloudflare.net', priority: 50 },
-]
+import { getManagedSubdomainConstants, planSubdomainProvision } from './domain-reconciliation'
 
 function requireEmailRoutingAuth(env: AppBindings) {
   const authEmail = env.CF_AUTH_EMAIL || env.CF_EMAIL
@@ -125,12 +120,23 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
   }
 
   const providers = createProviders(env)
+  const { mxTargets, spfContent } = getManagedSubdomainConstants()
+  const existingRecords = await providers.dns.listDnsRecords(rootRecord.cf_zone_id, { name })
+  const existingRules = await providers.email.listEmailRules(rootRecord.cf_zone_id)
+  const provisionPlan = planSubdomainProvision(name, DEFAULT_WORKER_NAME, existingRecords, existingRules)
+
+  if (provisionPlan.conflictingRouteRuleId) {
+    throw new AppError(409, '这个子域名已经有现成的 Email Routing 规则，但目标不是当前 Worker，请先手动清理后再重试')
+  }
+
   const mxIds: string[] = []
   let txtRecordId: string | null = null
   let routeRuleId: string | null = null
 
   try {
-    for (const target of MX_TARGETS) {
+    mxIds.push(...provisionPlan.reusableMxRecordIds)
+
+    for (const target of provisionPlan.mxTargetsToCreate) {
       const record = await providers.dns.createDnsRecord(rootRecord.cf_zone_id, {
         type: 'MX',
         name,
@@ -140,26 +146,39 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
       mxIds.push(record.id)
     }
 
-    const txtRecord = await providers.dns.createDnsRecord(rootRecord.cf_zone_id, {
-      type: 'TXT',
-      name,
-      content: 'v=spf1 include:_spf.mx.cloudflare.net ~all',
-    })
-    txtRecordId = txtRecord.id
+    txtRecordId = provisionPlan.txtRecordId
+    if (provisionPlan.needsTxtRecord) {
+      const txtRecord = await providers.dns.createDnsRecord(rootRecord.cf_zone_id, {
+        type: 'TXT',
+        name,
+        content: spfContent,
+      })
+      txtRecordId = txtRecord.id
+    }
 
-    const rule = await providers.email.createEmailRule(rootRecord.cf_zone_id, {
-      actions: [{ type: 'worker', value: [DEFAULT_WORKER_NAME] }],
-      matchers: [{ type: 'literal', field: 'to', value: `*@${name}` }],
-      enabled: true,
-      name: `${name}-worker-route`,
-      priority: 0,
-    })
-    routeRuleId = rule.id
+    routeRuleId = provisionPlan.routeRuleId
+    if (provisionPlan.needsRouteRule) {
+      const rule = await providers.email.createEmailRule(rootRecord.cf_zone_id, {
+        actions: [{ type: 'worker', value: [DEFAULT_WORKER_NAME] }],
+        matchers: [{ type: 'literal', field: 'to', value: `*@${name}` }],
+        enabled: true,
+        name: `${name}-worker-route`,
+        priority: 0,
+      })
+      routeRuleId = rule.id
+    }
 
     await exec(
       env.DB.prepare(
         `INSERT INTO domains (name, root_name, is_root, routing_enabled, cf_zone_id, mx_record_ids, txt_record_id, route_rule_id)
-         VALUES (?1, ?2, 0, 1, ?3, ?4, ?5, ?6)`,
+         VALUES (?1, ?2, 0, 1, ?3, ?4, ?5, ?6)
+         ON CONFLICT(name) DO UPDATE SET
+           root_name = excluded.root_name,
+           routing_enabled = excluded.routing_enabled,
+           cf_zone_id = excluded.cf_zone_id,
+           mx_record_ids = excluded.mx_record_ids,
+           txt_record_id = excluded.txt_record_id,
+           route_rule_id = excluded.route_rule_id`,
       ).bind(name, rootName, rootRecord.cf_zone_id, JSON.stringify(mxIds), txtRecordId, routeRuleId),
     )
   } catch (error) {

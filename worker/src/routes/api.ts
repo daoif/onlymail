@@ -242,9 +242,20 @@ apiRoutes.post('/settings/custom-domains', async (c) => {
   }
 
   const { hostname } = z.object({ hostname: z.string().min(1) }).parse(await c.req.json())
+  const normalizedHostname = hostname.trim().toLowerCase()
   const providers = createProviders(c.env)
-  const resolvedZoneId = await providers.dns.resolveZoneId(hostname)
-  const result = await providers.domainBinding.addWorkerDomain(accountId, hostname, resolvedZoneId, DEFAULT_WORKER_NAME)
+  const existingDomains = await providers.domainBinding.listWorkerDomains(accountId)
+  const existing = existingDomains.find((domain) => domain.hostname === normalizedHostname)
+  if (existing) {
+    if (existing.service && existing.service !== DEFAULT_WORKER_NAME) {
+      throw new AppError(409, '这个自定义域名已经绑定到别的 Worker，请先手动移除后再重试')
+    }
+
+    return jsonSuccess(c, existing)
+  }
+
+  const resolvedZoneId = await providers.dns.resolveZoneId(normalizedHostname)
+  const result = await providers.domainBinding.addWorkerDomain(accountId, normalizedHostname, resolvedZoneId, DEFAULT_WORKER_NAME)
   return jsonSuccess(c, result, 201)
 })
 
@@ -280,15 +291,21 @@ apiRoutes.post('/settings/pages-domains', async (c) => {
 
   const providers = createProviders(c.env)
   const { domain } = z.object({ domain: z.string().min(1) }).parse(await c.req.json())
-  const resolvedZoneId = await providers.dns.resolveZoneId(domain)
-  await providers.domainBinding.addPagesDomain(accountId, DEFAULT_PAGES_PROJECT, domain)
+  const normalizedDomain = domain.trim().toLowerCase()
+  const resolvedZoneId = await providers.dns.resolveZoneId(normalizedDomain)
+  const existingPagesDomains = await providers.domainBinding.listPagesDomains(accountId, DEFAULT_PAGES_PROJECT)
+  const existingPagesDomain = existingPagesDomains.find((item) => item.name === normalizedDomain)
+
+  if (!existingPagesDomain) {
+    await providers.domainBinding.addPagesDomain(accountId, DEFAULT_PAGES_PROJECT, normalizedDomain)
+  }
 
   const pagesSubdomain = await providers.domainBinding.getPagesProjectSubdomain(accountId, DEFAULT_PAGES_PROJECT)
-  const existingRecords = await providers.dns.listDnsRecords(resolvedZoneId, { type: 'CNAME', name: domain })
+  const existingRecords = await providers.dns.listDnsRecords(resolvedZoneId, { type: 'CNAME', name: normalizedDomain })
   const currentRecord = existingRecords[0]
   const recordPayload = {
     type: 'CNAME',
-    name: domain,
+    name: normalizedDomain,
     content: pagesSubdomain,
     proxied: false,
   }
@@ -299,9 +316,9 @@ apiRoutes.post('/settings/pages-domains', async (c) => {
     await providers.dns.updateDnsRecord(resolvedZoneId, currentRecord.id, recordPayload)
   }
 
-  const result = await providers.domainBinding.retryPagesDomainValidation(accountId, DEFAULT_PAGES_PROJECT, domain)
-  await addAllowedOriginPattern(c.env, `https://${domain}`)
-  return jsonSuccess(c, result, 201)
+  const result = await providers.domainBinding.retryPagesDomainValidation(accountId, DEFAULT_PAGES_PROJECT, normalizedDomain)
+  await addAllowedOriginPattern(c.env, `https://${normalizedDomain}`)
+  return jsonSuccess(c, result, existingPagesDomain ? 200 : 201)
 })
 
 apiRoutes.delete('/settings/pages-domains/:domain', async (c) => {
