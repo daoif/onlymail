@@ -24,16 +24,15 @@
 
 ## 下一步
 
-1. 定首个公开版本号，整理对应 release note
-2. 打正式 tag，按 `DOCS/RELEASING.md` 流程发首个 GitHub Release
-3. 补第二批贴近业务的测试，覆盖域名生命周期、Email Routing 失败分支和 SDK 关键路径
+1. 补第二批贴近业务的测试，覆盖域名生命周期、Email Routing 失败分支和 SDK 关键路径
+2. 增补真实 Cloudflare API 的线上 smoke test 记录，收紧当前靠代码约束的部分
+3. 继续打磨公开仓库后的维护细节，例如发布说明模板和升级案例
 
 ## 阻塞 / 风险
 
 - **CORS 验证** - Pages 默认来源和自定义前端域名统一走 D1 `settings.allowed_origins`；线上 smoke test 仍需确认 Pages 项目真实 `subdomain` 和 CORS 表现
 - **测试覆盖** - 现有测试还没覆盖真实 Cloudflare API 交互；域名、Email Routing、自定义入口仍主要靠代码约束和本地单测
 - **Upstream Sync** - 只做 fast-forward，策略保守；如果用户默认分支带长期私有改动，仍需手动处理
-- **首个 Release** - `daoif/onlymail` 的正式 GitHub Release 还没发出去；更新提醒在首个 release 发布前会显示“还没有正式 release”
 
 ## 最近变更
 
@@ -68,3 +67,4 @@
 - 地址页新增“生成临时邮箱”区域：直接拉取可用子域名、创建地址、展示结果、复制地址并跳到邮件页
 - 开源仓库基础面已补齐：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板、`DOCS/RELEASING.md`
 - 新增正式 release 更新提醒：Worker 每 24 小时检查一次 `daoif/onlymail` 的 GitHub Release；没接 GitHub 自动同步的实例会在后台顶部显示更新横幅，设置页也能手动检查和关闭提醒
+- 公开仓库已切到 `daoif/onlymail`，首个正式版本按 `v0.1.0` 发布
