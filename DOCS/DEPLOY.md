@@ -58,10 +58,10 @@
 
 本地开发和本地脚本现在统一读项目根目录的 `.env.local`。
 
-这里的配置模型固定成 `4 + 2`：
+这里的配置模型固定成 `4 + 1`：
 
 - 手动准备 4 个 Cloudflare 凭据：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`
-- 系统自动维护 2 个内部状态：`D1_DATABASE_ID`、`JWT_SECRET`
+- 系统自动维护 1 个内部状态：`D1_DATABASE_ID`
 
 先做这一步：
 
@@ -82,7 +82,7 @@
 
 `setup:github` 和 `init` 在需要写 GitHub Secrets / Variables 时，会优先使用 GitHub Actions 自带的仓库上下文；本地运行时则直接从当前 git 的 `origin` 远程仓库推导目标仓库，不再额外要求填写仓库名。
 
-`init` 首次跑完后会自动把 `D1_DATABASE_ID` 和 `JWT_SECRET` 回写到 `.env.local`，并顺手生成：
+`init` 首次跑完后会自动把 `D1_DATABASE_ID` 回写到 `.env.local`，并顺手生成：
 
 - `worker/wrangler.toml`
 - `worker/.dev.vars`
@@ -96,19 +96,18 @@
 | `CF_EMAIL` | `.env.local` 手填 | GitHub Secret | 先在 `.env.local` 手填，再用 `setup:github` 写进 GitHub Secret |
 | `CF_GLOBAL_API_KEY` | `.env.local` 手填 | GitHub Secret | 先在 `.env.local` 手填，再用 `setup:github` 写进 GitHub Secret |
 | `D1_DATABASE_ID` | `init` / `rebuild` 自动回写到 `.env.local` | `Bootstrap Cloudflare` 自动写回 GitHub Variable | 本地先回写到 `.env.local`，再由 `setup:github` 写进 GitHub Variable |
-| `JWT_SECRET` | `init` / `rebuild` 自动回写到 `.env.local` | 先手动放进 GitHub Secret，`Bootstrap Cloudflare` 只复用它 | 本地先回写到 `.env.local`，再由 `setup:github` 写进 GitHub Secret |
 
 运行时实际读取规则也固定了：
 
 - 本地命令先读 `.env.local`
 - GitHub workflow 先读 GitHub Secrets / Variables
 - Worker 运行时只读已经部署进 Cloudflare 的 secrets、`wrangler.toml` 和 D1
-- `D1_DATABASE_ID` 和 `JWT_SECRET` 不放进 D1；一个是数据库指针，一个是运行时签名密钥，都必须在读 D1 之前先可用
+- `D1_DATABASE_ID` 不放进 D1；它是数据库指针，必须在读 D1 之前先可用
 
 命令边界固定成这三条：
 
 - `pnpm run init`：保留现有 D1，补齐缺的基础设施，然后重新部署 Worker / Frontend。默认入口只认 `workers.dev + pages.dev`，不读取 Cloudflare 上已有的自定义域名残留。
-- `pnpm run rebuild`：删除并重建 D1，轮换 `JWT_SECRET`，然后重新跑一遍 `init`。它只处理平台内部状态，不碰 DNS、自定义域名、Email Routing 外部入口。
+- `pnpm run rebuild`：删除并重建 D1，然后重新跑一遍 `init`。它只处理平台内部状态，不碰 DNS、自定义域名、Email Routing 外部入口。
 - `pnpm deploy:worker` / `pnpm deploy:frontend`：单独重发代码，给开发和排障用。
 
 前端管理面板的 API 路径也固定成这条设计：
@@ -206,7 +205,6 @@ pnpm run init
 - ✅ 读取 Pages 默认 `pages.dev` 地址并同步到 D1 `settings.allowed_origins`
 - ✅ 从 `wrangler.toml.template` 生成 `wrangler.toml`
 - ✅ 执行 D1 migration（`worker/db/migrations/`）
-- ✅ 生成 JWT_SECRET 并设为 wrangler secret
 - ✅ 部署 Worker 到 Cloudflare
 - ✅ 读取 Worker 默认 `workers.dev` 地址并作为管理面板固定 API 入口
 - ✅ 首次构建并部署前端
@@ -220,7 +218,7 @@ pnpm run init
 >
 > 这里的 `init` 只准备基础设施；Worker / Pages 自定义域名不在这一步处理，留给应用里的设置页。
 >
-> `init` 可以重跑，用于重新对齐基础设施；默认会复用 `.env.local` 里的 `JWT_SECRET`。Cloudflare 上已有但没写进 D1 的自定义域名、DNS 残留不会被默认接管。
+> `init` 可以重跑，用于重新对齐基础设施。Cloudflare 上已有但没写进 D1 的自定义域名、DNS 残留不会被默认接管。
 
 ### 步骤 4：如果后面要接 GitHub 自动部署，再写 GitHub Secrets ⚡
 
@@ -231,7 +229,7 @@ pnpm setup:github
 ```
 
 这个脚本会：
-- 写入 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`、`JWT_SECRET` 这些 GitHub Secrets
+- 写入 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`、`CF_EMAIL`、`CF_GLOBAL_API_KEY` 这些 GitHub Secrets
 - 写入 `D1_DATABASE_ID` 这个 GitHub Variable
 - 缺少正常可用部署所需的关键值时直接报错，不再写半套 GitHub 配置
 - 本地运行时会把当前 git `origin` 当成目标仓库，不再额外要求填写仓库名
@@ -246,7 +244,6 @@ Secrets：
 | `CLOUDFLARE_API_TOKEN` | 上面创建的 API Token |
 | `CF_EMAIL` | Cloudflare 账号邮箱 |
 | `CF_GLOBAL_API_KEY` | Cloudflare Global API Key |
-| `JWT_SECRET` | 后台 JWT 密钥；本地已跑过 `init` 时可直接用 `.env.local` 里的值 |
 
 Variables：
 
@@ -318,7 +315,6 @@ pnpm run rebuild
 
 这条命令会：
 - 删除并重建 D1
-- 轮换 `JWT_SECRET`，让旧后台登录态失效
 - 重新跑一遍 `init`
 
 这条命令不会处理：
@@ -373,7 +369,6 @@ pnpm run rebuild
 | `CLOUDFLARE_API_TOKEN` | 必需 | Cloudflare API Token |
 | `CF_EMAIL` | 必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
 | `CF_GLOBAL_API_KEY` | 必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
-| `JWT_SECRET` | 必需 | 当前 GitHub-only 路线不会自动回写 repo secret；先手动准备一个值，后续重跑会直接复用 |
 
 ### 步骤 4：运行首次初始化 workflow 🧑
 
@@ -387,7 +382,7 @@ pnpm run rebuild
 - 部署前端到 `pages.dev`
 - 把后续自动部署要用的 `D1_DATABASE_ID` 写回仓库 Variable
 
-这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施。它会复用现有 `D1_DATABASE_ID` 和 `JWT_SECRET`；当前不会自动改写 repo secrets。
+这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施。它会复用现有 `D1_DATABASE_ID`。
 
 ### 步骤 5：初始化管理员 🧑
 
@@ -502,7 +497,7 @@ wrangler deploy / pages deploy
 
 | 路径前缀 | 认证方式 | 用途 | 权限范围 |
 |---------|---------|------|---------|
-| `/api/*` | Bearer JWT | 前端管理面板 | 完整 CRUD + 设置 |
+| `/api/*` | Bearer 管理员会话 token | 前端管理面板 | 完整 CRUD + 设置 |
 | `/call/*` | Bearer API Key | SDK / 注册机 | 只创建 + 只读，无删除 |
 
 > `/call/*` 设计原则：Key 泄露不会造成数据丢失。
@@ -529,7 +524,7 @@ pnpm --dir frontend dev   # http://localhost:5173（已代理到 Worker）
 本地开发分两档：
 
 - 只调本地页面和本地 API：
-  只需要 `.env.local` 里的 `JWT_SECRET`，再运行 `pnpm sync:dev-vars` 和 `pnpm render:wrangler`。这时不需要先跑 `init`，也不需要先创建线上 D1。
+  只需要先运行 `pnpm sync:dev-vars` 和 `pnpm render:wrangler`。这时不需要先跑 `init`，也不需要先创建线上 D1。
 - 本地还要调 Cloudflare 管理能力：
   再往 `.env.local` 里补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。
 - 本地还要调 Email Routing：

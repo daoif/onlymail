@@ -26,9 +26,8 @@
  *   管理面板始终请求 Worker 默认 workers.dev，自定义 API 域名只作为别名保留
  */
 
-import { ROOT_DIR, WORKER_DIR, ensureJwtSecret, writeLocalEnvValues } from './lib/local-config'
+import { ROOT_DIR, WORKER_DIR, writeLocalEnvValues } from './lib/local-config'
 import { execSync } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { CloudflareApiClient } from './lib/cloudflare-api'
@@ -174,11 +173,6 @@ function buildWorkersDevUrl(workerName: string, accountSubdomain: string) {
   return `https://${workerName}.${accountSubdomain}.workers.dev`
 }
 
-function shouldRotateJwtSecret() {
-  const value = process.env.MAILS_INIT_ROTATE_JWT_SECRET?.trim().toLowerCase()
-  return value === '1' || value === 'true'
-}
-
 function shouldReuseExistingDatabaseId() {
   const value = process.env.MAILS_INIT_REUSE_D1?.trim().toLowerCase()
   return value !== '0' && value !== 'false'
@@ -187,10 +181,6 @@ function shouldReuseExistingDatabaseId() {
 function shouldRequireGitHubSync() {
   const value = process.env.MAILS_REQUIRE_GITHUB_SYNC?.trim().toLowerCase()
   return value === '1' || value === 'true'
-}
-
-function createJwtSecret() {
-  return randomBytes(32).toString('hex')
 }
 
 // ── 主流程 ────────────────────────────────────────────────────
@@ -221,7 +211,6 @@ async function main() {
   const cfEmail = process.env.CF_EMAIL || process.env.CF_AUTH_EMAIL || ''
   const cfGlobalApiKey = process.env.CF_GLOBAL_API_KEY || ''
   const githubRepo = inferGitHubRepository()
-  const rotateJwtSecret = shouldRotateJwtSecret()
   const reuseExistingDatabaseId = shouldReuseExistingDatabaseId()
   const requireGitHubSync = shouldRequireGitHubSync()
   const client = cfApiToken ? new CloudflareApiClient({ token: cfApiToken, authEmail: cfEmail, globalApiKey: cfGlobalApiKey }) : null
@@ -263,7 +252,6 @@ async function main() {
     process.exit(1)
   }
 
-  const jwtSecret = rotateJwtSecret ? createJwtSecret() : ensureJwtSecret()
   let pagesDefaultUrl = ''
   let apiBaseUrl = ''
 
@@ -298,9 +286,8 @@ async function main() {
       CF_EMAIL: cfEmail,
       CF_GLOBAL_API_KEY: cfGlobalApiKey,
       D1_DATABASE_ID: databaseId,
-      JWT_SECRET: jwtSecret,
     },
-    ['CF_DEFAULT_WORKER_NAME', 'CF_DEFAULT_PAGES_PROJECT', 'ALLOWED_ORIGINS', 'GITHUB_REPOSITORY'],
+    ['CF_DEFAULT_WORKER_NAME', 'CF_DEFAULT_PAGES_PROJECT', 'ALLOWED_ORIGINS', 'GITHUB_REPOSITORY', 'JWT_SECRET'],
   )
   writeWranglerToml({
     accountId,
@@ -338,15 +325,6 @@ async function main() {
 
   // 7. 设置 Secrets
   console.log('\n🔐 步骤 6：设置 Secrets...')
-  console.log('生成 JWT_SECRET...')
-
-  try {
-    putSecret('JWT_SECRET', jwtSecret)
-    console.log('✅ JWT_SECRET 已设置')
-  } catch {
-    console.log('⚠️  设置 JWT_SECRET 失败，请手动执行:')
-    console.log(`   echo "${jwtSecret}" | npx wrangler secret put JWT_SECRET`)
-  }
 
   // CF API Token (如果有)
   if (cfApiToken) {

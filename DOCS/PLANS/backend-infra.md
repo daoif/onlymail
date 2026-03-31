@@ -94,12 +94,12 @@ worker/
 - 地址的 `updated_at` 在收件后更新，TTL 清理按这个字段判断。
 
 ## 鉴权设计
-- `/api/*` 给管理面板，用管理员登录签发的 JWT。
+- `/api/*` 给管理面板，用 D1 里的管理员会话令牌。
 - `/call/*` 给自动化调用方，用 `Authorization: Bearer <api_key>`。
-- `GET /api/init-status` 用来判断管理员是否已初始化，不做 JWT 校验。
+- `GET /api/init-status` 用来判断管理员是否已初始化，不做登录会话校验。
 - `POST /api/init` 只允许首次初始化时调用，写入 `admin_user` 和 `admin_pass_hash`。
 - `POST /api/login` 从 D1 `settings` 读取管理员账号和密码哈希做登录。
-- 可轮换的 API Key 和管理员账号都放 D1；环境变量里只保留 `JWT_SECRET` 和 Cloudflare 相关配置。
+- 可轮换的 API Key、管理员账号和后台会话都放 D1；环境变量里只保留 Cloudflare 相关配置。
 
 ## 自动化 API
 - `POST /api/address`

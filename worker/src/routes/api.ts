@@ -1,7 +1,7 @@
 /**
- * /api/* — JWT 认证路由（前端完整权限）
+ * /api/* — 管理后台会话路由（前端完整权限）
  *
- * 承载前端管理面板的完整能力；认证相关端点（init-status / init / login）无需 JWT。
+ * 承载前端管理面板的完整能力；认证相关端点（init-status / init / login）无需会话。
  */
 
 import { Hono } from 'hono'
@@ -9,12 +9,12 @@ import { z } from 'zod'
 
 import type { AppEnv } from '../types'
 
-import { createAdminToken } from '../lib/crypto'
 import { AppError, jsonMessage, jsonSuccess } from '../lib/http'
 import { DEFAULT_PAGES_PROJECT, DEFAULT_WORKER_NAME } from '../lib/project-defaults'
 import { getPageParams, toPagination } from '../lib/pagination'
 
 import { createOrInspectAddress, deleteAddress, listAddresses } from '../services/address'
+import { createAdminSession, revokeAdminSession } from '../services/admin-session'
 import { bootstrapRootDomain, createSubdomain, deleteSubdomain, deleteSubdomains, getDomainDetail, listDomains } from '../services/domain'
 import { deleteMail, getMailById, listMails } from '../services/mail'
 import {
@@ -78,7 +78,7 @@ const updateNotificationPreferenceSchema = z.object({
 
 export const apiRoutes = new Hono<AppEnv>()
 
-// ── 认证（无需 JWT） ─────────────────────────────────────────
+// ── 认证（无需会话） ───────────────────────────────────────
 
 apiRoutes.get('/init-status', async (c) =>
   jsonSuccess(c, {
@@ -99,11 +99,20 @@ apiRoutes.post('/login', async (c) => {
     throw new AppError(401, '账号或密码错误')
   }
 
-  const token = await createAdminToken(payload.username, c.env.JWT_SECRET)
+  const token = await createAdminSession(c.env, payload.username)
   return jsonSuccess(c, {
-    token,
+    token: token.token,
     username: payload.username,
   })
+})
+
+apiRoutes.post('/logout', async (c) => {
+  const authHeader = c.req.header('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    await revokeAdminSession(c.env, authHeader.slice('Bearer '.length).trim())
+  }
+
+  return jsonMessage(c, '已退出登录')
 })
 
 // ── Dashboard ─────────────────────────────────────────────────

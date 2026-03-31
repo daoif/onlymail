@@ -3,12 +3,12 @@ import { cors } from 'hono/cors'
 
 import type { AppBindings, AppEnv } from './types'
 
-import { verifyAdminToken } from './lib/crypto'
 import { AppError, jsonError, jsonSuccess } from './lib/http'
 import { handleEmail } from './email'
 import { apiRoutes } from './routes/api'
 import { callRoutes } from './routes/call'
 import { handleScheduled } from './scheduled'
+import { verifyAdminSession } from './services/admin-session'
 import { getAllowedOriginPatterns, getApiKeyConfig, verifyApiKey } from './services/settings'
 
 const app = new Hono<AppEnv>()
@@ -53,8 +53,8 @@ app.onError((error, c) => jsonError(c, error))
 app.get('/', (c) => jsonSuccess(c, { ok: true, service: 'onlymail-worker' }))
 app.get('/health', (c) => jsonSuccess(c, { ok: true }))
 
-// ── /api/* — JWT 认证 ─────────────────────────────────────────
-// 无需 JWT 的端点列表
+// ── /api/* — 管理后台会话认证 ─────────────────────────────────
+// 无需会话的端点列表
 const PUBLIC_API_PATHS = ['/api/init-status', '/api/init', '/api/login']
 
 app.use('/api/*', async (c, next) => {
@@ -68,7 +68,7 @@ app.use('/api/*', async (c, next) => {
     throw new AppError(401, '缺少登录凭证')
   }
 
-  await verifyAdminToken(authHeader.slice('Bearer '.length).trim(), c.env.JWT_SECRET)
+  await verifyAdminSession(c.env, authHeader.slice('Bearer '.length).trim())
   await next()
 })
 

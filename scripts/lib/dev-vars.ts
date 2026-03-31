@@ -1,8 +1,7 @@
 import { writeFileSync } from 'node:fs'
-import { DEV_VARS_PATH, ensureJwtSecret } from './local-config'
+import { DEV_VARS_PATH } from './local-config'
 
 const DEV_VAR_KEYS = [
-  'JWT_SECRET',
   'CF_API_TOKEN',
   'CF_EMAIL',
   'CF_GLOBAL_API_KEY',
@@ -34,7 +33,6 @@ function readValue(env: NodeJS.ProcessEnv, ...names: string[]) {
 
 export function resolveDevVars(env: NodeJS.ProcessEnv = process.env) {
   return {
-    JWT_SECRET: readValue(env, 'JWT_SECRET') || ensureJwtSecret(),
     CF_API_TOKEN: readValue(env, 'CF_API_TOKEN', 'CLOUDFLARE_API_TOKEN'),
     CF_EMAIL: readValue(env, 'CF_EMAIL', 'CF_AUTH_EMAIL'),
     CF_GLOBAL_API_KEY: readValue(env, 'CF_GLOBAL_API_KEY'),

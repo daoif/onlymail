@@ -53,7 +53,7 @@
 import { computed, ref } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 
-import { dismissVersionUpdateOnce, getVersionState, setVersionNotifications } from '../api/admin'
+import { dismissVersionUpdateOnce, getVersionState, logout as logoutRequest, setVersionNotifications } from '../api/admin'
 import { ApiError } from '../api/client'
 import BrandLockup from './BrandLockup.vue'
 import { useSWR } from '../composables/useSWR'
@@ -109,7 +109,16 @@ async function disableForever() {
   }
 }
 
-function logout() {
+async function logout() {
+  const token = authStore.token
+  if (token) {
+    try {
+      await logoutRequest(token)
+    } catch {
+      // 后端会话不存在时，本地也要能直接退出
+    }
+  }
+
   authStore.clearSession()
   router.push({ name: 'login' })
 }

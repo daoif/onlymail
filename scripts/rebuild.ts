@@ -1,6 +1,5 @@
 import './lib/local-config'
 import { execSync } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
 
 import { ROOT_DIR, writeLocalEnvValues } from './lib/local-config'
 
@@ -44,25 +43,19 @@ function tryDeleteDatabase() {
   }
 }
 
-function createJwtSecret() {
-  return randomBytes(32).toString('hex')
-}
-
 async function main() {
   console.log('=== OnlyMail 重建脚本 ===')
   console.log()
-  console.log('这会重建 D1、轮换 JWT_SECRET，并重新部署 Worker / Frontend。')
+  console.log('这会重建 D1，并重新部署 Worker / Frontend。')
   console.log('Cloudflare 上已有的 DNS、自定义域名和 Email Routing 外部入口不会处理。')
 
   console.log('\n🗑️  步骤 1：删除现有 D1 数据库...')
   tryDeleteDatabase()
 
-  console.log('\n🔐 步骤 2：轮换本地 JWT_SECRET，清空 D1_DATABASE_ID...')
-  const jwtSecret = createJwtSecret()
+  console.log('\n🧹 步骤 2：清空本地 D1_DATABASE_ID...')
   writeLocalEnvValues({
     D1_DATABASE_ID: '',
-    JWT_SECRET: jwtSecret,
-  })
+  }, ['JWT_SECRET'])
   console.log('✅ 已更新 .env.local')
 
   console.log('\n🚀 步骤 3：重新执行 init...')

@@ -1,11 +1,13 @@
 import type { AppBindings } from './types'
 
 import { cleanupExpiredAddresses } from './services/address'
+import { cleanupExpiredAdminSessions } from './services/admin-session'
 import { checkVersionUpdates } from './services/version-update'
 
 export async function handleScheduled(_controller: ScheduledController, env: AppBindings) {
   const cleanupResult = await cleanupExpiredAddresses(env)
   console.log(`cleanup complete: addresses=${cleanupResult.addressCount}, mails=${cleanupResult.mailCount}`)
+  await cleanupExpiredAdminSessions(env)
 
   try {
     const updateState = await checkVersionUpdates(env)

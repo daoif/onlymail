@@ -32,7 +32,6 @@ function createFakeEnv() {
         return statement
       },
     } as unknown as D1Database,
-    JWT_SECRET: 'test-secret',
   }
 }
 
@@ -43,7 +42,7 @@ test('health 端点可访问', async () => {
   assert.equal(payload.data.ok, true)
 })
 
-test('/api/* 在缺少 JWT 时返回 401', async () => {
+test('/api/* 在缺少管理员会话时返回 401', async () => {
   const response = await handler.fetch(new Request('https://example.com/api/dashboard'), createFakeEnv(), {} as ExecutionContext)
   assert.equal(response.status, 401)
 })

@@ -35,12 +35,12 @@ CF_EMAIL=
 CF_GLOBAL_API_KEY=
 ```
 
-这里的模型固定成 `4 + 2`：
+这里的模型固定成 `4 + 1`：
 
 - 手动准备 4 个 Cloudflare 凭据
-- 系统自动维护 2 个内部状态：`D1_DATABASE_ID`、`JWT_SECRET`
+- 系统自动维护 1 个内部状态：`D1_DATABASE_ID`
 
-`D1_DATABASE_ID` 和 `JWT_SECRET` 不用手填。第一次跑 `init` 后会自动回写到 `.env.local`。
+`D1_DATABASE_ID` 不用手填。第一次跑 `init` 后会自动回写到 `.env.local`。
 
 ---
 
@@ -64,7 +64,7 @@ pnpm run init
 - 执行 D1 migration
 - 创建或复用 Worker 默认入口
 - 创建或复用 Pages 默认入口
-- 写回 `D1_DATABASE_ID` 和 `JWT_SECRET`
+- 写回 `D1_DATABASE_ID`
 - 生成 `worker/wrangler.toml`
 - 生成 `worker/.dev.vars`
 - 部署 Worker
@@ -185,7 +185,6 @@ pnpm setup:github
   `CLOUDFLARE_API_TOKEN`
   `CF_EMAIL`
   `CF_GLOBAL_API_KEY`
-  `JWT_SECRET`
 - Variable：
   `D1_DATABASE_ID`
 

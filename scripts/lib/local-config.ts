@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -82,8 +81,4 @@ export function ensureLocalEnvValue(name: string, createValue: () => string) {
   const value = createValue()
   writeLocalEnvValues({ [name]: value })
   return value
-}
-
-export function ensureJwtSecret() {
-  return ensureLocalEnvValue('JWT_SECRET', () => randomBytes(32).toString('hex'))
 }

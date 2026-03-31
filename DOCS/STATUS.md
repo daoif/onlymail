@@ -5,7 +5,7 @@
 
 ## 已完成
 - ✅ P0: 平台抽象层 — `lib/cloudflare.ts` 拆分为 `providers/` 接口 + CF 实现
-- ✅ P1: API 路由落定为 `/api/*`（JWT）+ `/call/*`（API Key）
+- ✅ P1: API 路由落定为 `/api/*`（管理员会话）+ `/call/*`（API Key）
 - ✅ P2: 敏感信息 + CI/CD — `wrangler.toml.template` + 模板现场生成，移除整文件 Secret 依赖
 - ✅ P3: SDK 重设计 — Node.js/Python 路径→`/call/*`，新增域名操作
 - ✅ P4: 初始化优化 — `scripts/init.ts` 一键初始化脚本
@@ -29,14 +29,14 @@
 
 ## 最近变更
 - 所有 Cloudflare API 调用通过 Provider 接口解耦
-- API 路由固定为 `/api/*`（JWT）+ `/call/*`（API Key）
+- API 路由固定为 `/api/*`（管理员会话）+ `/call/*`（API Key）
 - `wrangler.toml` 不再提交 Git，本地和 CI/CD 都按模板现场生成
 - `scripts/init.ts` 现在只准备基础设施：D1、Worker、Pages 默认入口和可选 GitHub 配置，不再直接操作 Email Routing
 - 本地参数改成根目录 `.env.local` 单一来源；`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件
-- `init` 会把 `D1_DATABASE_ID`、`JWT_SECRET` 回写到 `.env.local`，再生成 `worker/wrangler.toml` 和 `worker/.dev.vars`
+- `init` 会把 `D1_DATABASE_ID` 回写到 `.env.local`，再生成 `worker/wrangler.toml` 和 `worker/.dev.vars`
 - `ALLOWED_ORIGINS` 已从本地 env、GitHub Variables、`wrangler.toml` 和 workflow 输入中移除；Worker 运行时只从 D1 `settings.allowed_origins` 读取默认 Pages 来源、自定义前端域名和开发白名单
 - Worker 名和 Pages 项目名已固定为 `onlymail-worker`、`onlymail-frontend`，不再暴露成用户配置项，也不再通过 GitHub Variables 传递
-- 新增 `pnpm run rebuild`：删除并重建 D1，轮换 `JWT_SECRET`，再重跑 `init`；DNS、自定义域名、Email Routing 外部入口不在这条命令里处理
+- 新增 `pnpm run rebuild`：删除并重建 D1，再重跑 `init`；DNS、自定义域名、Email Routing 外部入口不在这条命令里处理
 - 新增 `pnpm deploy:worker`、`pnpm deploy:frontend` 两个本地重部署入口，给本地调试和应急使用
 - 新增 `worker/db/migrations/` 和 `schema_migrations`；`init`、`deploy:worker`、`pnpm migrate:d1` 现在都按 migration 机制补齐数据库结构
 - 前端管理面板固定请求 Worker 默认 `workers.dev`；`VITE_API_BASE_URL` 不再作为用户配置项暴露，Worker 自定义域名只保留为别名
@@ -50,7 +50,7 @@
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署
 - 新增 `Upstream Sync` workflow，用于 fork 仓库按 fast-forward 自动接收上游更新
 - 新增 `CI` workflow，PR 和默认分支 push 会自动执行测试、构建、脚本检查和 Python SDK 检查
-- GitHub-only / 混合部署的状态延续已对齐本地：`Bootstrap Cloudflare` 现在会复用 GitHub 里的 `D1_DATABASE_ID` 和 `JWT_SECRET`，并要求 GitHub 配置写回成功后才算完成
+- GitHub-only / 混合部署的状态延续已对齐本地：`Bootstrap Cloudflare` 现在会复用 GitHub 里的 `D1_DATABASE_ID`，并要求 GitHub 配置写回成功后才算完成
 - `Deploy Worker` / `Deploy Frontend` 现在按默认分支和真实依赖触发；改到共享部署脚本、migration、模板或根依赖时也会自动跑
 - `Upstream Sync` 在 fast-forward 后会显式补触发 `CI` 和相关 deploy workflow，不再停在“代码同步了但后续检查和部署没跑”
 - 新增前端、Worker、脚本层测试入口，根目录 `pnpm test` 现在会统一跑完

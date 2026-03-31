@@ -100,11 +100,6 @@ async function main() {
       required: true,
       kind: 'secret',
     },
-    JWT_SECRET: {
-      value: readValue('JWT_SECRET'),
-      required: true,
-      kind: 'secret',
-    },
     D1_DATABASE_ID: {
       value: readValue('D1_DATABASE_ID', 'DB_ID'),
       required: true,

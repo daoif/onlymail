@@ -42,5 +42,4 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_EMAIL: ${{ secrets.CF_EMAIL }}
           CF_GLOBAL_API_KEY: ${{ secrets.CF_GLOBAL_API_KEY }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}

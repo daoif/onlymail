@@ -59,6 +59,13 @@ export function login(username: string, password: string) {
   })
 }
 
+export function logout(token: string) {
+  return apiRequest<{ message: string }>('/api/logout', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }, token)
+}
+
 export function getDashboard(token: string) {
   return apiRequest<ApiEnvelope<DashboardStats>>('/api/dashboard', {}, token)
 }

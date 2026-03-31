@@ -18,7 +18,7 @@
 | **临时邮箱** | 一键创建地址 → 接收邮件 → 查看详情 → 自动清理 |
 | **管理面板** | Vue 3 前端，覆盖地址、邮件、域名与系统设置 |
 | **域名自动化** | 根域名 bootstrap、子域名创建、DNS 与 Email Routing 全自动 |
-| **双路认证** | 面板走 JWT (`/api/*`)，SDK 走 API Key (`/call/*`)，互不干扰 |
+| **双路认证** | 面板走管理员会话 (`/api/*`)，SDK 走 API Key (`/call/*`)，互不干扰 |
 | **多语言 SDK** | Node.js + Python，封装地址创建与收件轮询 |
 
 ---
@@ -60,12 +60,12 @@ pnpm run init
 
 - 创建或复用 D1 数据库，执行未完成的 migration
 - 创建或复用 Worker 与 Pages 默认入口并部署
-- 回写 `D1_DATABASE_ID` 与 `JWT_SECRET` 到本地配置
+- 回写 `D1_DATABASE_ID` 到本地配置
 
-这套部署模型固定成 `4 + 2`：
+这套部署模型固定成 `4 + 1`：
 
 - 手动准备 4 个 Cloudflare 凭据：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`
-- 系统自动维护 2 个内部状态：`D1_DATABASE_ID`、`JWT_SECRET`
+- 系统自动维护 1 个内部状态：`D1_DATABASE_ID`
 
 **3. 打开面板**
 
@@ -80,22 +80,27 @@ pnpm run init
 ```text
 你现在要帮我部署 OnlyMail，不需要把仓库拉到本地。
 
-仓库地址：
+源仓库地址：
 https://github.com/daoif/onlymail
+
+注意：
+- `daoif/onlymail` 是源仓库，只拿来读取文档和工作流定义
+- 实际部署必须在我自己的 GitHub 仓库里进行
+- 如果我还没有 fork，你先 fork 到我的 GitHub 账号，或者先在我的账号下创建一个自己的仓库，再把源仓库代码同步进去
+- 后续所有 Secrets、Variables、Actions workflow、Cloudflare 部署，都只操作我自己的仓库，不要对源仓库做任何写操作
 
 部署方式：
 走 GitHub-only 部署，不走本地 init。
 
-我会提供这 5 个 GitHub Secrets：
+我会提供这 4 个 GitHub Secrets：
 - CLOUDFLARE_API_TOKEN
 - CLOUDFLARE_ACCOUNT_ID
 - CF_EMAIL
 - CF_GLOBAL_API_KEY
-- JWT_SECRET
 
 要求你直接完成这些事：
 1. 检查仓库里的部署文档，优先看 DOCS/DEPLOY.md、DOCS/RUNBOOK.md、DOCS/UPDATE.md
-2. 在 GitHub 仓库里配置部署需要的 Secrets / Variables
+2. 在我自己的 GitHub 仓库里配置部署需要的 Secrets / Variables
 3. 手动触发 Bootstrap Cloudflare workflow
 4. 等 Worker 和 Pages 默认入口部署完成
 5. 告诉我默认前端地址和默认 Worker 地址
@@ -112,6 +117,7 @@ https://github.com/daoif/onlymail
 
 - 想让 AI 直接在 GitHub 上完成首次部署
 - 不想先在本地装依赖、登录 Wrangler、跑 `pnpm run init`
+- 想让 AI 直接在自己的 fork / 自建仓库上完成部署
 - 后面准备继续用 GitHub Actions 做自动部署
 
 ---

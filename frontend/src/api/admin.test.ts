@@ -16,6 +16,7 @@ import {
   dismissVersionUpdateOnce,
   getDomains,
   getVersionState,
+  logout,
   removePagesDomain,
   setVersionNotifications,
 } from './admin'
@@ -122,6 +123,19 @@ describe('admin api helpers', () => {
         body: JSON.stringify({ disabled: true }),
       },
       'token-9',
+    )
+  })
+
+  it('logout 会带当前管理员会话 token 请求退出接口', () => {
+    logout('token-10')
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/logout',
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+      'token-10',
     )
   })
 })

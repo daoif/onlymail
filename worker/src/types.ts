@@ -1,8 +1,5 @@
-import type { JwtVariables } from 'hono/jwt'
-
 export interface AppBindings {
   DB: D1Database
-  JWT_SECRET: string
   CF_API_TOKEN?: string
   CF_EMAIL?: string
   CF_AUTH_EMAIL?: string
@@ -12,7 +9,7 @@ export interface AppBindings {
 
 export type AppEnv = {
   Bindings: AppBindings
-  Variables: JwtVariables
+  Variables: Record<string, never>
 }
 
 export interface PageParams {

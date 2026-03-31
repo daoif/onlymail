@@ -1,5 +1,6 @@
 import type { AppBindings } from '../types'
 
+import { revokeAllAdminSessions } from './admin-session'
 import { AppError } from '../lib/http'
 import { exec, one } from '../lib/db'
 import { generateApiKey, getApiKeyPreview, sha256 } from '../lib/crypto'
@@ -119,6 +120,7 @@ export async function changeAdminPassword(env: AppBindings, oldPassword: string,
   }
 
   await setSettingValue(env, 'admin_pass_hash', await sha256(newPassword))
+  await revokeAllAdminSessions(env)
 }
 
 export async function getApiKeyConfig(env: AppBindings) {

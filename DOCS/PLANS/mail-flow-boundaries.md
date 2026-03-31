@@ -24,7 +24,6 @@
 - 创建或确认 Pages 项目
 - 按模板生成 `worker/wrangler.toml`
 - 生成 `worker/.dev.vars`
-- 设置 Worker Secrets（包括 JWT_SECRET）
 - 部署 Worker 到 `workers.dev`
 - 构建并部署前端到 Pages
 - 可选调用 `setup:github` 写 GitHub Secrets / Variables

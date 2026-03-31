@@ -14,7 +14,7 @@
     "deploy:frontend": "tsx scripts/deploy-frontend.ts",
     "test": "pnpm test:scripts && pnpm test:worker && pnpm --dir frontend test",
     "test:scripts": "node --import tsx --test scripts/test/d1-migrations.test.ts scripts/test/d1-allowed-origins.test.ts scripts/test/d1-output.test.ts scripts/test/github-repo.test.ts",
-    "test:worker": "node --import tsx --test worker/test/worker.test.ts worker/test/domain-reconciliation.test.ts worker/test/version-update.test.ts",
+    "test:worker": "node --import tsx --test worker/test/worker.test.ts worker/test/admin-session.test.ts worker/test/domain-reconciliation.test.ts worker/test/version-update.test.ts",
     "check:scripts": "pnpm --dir worker exec tsc -p ../scripts/tsconfig.json --noEmit",
     "build": "pnpm --dir worker run build && pnpm --dir frontend run build && pnpm --dir sdk/nodejs run build",
     "build:worker": "pnpm --dir worker run build",
