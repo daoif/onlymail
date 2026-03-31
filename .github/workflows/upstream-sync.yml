@@ -9,6 +9,9 @@ on:
         type: string
   schedule:
     - cron: '17 */12 * * *'
+  push:
+    paths:
+      - '.github/workflows/upstream-sync.yml'
 
 permissions:
   contents: write
