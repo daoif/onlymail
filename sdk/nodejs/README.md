@@ -34,7 +34,7 @@ import { MailsClient } from '@mails/sdk-nodejs'
 
 const client = new MailsClient('https://your-worker.your-account.workers.dev', process.env.MAILS_API_KEY!)
 const created = await client.createAddress('demo@m1.example.com', 'demo', 24)
-const mail = await client.waitForMail(created.data.address.name, 60_000, 3_000)
+const mail = await client.waitForMail(created.address.name, 60_000, 3_000)
 console.log(mail.subject)
 ```
 

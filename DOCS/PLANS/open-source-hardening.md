@@ -99,6 +99,6 @@
 
 下一步先做这 3 件事：
 
-1. 跑一轮真实 Cloudflare 现场 smoke test
-2. 补第二批业务链路测试
-3. 准备首个公开版本发布
+1. 定首个公开版本号并整理 release note
+2. 打正式 tag，按 `DOCS/RELEASING.md` 发首个 GitHub Release
+3. 补第二批业务链路测试，继续扩大 SDK 与域名生命周期覆盖

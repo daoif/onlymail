@@ -17,9 +17,9 @@
 - ✅ P10: 发布与维护面 — `DOCS/RELEASING.md`、版本策略、数据库变更要求和发布前检查齐备
 
 ## 下一步（最多 3 条）
-1. 跑一次真实 Cloudflare 现场的 `init` / `rebuild` / 域名绑定 smoke test，确认线上行为和文档完全一致
-2. 补第二批更贴近业务的测试，覆盖域名生命周期、Email Routing 失败分支和 SDK 关键路径
-3. 准备首个公开版本号和 release note，把当前变更打成可发布基线
+1. 定首个公开版本号，整理对应的 release note
+2. 打正式 tag，并按 `DOCS/RELEASING.md` 发首个 GitHub Release
+3. 补第二批更贴近业务的测试，覆盖域名生命周期、Email Routing 失败分支和 SDK 关键路径
 
 ## 阻塞/风险
 - Pages 默认来源和自定义前端域名现在统一走 D1 `settings.allowed_origins`；线上 smoke test 仍要确认 Pages 项目真实 `subdomain` 和 CORS 表现
@@ -54,6 +54,7 @@
 - `Upstream Sync` 在 fast-forward 后会显式补触发 `CI` 和相关 deploy workflow，不再停在“代码同步了但后续检查和部署没跑”
 - 新增前端、Worker、脚本层测试入口，根目录 `pnpm test` 现在会统一跑完
 - SDK 分发路径定为“直接从 GitHub 仓库子目录安装”：Node.js 主推 `pnpm`，Python 主推 `pip`；当前不发 npm / PyPI
+- Node.js / Python SDK 已分别完成真实安装与真实 API 调用验证；当前线上可正常列域名、创建地址并读取空邮件列表
 - 地址页新增“生成临时邮箱”区域：直接拉取可用子域名、创建地址、展示结果、复制地址并跳到邮件页
 - 开源仓库基础面已补齐：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板、`DOCS/RELEASING.md`
 

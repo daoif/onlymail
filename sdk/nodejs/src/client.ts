@@ -46,8 +46,14 @@ interface ApiEnvelope<T> {
   data: T
 }
 
-interface Paginated<T> {
+export interface Paginated<T> {
   items: T[]
+  pagination: {
+    page: number
+    size: number
+    total: number
+    totalPages: number
+  }
 }
 
 // ── Client ────────────────────────────────────────────────────
@@ -73,10 +79,15 @@ export class MailsApiClient {
     return payload as T
   }
 
+  private async requestData<T>(path: string, init: RequestInit = {}) {
+    const payload = await this.request<ApiEnvelope<T>>(path, init)
+    return payload.data
+  }
+
   // ── 邮箱操作 ──────────────────────────────────────────────
 
   createAddress(address: string, project: string, ttlHours?: number) {
-    return this.request<ApiEnvelope<{ status: 'created' | 'occupied' | 'available'; address: AddressRecord }>>('/call/address', {
+    return this.requestData<{ status: 'created' | 'occupied' | 'available'; address: AddressRecord }>('/call/address', {
       method: 'POST',
       body: JSON.stringify({ address, project, ttl_hours: ttlHours }),
     })
@@ -84,11 +95,11 @@ export class MailsApiClient {
 
   getMailList(address: string, page = 1, size = 20) {
     const params = new URLSearchParams({ page: String(page), size: String(size) })
-    return this.request<ApiEnvelope<Paginated<MailSummary>>>(`/call/mails/${encodeURIComponent(address)}?${params.toString()}`)
+    return this.requestData<Paginated<MailSummary>>(`/call/mails/${encodeURIComponent(address)}?${params.toString()}`)
   }
 
   getMail(id: number) {
-    return this.request<ApiEnvelope<MailDetail>>(`/call/mail/${id}`)
+    return this.requestData<MailDetail>(`/call/mail/${id}`)
   }
 
   // ── 域名操作 ──────────────────────────────────────────────
@@ -99,15 +110,15 @@ export class MailsApiClient {
     if (root) params.set('root', root)
     if (limit !== undefined) params.set('limit', String(limit))
     const qs = params.toString()
-    return this.request<ApiEnvelope<DomainRecord[]>>(`/call/domains${qs ? `?${qs}` : ''}`)
+    return this.requestData<DomainRecord[]>(`/call/domains${qs ? `?${qs}` : ''}`)
   }
 
   getDomain(name: string) {
-    return this.request<ApiEnvelope<DomainDetail>>(`/call/domains/${encodeURIComponent(name)}`)
+    return this.requestData<DomainDetail>(`/call/domains/${encodeURIComponent(name)}`)
   }
 
   createSubdomain(name: string, rootName?: string) {
-    return this.request<ApiEnvelope<DomainRecord>>('/call/domains', {
+    return this.requestData<DomainRecord>('/call/domains', {
       method: 'POST',
       body: JSON.stringify({ name, rootName: rootName || undefined }),
     })
