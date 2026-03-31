@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../assets/brand/exports/onlymail-mark-256.png" alt="OnlyMail" width="96" />
+</p>
+
 # 完整路径
 
 这份文档只走一条推荐路径：

@@ -1,13 +1,13 @@
 <template>
   <div class="flex min-h-screen items-center justify-center bg-white px-6">
     <div v-if="checkingInit" class="w-full max-w-sm space-y-2 text-center">
-      <h1 class="page-title">OnlyMail</h1>
+      <BrandLockup centered size="lg" title-tag="h1" />
       <p class="page-subtitle">正在检查管理员初始化状态。</p>
     </div>
 
     <form v-else class="w-full max-w-sm space-y-5" @submit.prevent="submit">
       <div class="space-y-2">
-        <h1 class="page-title">OnlyMail</h1>
+        <BrandLockup centered size="lg" title-tag="h1" />
         <p class="page-subtitle">
           {{ initialized ? '输入管理员账号和密码进入后台。' : '首次访问先创建管理员账号，后续用它登录后台。' }}
         </p>
@@ -46,6 +46,7 @@ import { useRouter } from 'vue-router'
 
 import { getInitStatus, initAdmin, login } from '../api/admin'
 import { ApiError } from '../api/client'
+import BrandLockup from '../components/BrandLockup.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()

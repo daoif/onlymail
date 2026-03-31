@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/exports/onlymail-mark-256.png" alt="OnlyMail" width="112" />
+</p>
+
 # OnlyMail
 
 > 自部署的个人邮箱系统 —— 基于 Cloudflare Workers + D1 + Email Routing + Pages，开箱即用。
