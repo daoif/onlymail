@@ -12,12 +12,19 @@
 ## 本地准备
 
 1. 复制 `.env.local.example` 为 `.env.local`
-2. 填好 4 个 Cloudflare 必填项
+2. 填好 4 个 Cloudflare 必填项：`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`
 3. 安装依赖：`pnpm install`
 4. 生成本地配置：`pnpm render:wrangler`、`pnpm sync:dev-vars`
 
+`D1_DATABASE_ID` 和 `JWT_SECRET` 不是手动配置项。`init` / `rebuild` 会自动回写到 `.env.local`，混合部署时再由 `pnpm setup:github` 同步到 GitHub。
+
 ## 常用命令
 
+- `pnpm run init`
+- `pnpm run rebuild`
+- `pnpm deploy:worker`
+- `pnpm deploy:frontend`
+- `pnpm setup:github`
 - `pnpm test`
 - `pnpm build`
 - `pnpm check:scripts`
