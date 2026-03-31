@@ -40,7 +40,7 @@
 当前设计：
 
 - 根目录 `pnpm test` 统一跑脚本、Worker、前端三层测试
-- GitHub Actions `CI` 在 `master` push 和 PR 上自动执行测试、构建和检查
+- GitHub Actions `CI` 在默认分支 push 和 PR 上自动执行测试、构建和检查
 - `pnpm build`、`pnpm check:scripts`、`pnpm check:python` 作为发布前必跑项
 
 已完成：

@@ -207,10 +207,10 @@ pnpm setup:github
 ```
 
 这个脚本会：
-- 写入 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`，以及按需写入 `CF_EMAIL`、`CF_GLOBAL_API_KEY` 这些 GitHub Secrets
+- 写入 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`、`JWT_SECRET` 这些 GitHub Secrets
 - 写入 `D1_DATABASE_ID`、`CF_DEFAULT_WORKER_NAME`、`CF_DEFAULT_PAGES_PROJECT` 这些 GitHub Variables
 - 如果能从 Cloudflare 读到 Pages 项目默认地址，还会顺手写入 `ALLOWED_ORIGINS`
-- 自动跳过没提供的可选项
+- 缺少正常可用部署所需的关键值时直接报错，不再写半套 GitHub 配置
 
 没有 `gh` CLI 时，去 GitHub → 仓库 → Settings → Secrets and variables → Actions，手动添加：
 
@@ -220,6 +220,9 @@ Secrets：
 |------|------|
 | `CLOUDFLARE_ACCOUNT_ID` | CF 账户 ID |
 | `CLOUDFLARE_API_TOKEN` | 上面创建的 API Token |
+| `CF_EMAIL` | Cloudflare 账号邮箱 |
+| `CF_GLOBAL_API_KEY` | Cloudflare Global API Key |
+| `JWT_SECRET` | 后台 JWT 密钥；本地已跑过 `init` 时可直接用 `.env.local` 里的值 |
 
 Variables：
 
@@ -350,6 +353,7 @@ pnpm run rebuild
 | `CLOUDFLARE_API_TOKEN` | 必需 | Cloudflare API Token |
 | `CF_EMAIL` | 必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
 | `CF_GLOBAL_API_KEY` | 必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
+| `JWT_SECRET` | 首次可留空 | 第一次 `Bootstrap Cloudflare` 会自动生成并写回仓库；后续重跑会复用它 |
 
 ### 步骤 4：运行首次初始化 workflow 🧑
 
@@ -359,13 +363,13 @@ pnpm run rebuild
 
 这个 workflow 会直接跑仓库里的 `pnpm run init`，自动完成：
 - 创建或确认 D1
-- 初始化 schema
+- 执行 D1 migration
 - 部署 Worker
 - 创建或确认 Pages 项目
 - 部署前端到 `pages.dev`
-- 把后续自动部署要用的 GitHub Variables 写回仓库
+- 把后续自动部署要用的 GitHub Secrets / Variables 写回仓库
 
-这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施。它会保留现有 D1，默认也会复用现有 `JWT_SECRET`。
+这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施。它会复用现有 `D1_DATABASE_ID` 和 `JWT_SECRET`；如果 GitHub 配置写回失败，workflow 会直接失败，不再留半套状态。
 
 ### 步骤 5：初始化管理员 🧑
 
@@ -414,7 +418,7 @@ pnpm run rebuild
 
 ## 五、后续推送（CI/CD 自动部署）
 
-配置好 GitHub Secrets 后，后续推送代码会自动触发部署：
+配置好 GitHub Secrets 后，后续推送到仓库默认分支会自动触发部署：
 
 | 触发条件 | Workflow | 动作 |
 |---------|----------|------|
@@ -425,7 +429,7 @@ pnpm run rebuild
 ### CI/CD 工作原理
 
 ```
-推送到 master
+推送到默认分支
   ↓
 GitHub Actions 触发
   ↓
@@ -466,7 +470,7 @@ wrangler deploy / pages deploy
 - 你的默认分支如果还和上游一条线，就能自动跟上
 - 你的默认分支如果已经有分叉提交，就会停下来，等你手动处理
 
-这是故意这样设计的，避免自动 merge 把用户自己的仓库历史揉乱。
+同步成功后，workflow 会再显式触发 `CI`，并按实际变更决定要不要触发 `Deploy Worker` / `Deploy Frontend`。这是故意这样设计的，避免 `GITHUB_TOKEN` push 不会自动带起下游 workflow 的问题，也避免自动 merge 把用户自己的仓库历史揉乱。
 
 ---
 

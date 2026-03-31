@@ -46,7 +46,10 @@
 - Pages 自定义域名绑定继续走：读取 Pages 项目真实 subdomain → 自动创建或更新 CNAME → 重试验证，并在设置页显示验证/证书状态
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署
 - 新增 `Upstream Sync` workflow，用于 fork 仓库按 fast-forward 自动接收上游更新
-- 新增 `CI` workflow，PR 和 `master` push 会自动执行测试、构建、脚本检查和 Python SDK 检查
+- 新增 `CI` workflow，PR 和默认分支 push 会自动执行测试、构建、脚本检查和 Python SDK 检查
+- GitHub-only / 混合部署的状态延续已对齐本地：`Bootstrap Cloudflare` 现在会复用 GitHub 里的 `D1_DATABASE_ID` 和 `JWT_SECRET`，并要求 GitHub 配置写回成功后才算完成
+- `Deploy Worker` / `Deploy Frontend` 现在按默认分支和真实依赖触发；改到共享部署脚本、migration、模板或根依赖时也会自动跑
+- `Upstream Sync` 在 fast-forward 后会显式补触发 `CI` 和相关 deploy workflow，不再停在“代码同步了但后续检查和部署没跑”
 - 新增前端、Worker、脚本层测试入口，根目录 `pnpm test` 现在会统一跑完
 - SDK 分发路径定为“直接从 GitHub 仓库子目录安装”：Node.js 主推 `pnpm`，Python 主推 `pip`；当前不发 npm / PyPI
 - 地址页新增“生成临时邮箱”区域：直接拉取可用子域名、创建地址、展示结果、复制地址并跳到邮件页

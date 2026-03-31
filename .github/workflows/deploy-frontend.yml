@@ -2,14 +2,20 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: [master]
     paths:
       - 'frontend/**'
+      - 'scripts/deploy-frontend.ts'
+      - 'scripts/lib/local-config.ts'
+      - 'scripts/lib/cloudflare-api.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     name: Build & Deploy Frontend to Cloudflare Pages
     steps:

@@ -17,7 +17,7 @@
  * - pnpm、wrangler CLI 已安装
  * - 已完成 `wrangler login`
  * - 如需完整自动化，提供 CF_API_TOKEN
- * - 正常可用部署建议一开始就提供 CF_EMAIL + CF_GLOBAL_API_KEY；根域名 bootstrap、子域名创建删除、catch-all 和 Email Routing 规则都会用到它们
+ * - 正常可用部署默认需要 CF_EMAIL + CF_GLOBAL_API_KEY；根域名 bootstrap、子域名创建删除、catch-all 和 Email Routing 规则都会用到它们
  *
  * 不处理：
  * - Worker / Pages 自定义域名绑定
@@ -93,6 +93,18 @@ function detectAccountId(): string {
     const output = run('npx wrangler whoami')
     const match = output.match(/Account ID:\s*([a-f0-9]{32})/i)
     return match?.[1] || ''
+  } catch {
+    return ''
+  }
+}
+
+function detectCurrentGitBranch(): string {
+  try {
+    return execSync('git branch --show-current', {
+      cwd: ROOT_DIR,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
   } catch {
     return ''
   }
@@ -191,6 +203,11 @@ function shouldReuseExistingDatabaseId() {
   return value !== '0' && value !== 'false'
 }
 
+function shouldRequireGitHubSync() {
+  const value = process.env.MAILS_REQUIRE_GITHUB_SYNC?.trim().toLowerCase()
+  return value === '1' || value === 'true'
+}
+
 function createJwtSecret() {
   return randomBytes(32).toString('hex')
 }
@@ -217,7 +234,7 @@ async function main() {
   // 2. 收集配置
   const workerName = process.env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
   const pagesProjectName = process.env.CF_DEFAULT_PAGES_PROJECT || 'mails-frontend'
-  const pagesProductionBranch = process.env.CF_PAGES_PRODUCTION_BRANCH || 'master'
+  const pagesProductionBranch = process.env.CF_PAGES_PRODUCTION_BRANCH || process.env.GITHUB_REF_NAME || detectCurrentGitBranch() || 'master'
   const accountId = process.env.CF_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID || detectAccountId() || prompt('请输入 CF Account ID (CF_ACCOUNT_ID): ')
   const cfApiToken = process.env.CF_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || ''
   const cfEmail = process.env.CF_EMAIL || process.env.CF_AUTH_EMAIL || ''
@@ -225,10 +242,16 @@ async function main() {
   const githubRepo = process.env.GITHUB_REPOSITORY || process.env.GH_REPO || ''
   const rotateJwtSecret = shouldRotateJwtSecret()
   const reuseExistingDatabaseId = shouldReuseExistingDatabaseId()
+  const requireGitHubSync = shouldRequireGitHubSync()
   const client = cfApiToken ? new CloudflareApiClient({ token: cfApiToken, authEmail: cfEmail, globalApiKey: cfGlobalApiKey }) : null
 
   if (!accountId) {
     console.error('❌ 需要 Account ID')
+    process.exit(1)
+  }
+
+  if (requireGitHubSync && !githubRepo) {
+    console.error('❌ 需要 GITHUB_REPOSITORY 才能完成严格 GitHub 同步')
     process.exit(1)
   }
 
@@ -397,6 +420,13 @@ async function main() {
     console.log('\n🌐 步骤 8：确认默认入口并部署前端...')
     try {
       await client.ensureWorkerSubdomain(context.accountId, context.workerName)
+      if (!context.apiBaseUrl) {
+        const workersSubdomain = await client.getWorkersSubdomain(context.accountId).catch(() => null)
+        if (workersSubdomain?.subdomain) {
+          context.apiBaseUrl = buildWorkersDevUrl(context.workerName, workersSubdomain.subdomain)
+        }
+      }
+
       if (context.apiBaseUrl) {
         console.log(`✅ Worker 默认入口已可用: ${context.apiBaseUrl}`)
       }
@@ -433,9 +463,19 @@ async function main() {
       })
       console.log('✅ GitHub 仓库配置已写入')
     } catch {
+      if (requireGitHubSync) {
+        console.log('❌ GitHub 配置写入失败，当前流程要求 GitHub 配置写入成功')
+        process.exit(1)
+      }
+
       console.log('⚠️  GitHub 配置写入失败，请稍后手动执行 pnpm setup:github')
     }
   } else if (githubRepo) {
+    if (requireGitHubSync) {
+      console.log('❌ 当前流程要求 GitHub 配置写入成功，但 gh 不可用')
+      process.exit(1)
+    }
+
     console.log('\n⚠️  检测到仓库名，但当前 gh 不可用，跳过 GitHub 自动配置')
   }
 

@@ -123,12 +123,17 @@ async function main() {
     },
     CF_EMAIL: {
       value: readValue('CF_EMAIL', 'CF_AUTH_EMAIL'),
-      required: false,
+      required: true,
       kind: 'secret',
     },
     CF_GLOBAL_API_KEY: {
       value: readValue('CF_GLOBAL_API_KEY'),
-      required: false,
+      required: true,
+      kind: 'secret',
+    },
+    JWT_SECRET: {
+      value: readValue('JWT_SECRET'),
+      required: true,
       kind: 'secret',
     },
     D1_DATABASE_ID: {

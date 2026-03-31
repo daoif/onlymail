@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   sync:
@@ -41,6 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          BEFORE_SHA="$(git rev-parse HEAD)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote add upstream "https://github.com/$UPSTREAM_REPOSITORY.git"
@@ -48,3 +50,30 @@ jobs:
           git checkout "$DEFAULT_BRANCH"
           git merge --ff-only "upstream/$DEFAULT_BRANCH"
           git push origin "HEAD:$DEFAULT_BRANCH"
+          echo "SYNC_BASE_SHA=$BEFORE_SHA" >> "$GITHUB_ENV"
+          echo "SYNC_HEAD_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Dispatch downstream workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$SYNC_BASE_SHA" = "$SYNC_HEAD_SHA" ]; then
+            echo "没有新提交，跳过后续 workflow"
+            exit 0
+          fi
+
+          CHANGED_FILES="$(git diff --name-only "$SYNC_BASE_SHA" "$SYNC_HEAD_SHA")"
+          echo "$CHANGED_FILES"
+
+          gh workflow run ci.yml -R "$GITHUB_REPOSITORY"
+
+          if echo "$CHANGED_FILES" | grep -Eq '^(worker/|worker/db/migrations/|worker/wrangler.toml.template|scripts/deploy-worker.ts|scripts/render-wrangler.ts|scripts/lib/local-config.ts|scripts/lib/d1-migrations.ts|scripts/lib/wrangler-config.ts|package.json|pnpm-lock.yaml|pnpm-workspace.yaml)'; then
+            gh workflow run deploy-worker.yml -R "$GITHUB_REPOSITORY"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -Eq '^(frontend/|scripts/deploy-frontend.ts|scripts/lib/local-config.ts|scripts/lib/cloudflare-api.ts|package.json|pnpm-lock.yaml|pnpm-workspace.yaml)'; then
+            gh workflow run deploy-frontend.yml -R "$GITHUB_REPOSITORY"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}

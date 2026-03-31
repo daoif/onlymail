@@ -2,14 +2,24 @@ name: Deploy Worker
 
 on:
   push:
-    branches: [master]
     paths:
       - 'worker/**'
+      - 'worker/db/migrations/**'
+      - 'worker/wrangler.toml.template'
+      - 'scripts/deploy-worker.ts'
+      - 'scripts/render-wrangler.ts'
+      - 'scripts/lib/local-config.ts'
+      - 'scripts/lib/d1-migrations.ts'
+      - 'scripts/lib/wrangler-config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - '.github/workflows/deploy-worker.yml'
   workflow_dispatch:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     name: Deploy Worker to Cloudflare
     steps:
