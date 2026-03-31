@@ -108,15 +108,18 @@
               <div class="divide-y divide-slate-100">
                 <div
                   v-if="group.rootVisible"
-                  class="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1.8fr)_120px_170px_110px] sm:items-center"
+                  class="grid gap-3 px-4 py-4 sm:grid-cols-[28px_minmax(0,1.5fr)_130px_180px_110px] sm:items-center"
                 >
+                  <div class="flex items-center justify-center">
+                    <span class="h-4 w-4 rounded border border-transparent" aria-hidden="true"></span>
+                  </div>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-medium text-slate-900">{{ group.root.name }}</p>
                     <p class="mt-1 text-sm text-slate-500">当前根域名的收件入口已经初始化完成。</p>
                   </div>
                   <div class="text-sm text-slate-500">Routing：{{ group.root.routing_enabled === 1 ? '已启用' : '未启用' }}</div>
                   <div class="text-sm text-slate-500">创建时间：{{ formatDate(group.root.created_at) }}</div>
-                  <div class="text-right text-sm text-slate-400">根域名不在这里删除</div>
+                  <div></div>
                 </div>
 
                 <div
