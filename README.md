@@ -2,12 +2,26 @@
   <img src="assets/brand/exports/onlymail-mark-256.png" alt="OnlyMail" width="112" />
 </p>
 
-# OnlyMail
+<h1 align="center">OnlyMail</h1>
 
-> 自部署的个人邮箱系统 —— 基于 Cloudflare Workers + D1 + Email Routing + Pages，开箱即用。
+<p align="center">
+  <a href="CHANGELOG.md">
+    <img src="https://img.shields.io/badge/version-v0.1.0-111827?style=flat-square" alt="version" />
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-111827?style=flat-square" alt="license" />
+  </a>
+</p>
 
-创建临时邮箱、接收邮件、管理域名，全部跑在 Cloudflare 免费套餐上。
-附带后台面板、自动化域名配置和多语言 SDK，适合个人开发者与小团队。
+<p align="center">
+  自部署的个人邮箱系统，基于 Cloudflare Workers + D1 + Email Routing + Pages，开箱即用。
+</p>
+
+<p align="center">
+  <a href="https://qm.qq.com/q/AHUKoyLVKg">💬 QQ 交流群：993975349</a>
+</p>
+
+> 转载说明：本项目欢迎任何社区、论坛、平台转载分享。 但请勿将本项目发布至某 L 站。 原因是：本项目包含社群链接，按该站相关尺度，这类内容属于“推广”。
 
 ---
 

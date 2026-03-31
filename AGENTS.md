@@ -6,6 +6,14 @@
 - `DOCS/PLANS/` 只放本项目的范围、路线图和实施方案。
 - `reference/` 只做参考，不在这个目录直接实现本项目代码。
 
+### 文档入口
+- 总入口先看 `DOCS/SUMMARY.md`。
+- 想快速跑通一条完整路径，先看 `DOCS/RUNBOOK.md`。
+- 想看部署方式、本地/GitHub/混合部署差异，先看 `DOCS/DEPLOY.md`。
+- 想看自动更新、版本提醒和 Upstream Sync，先看 `DOCS/UPDATE.md`。
+- 想准备发版，先看 `DOCS/RELEASING.md`。
+- 想知道当前现场事实和剩余待办，先看 `DOCS/STATUS.md`。
+
 ### 常用命令
 - `pnpm run init`：幂等初始化，保留现有 D1，补齐基础设施并重新部署 Worker / Frontend。
 - `pnpm run rebuild`：删除并重建 D1，再重跑 `init`。
