@@ -1,6 +1,7 @@
 import { exec, many, one } from '../lib/db'
 import { createProviders } from '../providers/index'
 import { AppError } from '../lib/http'
+import { DEFAULT_WORKER_NAME } from '../lib/project-defaults'
 import type { AppBindings, DomainRecord } from '../types'
 
 const MX_TARGETS = [
@@ -89,13 +90,12 @@ export async function bootstrapRootDomain(
   const providers = createProviders(env)
   const zoneId = await providers.dns.resolveZoneId(rootDomain)
   const settings = await providers.email.getEmailRoutingSettings(zoneId)
-  const workerName = env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
 
   if (!settings.enabled) {
     await providers.email.enableEmailRouting(zoneId)
   }
 
-  await providers.email.updateCatchAll(zoneId, workerName)
+  await providers.email.updateCatchAll(zoneId, DEFAULT_WORKER_NAME)
 
   await exec(
     env.DB.prepare(
@@ -110,7 +110,7 @@ export async function bootstrapRootDomain(
   return (await findDomain(env, rootDomain))!
 }
 
-export async function createSubdomain(env: AppBindings, payload: { name: string; rootName?: string; workerName?: string }) {
+export async function createSubdomain(env: AppBindings, payload: { name: string; rootName?: string }) {
   requireEmailRoutingAuth(env)
   const name = payload.name.trim().toLowerCase()
   const existing = await findDomain(env, name)
@@ -122,11 +122,6 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
   const rootRecord = await findDomain(env, rootName)
   if (!rootRecord || rootRecord.is_root !== 1) {
     throw new AppError(400, '请先初始化根域名，再创建子域名')
-  }
-
-  const workerName = payload.workerName?.trim() || env.CF_DEFAULT_WORKER_NAME
-  if (!workerName) {
-    throw new AppError(500, '缺少 Worker 名称，无法创建 Email Routing 规则')
   }
 
   const providers = createProviders(env)
@@ -153,7 +148,7 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
     txtRecordId = txtRecord.id
 
     const rule = await providers.email.createEmailRule(rootRecord.cf_zone_id, {
-      actions: [{ type: 'worker', value: [workerName] }],
+      actions: [{ type: 'worker', value: [DEFAULT_WORKER_NAME] }],
       matchers: [{ type: 'literal', field: 'to', value: `*@${name}` }],
       enabled: true,
       name: `${name}-worker-route`,

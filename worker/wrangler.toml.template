@@ -10,10 +10,7 @@ compatibility_flags = ["nodejs_compat"]
 crons = ["0 * * * *"]
 
 [vars]
-CF_DEFAULT_WORKER_NAME = "mails-worker"
 CF_ACCOUNT_ID = "__ACCOUNT_ID__"
-CF_DEFAULT_PAGES_PROJECT = "__PAGES_PROJECT_NAME__"
-# ALLOWED_ORIGINS = "https://你的-pages-subdomain.pages.dev,https://*.你的-pages-subdomain.pages.dev,http://localhost:5173"
 
 [[d1_databases]]
 binding = "DB"

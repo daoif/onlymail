@@ -23,7 +23,6 @@
           </div>
           <input v-model="createForm.name" class="input-base" type="text" placeholder="m1.example.com" />
           <input v-model="createForm.rootName" class="input-base" type="text" placeholder="可选：根域名" />
-          <input v-model="createForm.workerName" class="input-base" type="text" placeholder="可选：Worker 名称" />
           <button class="button-primary" type="submit">创建子域名</button>
         </form>
       </div>
@@ -94,7 +93,7 @@ import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
 const bootstrapForm = reactive({ rootDomain: '' })
-const createForm = reactive({ name: '', rootName: '', workerName: '' })
+const createForm = reactive({ name: '', rootName: '' })
 const message = ref('')
 const pendingDelete = ref('')
 
@@ -124,11 +123,10 @@ async function submitBootstrap() {
 async function submitSubdomain() {
   message.value = ''
   try {
-    const response = await createSubdomain(authStore.token, createForm.name, createForm.rootName, createForm.workerName)
+    const response = await createSubdomain(authStore.token, createForm.name, createForm.rootName)
     message.value = `子域名 ${response.data.name} 已创建。`
     createForm.name = ''
     createForm.rootName = ''
-    createForm.workerName = ''
     await mutate()
   } catch (err) {
     message.value = err instanceof ApiError ? err.message : '创建子域名失败'

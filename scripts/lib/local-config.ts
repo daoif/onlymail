@@ -25,10 +25,11 @@ function formatEnvValue(value: string) {
   return JSON.stringify(value)
 }
 
-function upsertEnvContent(content: string, updates: Record<string, string>) {
+function upsertEnvContent(content: string, updates: Record<string, string>, removals: string[] = []) {
   const normalized = content.replace(/\r\n/g, '\n')
   const lines = normalized ? normalized.split('\n') : []
   const remaining = new Map(Object.entries(updates))
+  const removedKeys = new Set(removals)
   const nextLines = lines.map((line) => {
     const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=/)
     if (!match) {
@@ -36,6 +37,10 @@ function upsertEnvContent(content: string, updates: Record<string, string>) {
     }
 
     const key = match[1]
+    if (removedKeys.has(key)) {
+      return ''
+    }
+
     if (!remaining.has(key)) {
       return line
     }
@@ -56,9 +61,9 @@ function upsertEnvContent(content: string, updates: Record<string, string>) {
   return `${nextLines.join('\n')}\n`
 }
 
-export function writeLocalEnvValues(updates: Record<string, string>) {
+export function writeLocalEnvValues(updates: Record<string, string>, removals: string[] = []) {
   const current = existsSync(ENV_LOCAL_PATH) ? readFileSync(ENV_LOCAL_PATH, 'utf-8') : ''
-  const next = upsertEnvContent(current, updates)
+  const next = upsertEnvContent(current, updates, removals)
   writeFileSync(ENV_LOCAL_PATH, next, 'utf-8')
 
   for (const [key, value] of Object.entries(updates)) {

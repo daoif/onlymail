@@ -34,7 +34,7 @@
 - 管理面板采用白色主色调，使用 Tailwind 手写样式，骨架屏占位 + SWR 缓存。
 - 所有 Cloudflare API 调用通过 `providers/` 接口解耦，禁止 service 层直接调用。
 - `wrangler.toml` 不提交 Git；本地和 CI/CD 都按模板现场生成。
-- Worker CORS 先读取模板默认来源，再叠加数据库里的运行时来源；Pages 自定义域名新增/删除时会同步更新这部分配置。
+- Worker CORS 运行时只读取 D1 `settings.allowed_origins`，再固定补一个本地开发来源 `http://localhost:5173`；Pages 默认 `pages.dev` 来源和自定义域名新增/删除都会同步维护这部分配置。
 - SDK 只暴露 `/call/*` 受控子集（创建+只读），Key 泄露不会导致数据丢失。
 - GitHub Actions 不只负责后续部署，也能负责首次 bootstrap；本地不再是唯一初始化入口。
 

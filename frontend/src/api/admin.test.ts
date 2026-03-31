@@ -39,8 +39,8 @@ describe('admin api helpers', () => {
     )
   })
 
-  it('createSubdomain 会保留 rootName 和 workerName', () => {
-    createSubdomain('token-3', 'mail.example.com', 'example.com', 'mails-worker')
+  it('createSubdomain 会保留 rootName', () => {
+    createSubdomain('token-3', 'mail.example.com', 'example.com')
 
     expect(apiRequest).toHaveBeenCalledWith(
       '/api/domains',
@@ -49,7 +49,6 @@ describe('admin api helpers', () => {
         body: JSON.stringify({
           name: 'mail.example.com',
           rootName: 'example.com',
-          workerName: 'mails-worker',
         }),
       },
       'token-3',

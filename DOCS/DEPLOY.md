@@ -180,7 +180,7 @@ pnpm run init
 脚本自动完成：
 - ✅ 创建 D1 数据库 `mails-db`
 - ✅ 创建或确认 Pages 项目
-- ✅ 读取 Pages 默认 `pages.dev` 地址并写入默认前端来源
+- ✅ 读取 Pages 默认 `pages.dev` 地址并同步到 D1 `settings.allowed_origins`
 - ✅ 从 `wrangler.toml.template` 生成 `wrangler.toml`
 - ✅ 执行 D1 migration（`worker/db/migrations/`）
 - ✅ 生成 JWT_SECRET 并设为 wrangler secret
@@ -209,8 +209,7 @@ pnpm setup:github
 
 这个脚本会：
 - 写入 `CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`、`CF_EMAIL`、`CF_GLOBAL_API_KEY`、`JWT_SECRET` 这些 GitHub Secrets
-- 写入 `D1_DATABASE_ID`、`CF_DEFAULT_WORKER_NAME`、`CF_DEFAULT_PAGES_PROJECT` 这些 GitHub Variables
-- 如果能从 Cloudflare 读到 Pages 项目默认地址，还会顺手写入 `ALLOWED_ORIGINS`
+- 写入 `D1_DATABASE_ID` 这个 GitHub Variable
 - 缺少正常可用部署所需的关键值时直接报错，不再写半套 GitHub 配置
 - 本地运行时会把当前 git `origin` 当成目标仓库，不再额外要求填写仓库名
 
@@ -231,9 +230,6 @@ Variables：
 | 名称 | 值 |
 |------|------|
 | `D1_DATABASE_ID` | `mails-db` 的 database id |
-| `CF_DEFAULT_WORKER_NAME` | Worker 名，默认 `mails-worker` |
-| `CF_DEFAULT_PAGES_PROJECT` | Pages 项目名，默认 `mails-frontend` |
-| `ALLOWED_ORIGINS` | 可选；默认推荐填当前 Pages 项目的 `pages.dev` 地址、它的预览子域名和 `http://localhost:5173` |
 
 > `worker/wrangler.toml` 不需要上传到 GitHub，也不需要再作为整文件 Secret 保存。CI 会按模板自动生成。
 
@@ -511,7 +507,7 @@ pnpm --dir frontend dev   # http://localhost:5173（已代理到 Worker）
 - 只调本地页面和本地 API：
   只需要 `.env.local` 里的 `JWT_SECRET`，再运行 `pnpm sync:dev-vars` 和 `pnpm render:wrangler`。这时不需要先跑 `init`，也不需要先创建线上 D1。
 - 本地还要调 Cloudflare 管理能力：
-  再往 `.env.local` 里补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_DEFAULT_PAGES_PROJECT`。
+  再往 `.env.local` 里补 `CF_API_TOKEN`、`CF_ACCOUNT_ID`。
 - 本地还要调 Email Routing：
   再往 `.env.local` 里补 `CF_EMAIL`、`CF_GLOBAL_API_KEY`。`CF_AUTH_EMAIL` 这个旧名字也兼容。
 

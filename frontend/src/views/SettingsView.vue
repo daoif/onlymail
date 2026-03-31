@@ -140,7 +140,7 @@
                 </tbody>
               </table>
             </div>
-            <p v-else class="py-2 text-sm text-slate-500">暂无绑定。如需配置 CF_DEFAULT_PAGES_PROJECT 请联系管理员。</p>
+            <p v-else class="py-2 text-sm text-slate-500">暂无绑定。</p>
           </template>
 
           <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="submitAddPagesDomain">
@@ -396,7 +396,7 @@ async function loadPagesDomains() {
     const response = await getPagesDomains(authStore.token)
     pagesDomains.value = response.data
   } catch {
-    // Pages 域名可能因 CF_DEFAULT_PAGES_PROJECT 未配置而失败，不阻塞页面
+    // Pages 域名接口失败时不阻塞设置页其他区域
     pagesDomains.value = []
   } finally {
     pagesDomainsLoading.value = false

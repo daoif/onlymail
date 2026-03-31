@@ -10,6 +10,8 @@ on:
       - 'scripts/render-wrangler.ts'
       - 'scripts/lib/local-config.ts'
       - 'scripts/lib/d1-migrations.ts'
+      - 'scripts/lib/d1-allowed-origins.ts'
+      - 'scripts/lib/project-defaults.ts'
       - 'scripts/lib/wrangler-config.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -43,6 +45,3 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
-          CF_DEFAULT_WORKER_NAME: ${{ vars.CF_DEFAULT_WORKER_NAME }}
-          CF_DEFAULT_PAGES_PROJECT: ${{ vars.CF_DEFAULT_PAGES_PROJECT }}
-          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}

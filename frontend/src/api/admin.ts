@@ -108,12 +108,12 @@ export function bootstrapDomain(token: string, rootDomain: string) {
   )
 }
 
-export function createSubdomain(token: string, name: string, rootName?: string, workerName?: string) {
+export function createSubdomain(token: string, name: string, rootName?: string) {
   return apiRequest<ApiEnvelope<DomainRecord>>(
     '/api/domains',
     {
       method: 'POST',
-      body: JSON.stringify({ name, rootName: rootName || undefined, workerName: workerName || undefined }),
+      body: JSON.stringify({ name, rootName: rootName || undefined }),
     },
     token,
   )

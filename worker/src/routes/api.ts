@@ -11,6 +11,7 @@ import type { AppEnv } from '../types'
 
 import { createAdminToken } from '../lib/crypto'
 import { AppError, jsonMessage, jsonSuccess } from '../lib/http'
+import { DEFAULT_PAGES_PROJECT, DEFAULT_WORKER_NAME } from '../lib/project-defaults'
 import { getPageParams, toPagination } from '../lib/pagination'
 
 import { createOrInspectAddress, deleteAddress, listAddresses } from '../services/address'
@@ -55,7 +56,6 @@ const bootstrapSchema = z.object({
 const createDomainSchema = z.object({
   name: z.string().min(1),
   rootName: z.string().min(1).optional(),
-  workerName: z.string().min(1).optional(),
 })
 
 const changePasswordSchema = z.object({
@@ -231,8 +231,7 @@ apiRoutes.get('/settings/custom-domains', async (c) => {
 
   const providers = createProviders(c.env)
   const domains = await providers.domainBinding.listWorkerDomains(accountId)
-  const workerName = c.env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
-  const filtered = domains.filter((d) => d.service === workerName)
+  const filtered = domains.filter((d) => d.service === DEFAULT_WORKER_NAME)
   return jsonSuccess(c, filtered)
 })
 
@@ -243,10 +242,9 @@ apiRoutes.post('/settings/custom-domains', async (c) => {
   }
 
   const { hostname } = z.object({ hostname: z.string().min(1) }).parse(await c.req.json())
-  const workerName = c.env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
   const providers = createProviders(c.env)
   const resolvedZoneId = await providers.dns.resolveZoneId(hostname)
-  const result = await providers.domainBinding.addWorkerDomain(accountId, hostname, resolvedZoneId, workerName)
+  const result = await providers.domainBinding.addWorkerDomain(accountId, hostname, resolvedZoneId, DEFAULT_WORKER_NAME)
   return jsonSuccess(c, result, 201)
 })
 
@@ -265,29 +263,27 @@ apiRoutes.delete('/settings/custom-domains/:id', async (c) => {
 
 apiRoutes.get('/settings/pages-domains', async (c) => {
   const accountId = c.env.CF_ACCOUNT_ID
-  const projectName = c.env.CF_DEFAULT_PAGES_PROJECT
-  if (!accountId || !projectName) {
-    throw new AppError(500, 'CF_ACCOUNT_ID 或 CF_DEFAULT_PAGES_PROJECT 未配置')
+  if (!accountId) {
+    throw new AppError(500, 'CF_ACCOUNT_ID 未配置')
   }
 
   const providers = createProviders(c.env)
-  const domains = await providers.domainBinding.listPagesDomains(accountId, projectName)
+  const domains = await providers.domainBinding.listPagesDomains(accountId, DEFAULT_PAGES_PROJECT)
   return jsonSuccess(c, domains)
 })
 
 apiRoutes.post('/settings/pages-domains', async (c) => {
   const accountId = c.env.CF_ACCOUNT_ID
-  const projectName = c.env.CF_DEFAULT_PAGES_PROJECT
-  if (!accountId || !projectName) {
-    throw new AppError(500, 'CF_ACCOUNT_ID 或 CF_DEFAULT_PAGES_PROJECT 未配置')
+  if (!accountId) {
+    throw new AppError(500, 'CF_ACCOUNT_ID 未配置')
   }
 
   const providers = createProviders(c.env)
   const { domain } = z.object({ domain: z.string().min(1) }).parse(await c.req.json())
   const resolvedZoneId = await providers.dns.resolveZoneId(domain)
-  await providers.domainBinding.addPagesDomain(accountId, projectName, domain)
+  await providers.domainBinding.addPagesDomain(accountId, DEFAULT_PAGES_PROJECT, domain)
 
-  const pagesSubdomain = await providers.domainBinding.getPagesProjectSubdomain(accountId, projectName)
+  const pagesSubdomain = await providers.domainBinding.getPagesProjectSubdomain(accountId, DEFAULT_PAGES_PROJECT)
   const existingRecords = await providers.dns.listDnsRecords(resolvedZoneId, { type: 'CNAME', name: domain })
   const currentRecord = existingRecords[0]
   const recordPayload = {
@@ -303,16 +299,15 @@ apiRoutes.post('/settings/pages-domains', async (c) => {
     await providers.dns.updateDnsRecord(resolvedZoneId, currentRecord.id, recordPayload)
   }
 
-  const result = await providers.domainBinding.retryPagesDomainValidation(accountId, projectName, domain)
+  const result = await providers.domainBinding.retryPagesDomainValidation(accountId, DEFAULT_PAGES_PROJECT, domain)
   await addAllowedOriginPattern(c.env, `https://${domain}`)
   return jsonSuccess(c, result, 201)
 })
 
 apiRoutes.delete('/settings/pages-domains/:domain', async (c) => {
   const accountId = c.env.CF_ACCOUNT_ID
-  const projectName = c.env.CF_DEFAULT_PAGES_PROJECT
-  if (!accountId || !projectName) {
-    throw new AppError(500, 'CF_ACCOUNT_ID 或 CF_DEFAULT_PAGES_PROJECT 未配置')
+  if (!accountId) {
+    throw new AppError(500, 'CF_ACCOUNT_ID 未配置')
   }
 
   const domainName = decodeURIComponent(c.req.param('domain'))
@@ -326,10 +321,10 @@ apiRoutes.delete('/settings/pages-domains/:domain', async (c) => {
   }
 
   const pagesSubdomain = resolvedZoneId
-    ? await providers.domainBinding.getPagesProjectSubdomain(accountId, projectName)
+    ? await providers.domainBinding.getPagesProjectSubdomain(accountId, DEFAULT_PAGES_PROJECT)
     : null
 
-  await providers.domainBinding.removePagesDomain(accountId, projectName, domainName)
+  await providers.domainBinding.removePagesDomain(accountId, DEFAULT_PAGES_PROJECT, domainName)
 
   if (resolvedZoneId && pagesSubdomain) {
     const existingRecords = await providers.dns.listDnsRecords(resolvedZoneId, { type: 'CNAME', name: domainName })

@@ -22,7 +22,7 @@
 3. 准备首个公开版本号和 release note，把当前变更打成可发布基线
 
 ## 阻塞/风险
-- Pages 预览域名和正式 `pages.dev` 域名依赖 `ALLOWED_ORIGINS` 默认值，线上 smoke test 仍要确认 Pages 项目真实 `subdomain` 和 CORS 表现
+- Pages 默认来源和自定义前端域名现在统一走 D1 `settings.allowed_origins`；线上 smoke test 仍要确认 Pages 项目真实 `subdomain` 和 CORS 表现
 - 现有测试还没覆盖真实 Cloudflare API 交互；域名、Email Routing、自定义入口这几层仍主要靠代码约束和本地单测
 - `Upstream Sync` 只做 fast-forward，同步策略保守；如果用户默认分支带长期私有改动，仍然需要手动处理
 
@@ -33,6 +33,8 @@
 - `scripts/init.ts` 现在只准备基础设施：D1、Worker、Pages 默认入口和可选 GitHub 配置，不再直接操作 Email Routing
 - 本地参数改成根目录 `.env.local` 单一来源；`init`、`render:wrangler`、`setup:github`、`sync:dev-vars` 都先读这个文件
 - `init` 会把 `D1_DATABASE_ID`、`JWT_SECRET` 回写到 `.env.local`，再生成 `worker/wrangler.toml` 和 `worker/.dev.vars`
+- `ALLOWED_ORIGINS` 已从本地 env、GitHub Variables、`wrangler.toml` 和 workflow 输入中移除；Worker 运行时只从 D1 `settings.allowed_origins` 读取默认 Pages 来源、自定义前端域名和开发白名单
+- Worker 名和 Pages 项目名已固定为 `mails-worker`、`mails-frontend`，不再暴露成用户配置项，也不再通过 GitHub Variables 传递
 - 新增 `pnpm run rebuild`：删除并重建 D1，轮换 `JWT_SECRET`，再重跑 `init`；DNS、自定义域名、Email Routing 外部入口不在这条命令里处理
 - 新增 `pnpm deploy:worker`、`pnpm deploy:frontend` 两个本地重部署入口，给本地调试和应急使用
 - 新增 `worker/db/migrations/` 和 `schema_migrations`；`init`、`deploy:worker`、`pnpm migrate:d1` 现在都按 migration 机制补齐数据库结构
@@ -42,7 +44,7 @@
 - 文档里删掉了 `Zone → Email Routing Rules` 这条 Token 权限说明，并补充 `CF_ACCOUNT_ID` 获取位置
 - 根域名 bootstrap、Worker 自定义域名、Pages 自定义域名现在都按域名自动解析 Zone；项目边界明确为单一 Cloudflare 账号
 - `CF_DEFAULT_ZONE_ID` 已从 `.env.local`、`worker/.dev.vars`、`wrangler.toml` 模板、GitHub workflow 和前端手动输入里移除
-- Worker CORS 改为：模板默认来源 + 数据库里的运行时追加来源；设置页新增/删除 Pages 自定义域名时会同步维护
+- Worker CORS 改为：默认 `pages.dev` 来源、自定义前端域名和开发白名单统一进 D1；设置页新增/删除 Pages 自定义域名时会同步维护
 - Pages 自定义域名绑定继续走：读取 Pages 项目真实 subdomain → 自动创建或更新 CNAME → 重试验证，并在设置页显示验证/证书状态
 - 新增 `Bootstrap Cloudflare` workflow，用于完全不拉本地的首次部署
 - 新增 `Upstream Sync` workflow，用于 fork 仓库按 fast-forward 自动接收上游更新

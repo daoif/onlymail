@@ -3,6 +3,7 @@ import type { AppBindings } from '../types'
 import { AppError } from '../lib/http'
 import { exec, one } from '../lib/db'
 import { generateApiKey, getApiKeyPreview, sha256 } from '../lib/crypto'
+import { DEFAULT_DEV_ALLOWED_ORIGINS } from '../lib/project-defaults'
 
 type SettingKey =
   | 'admin_user'
@@ -41,10 +42,6 @@ async function setSetting(env: AppBindings, key: SettingKey, value: string) {
 
 function normalizeOrigins(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort()
-}
-
-function getEnvAllowedOrigins(env: AppBindings) {
-  return normalizeOrigins((env.ALLOWED_ORIGINS || '').split(','))
 }
 
 function clearAllowedOriginsCache() {
@@ -161,10 +158,10 @@ export async function rotateApiKey(env: AppBindings) {
 }
 
 export async function getAllowedOriginPatterns(env: AppBindings) {
-  const envOrigins = getEnvAllowedOrigins(env)
+  const defaultOrigins = normalizeOrigins(DEFAULT_DEV_ALLOWED_ORIGINS)
 
   if (allowedOriginsCache && allowedOriginsCache.expiresAt > Date.now()) {
-    return normalizeOrigins([...envOrigins, ...allowedOriginsCache.values])
+    return normalizeOrigins([...defaultOrigins, ...allowedOriginsCache.values])
   }
 
   const row = await getSetting(env, 'allowed_origins')
@@ -185,7 +182,7 @@ export async function getAllowedOriginPatterns(env: AppBindings) {
     expiresAt: Date.now() + ALLOWED_ORIGINS_CACHE_TTL_MS,
   }
 
-  return normalizeOrigins([...envOrigins, ...storedOrigins])
+  return normalizeOrigins([...defaultOrigins, ...storedOrigins])
 }
 
 export async function addAllowedOriginPattern(env: AppBindings, origin: string) {

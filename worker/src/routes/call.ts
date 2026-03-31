@@ -27,7 +27,6 @@ const createAddressSchema = z.object({
 const createDomainSchema = z.object({
   name: z.string().min(1),
   rootName: z.string().min(1).optional(),
-  workerName: z.string().min(1).optional(),
 })
 
 export const callRoutes = new Hono<AppEnv>()

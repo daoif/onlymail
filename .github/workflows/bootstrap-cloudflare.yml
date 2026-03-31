@@ -2,17 +2,6 @@ name: Bootstrap Cloudflare
 
 on:
   workflow_dispatch:
-    inputs:
-      cf_default_worker_name:
-        description: Worker 名称
-        required: false
-        default: mails-worker
-        type: string
-      cf_default_pages_project:
-        description: Pages 项目名称
-        required: false
-        default: mails-frontend
-        type: string
   push:
     paths:
       - '.github/workflows/bootstrap-cloudflare.yml'
@@ -51,5 +40,3 @@ jobs:
           CF_GLOBAL_API_KEY: ${{ secrets.CF_GLOBAL_API_KEY }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
-          CF_DEFAULT_WORKER_NAME: ${{ inputs.cf_default_worker_name }}
-          CF_DEFAULT_PAGES_PROJECT: ${{ inputs.cf_default_pages_project }}

@@ -7,10 +7,7 @@ export interface AppBindings {
   CF_EMAIL?: string
   CF_AUTH_EMAIL?: string
   CF_GLOBAL_API_KEY?: string
-  CF_DEFAULT_WORKER_NAME?: string
   CF_ACCOUNT_ID?: string
-  CF_DEFAULT_PAGES_PROJECT?: string
-  ALLOWED_ORIGINS?: string
 }
 
 export type AppEnv = {

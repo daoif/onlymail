@@ -33,7 +33,6 @@ function createFakeEnv() {
       },
     } as unknown as D1Database,
     JWT_SECRET: 'test-secret',
-    ALLOWED_ORIGINS: '',
   }
 }
 

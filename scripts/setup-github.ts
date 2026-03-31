@@ -1,6 +1,5 @@
 import './lib/local-config'
 import { execFileSync, execSync } from 'node:child_process'
-import { CloudflareApiClient } from './lib/cloudflare-api'
 import { inferGitHubRepository } from './lib/github-repo'
 
 type ConfigValue = {
@@ -58,43 +57,15 @@ function setVariable(repo: string, name: string, value: string) {
   console.log(`已写入 variable: ${name}`)
 }
 
-function buildPagesAllowedOrigins(projectSubdomain: string, existing: string) {
-  const values = existing
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-
-  return Array.from(new Set([
-    `https://${projectSubdomain}`,
-    `https://*.${projectSubdomain}`,
-    'http://localhost:5173',
-    ...values,
-  ])).join(',')
-}
-
-async function inferCloudflareDefaults() {
-  const token = readValue('CLOUDFLARE_API_TOKEN', 'CF_API_TOKEN')
-  const accountId = readValue('CLOUDFLARE_ACCOUNT_ID', 'CF_ACCOUNT_ID')
-  const workerName = readValue('CF_DEFAULT_WORKER_NAME') || 'mails-worker'
-  const pagesProjectName = readValue('CF_DEFAULT_PAGES_PROJECT') || 'mails-frontend'
-
-  if (!token || !accountId) {
-    return {
-      workerName,
-      pagesProjectName,
-      allowedOrigins: '',
-    }
-  }
-
-  const client = new CloudflareApiClient({ token })
-  const pagesProject = await client.getPagesProject(accountId, pagesProjectName).catch(() => null)
-
-  return {
-    workerName,
-    pagesProjectName,
-    allowedOrigins: pagesProject?.subdomain
-      ? buildPagesAllowedOrigins(pagesProject.subdomain, readValue('ALLOWED_ORIGINS'))
-      : '',
+function deleteVariable(repo: string, name: string) {
+  try {
+    execFileSync('gh', ['variable', 'delete', name, '-R', repo], {
+      stdio: ['ignore', 'inherit', 'inherit'],
+      encoding: 'utf-8',
+    })
+    console.log(`已删除旧 variable: ${name}`)
+  } catch {
+    // 变量不存在时直接忽略
   }
 }
 
@@ -107,7 +78,6 @@ async function main() {
 
   ensureGhReady()
   const skipSecrets = shouldSkipSecrets()
-  const inferred = await inferCloudflareDefaults()
 
   const config: Record<string, ConfigValue> = {
     CLOUDFLARE_ACCOUNT_ID: {
@@ -140,21 +110,6 @@ async function main() {
       required: true,
       kind: 'variable',
     },
-    CF_DEFAULT_WORKER_NAME: {
-      value: readValue('CF_DEFAULT_WORKER_NAME') || inferred.workerName,
-      required: false,
-      kind: 'variable',
-    },
-    CF_DEFAULT_PAGES_PROJECT: {
-      value: readValue('CF_DEFAULT_PAGES_PROJECT') || inferred.pagesProjectName,
-      required: false,
-      kind: 'variable',
-    },
-    ALLOWED_ORIGINS: {
-      value: readValue('ALLOWED_ORIGINS') || inferred.allowedOrigins,
-      required: false,
-      kind: 'variable',
-    },
   }
 
   const missing = Object.entries(config)
@@ -180,6 +135,10 @@ async function main() {
     } else {
       setVariable(repo, name, item.value)
     }
+  }
+
+  for (const name of ['CF_DEFAULT_WORKER_NAME', 'CF_DEFAULT_PAGES_PROJECT', 'ALLOWED_ORIGINS']) {
+    deleteVariable(repo, name)
   }
 }
 

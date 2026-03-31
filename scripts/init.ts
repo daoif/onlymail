@@ -32,9 +32,11 @@ import { randomBytes } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { CloudflareApiClient } from './lib/cloudflare-api'
+import { syncAllowedOriginsSetting } from './lib/d1-allowed-origins'
 import { applyD1Migrations, ensureD1MigrationsExist } from './lib/d1-migrations'
 import { writeWorkerDevVars } from './lib/dev-vars'
 import { inferGitHubRepository } from './lib/github-repo'
+import { DEFAULT_PAGES_PROJECT, DEFAULT_WORKER_NAME } from './lib/project-defaults'
 import { writeWranglerToml } from './lib/wrangler-config'
 
 const FRONTEND_DIR = resolve(ROOT_DIR, 'frontend')
@@ -43,10 +45,7 @@ const DB_NAME = 'mails-db'
 
 type SetupContext = {
   accountId: string
-  workerName: string
-  pagesProjectName: string
   pagesProductionBranch: string
-  allowedOrigins: string
   apiBaseUrl: string
   databaseId: string
   pagesDefaultUrl?: string
@@ -170,26 +169,6 @@ function canUseGhSetup(githubRepo?: string) {
   }
 }
 
-function normalizeOriginList(...groups: string[]) {
-  const values = groups.flatMap((group) =>
-    group
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean),
-  )
-
-  return Array.from(new Set(values)).join(',')
-}
-
-function buildPagesAllowedOrigins(projectSubdomain: string, existing: string) {
-  return normalizeOriginList(
-    existing,
-    `https://${projectSubdomain}`,
-    `https://*.${projectSubdomain}`,
-    'http://localhost:5173',
-  )
-}
-
 function buildWorkersDevUrl(workerName: string, accountSubdomain: string) {
   return `https://${workerName}.${accountSubdomain}.workers.dev`
 }
@@ -233,8 +212,8 @@ async function main() {
   }
 
   // 2. 收集配置
-  const workerName = process.env.CF_DEFAULT_WORKER_NAME || 'mails-worker'
-  const pagesProjectName = process.env.CF_DEFAULT_PAGES_PROJECT || 'mails-frontend'
+  const workerName = DEFAULT_WORKER_NAME
+  const pagesProjectName = DEFAULT_PAGES_PROJECT
   const pagesProductionBranch = process.env.CF_PAGES_PRODUCTION_BRANCH || process.env.GITHUB_REF_NAME || detectCurrentGitBranch() || 'master'
   const accountId = process.env.CF_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID || detectAccountId() || prompt('请输入 CF Account ID (CF_ACCOUNT_ID): ')
   const cfApiToken = process.env.CF_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || ''
@@ -283,7 +262,6 @@ async function main() {
 
   const jwtSecret = rotateJwtSecret ? createJwtSecret() : ensureJwtSecret()
   let pagesDefaultUrl = ''
-  let allowedOrigins = normalizeOriginList(process.env.ALLOWED_ORIGINS || '', 'http://localhost:5173')
   let apiBaseUrl = ''
 
   if (client) {
@@ -294,7 +272,6 @@ async function main() {
     ])
 
     pagesDefaultUrl = `https://${pagesProject.subdomain}`
-    allowedOrigins = buildPagesAllowedOrigins(pagesProject.subdomain, process.env.ALLOWED_ORIGINS || '')
 
     if (!apiBaseUrl && workersSubdomain?.subdomain) {
       apiBaseUrl = buildWorkersDevUrl(workerName, workersSubdomain.subdomain)
@@ -311,23 +288,21 @@ async function main() {
 
   // 4. 同步本地配置并生成 wrangler.toml
   console.log('\n📝 步骤 3：同步 .env.local 并生成 wrangler.toml...')
-  const envLocalPath = writeLocalEnvValues({
-    CF_API_TOKEN: cfApiToken,
-    CF_ACCOUNT_ID: accountId,
-    CF_EMAIL: cfEmail,
-    CF_GLOBAL_API_KEY: cfGlobalApiKey,
-    D1_DATABASE_ID: databaseId,
-    CF_DEFAULT_WORKER_NAME: workerName,
-    CF_DEFAULT_PAGES_PROJECT: pagesProjectName,
-    JWT_SECRET: jwtSecret,
-  })
+  const envLocalPath = writeLocalEnvValues(
+    {
+      CF_API_TOKEN: cfApiToken,
+      CF_ACCOUNT_ID: accountId,
+      CF_EMAIL: cfEmail,
+      CF_GLOBAL_API_KEY: cfGlobalApiKey,
+      D1_DATABASE_ID: databaseId,
+      JWT_SECRET: jwtSecret,
+    },
+    ['CF_DEFAULT_WORKER_NAME', 'CF_DEFAULT_PAGES_PROJECT', 'ALLOWED_ORIGINS', 'GITHUB_REPOSITORY'],
+  )
   writeWranglerToml({
     accountId,
     databaseId,
     databaseName: DB_NAME,
-    workerName,
-    pagesProjectName,
-    allowedOrigins,
   })
   console.log(`✅ 已同步: ${envLocalPath}`)
   console.log(`✅ 已生成: ${TOML_PATH}`)
@@ -349,6 +324,13 @@ async function main() {
       console.log('⚠️  D1 migration 执行失败，请检查数据库状态后重试')
       process.exit(1)
     }
+  }
+
+  if (client && pagesDefaultUrl) {
+    console.log('\n🌐 步骤 5.5：同步默认允许来源到 D1...')
+    const pagesSubdomain = pagesDefaultUrl.replace(/^https?:\/\//, '')
+    const syncedOrigins = syncAllowedOriginsSetting(DB_NAME, 'remote', pagesSubdomain)
+    console.log(`✅ 默认允许来源已同步到 D1: ${syncedOrigins.join(', ')}`)
   }
 
   // 7. 设置 Secrets
@@ -403,10 +385,7 @@ async function main() {
 
   const context: SetupContext = {
     accountId,
-    workerName,
-    pagesProjectName,
     pagesProductionBranch,
-    allowedOrigins,
     apiBaseUrl,
     databaseId,
     pagesDefaultUrl,
@@ -419,11 +398,11 @@ async function main() {
   if (client) {
     console.log('\n🌐 步骤 8：确认默认入口并部署前端...')
     try {
-      await client.ensureWorkerSubdomain(context.accountId, context.workerName)
+      await client.ensureWorkerSubdomain(context.accountId, workerName)
       if (!context.apiBaseUrl) {
         const workersSubdomain = await client.getWorkersSubdomain(context.accountId).catch(() => null)
         if (workersSubdomain?.subdomain) {
-          context.apiBaseUrl = buildWorkersDevUrl(context.workerName, workersSubdomain.subdomain)
+          context.apiBaseUrl = buildWorkersDevUrl(workerName, workersSubdomain.subdomain)
         }
       }
 
@@ -435,7 +414,7 @@ async function main() {
     }
 
     if (context.apiBaseUrl) {
-      deployFrontend(context.pagesProjectName, context.apiBaseUrl)
+      deployFrontend(pagesProjectName, context.apiBaseUrl)
     } else {
       console.log('⚠️  未能自动推导 Worker 默认 workers.dev 地址，跳过前端部署；请先检查 CF_API_TOKEN / CF_ACCOUNT_ID 和 workers.dev 是否可用')
     }
@@ -455,9 +434,6 @@ async function main() {
           CLOUDFLARE_ACCOUNT_ID: accountId,
           CLOUDFLARE_API_TOKEN: cfApiToken,
           D1_DATABASE_ID: databaseId,
-          CF_DEFAULT_WORKER_NAME: workerName,
-          CF_DEFAULT_PAGES_PROJECT: pagesProjectName,
-          ALLOWED_ORIGINS: allowedOrigins,
         },
       })
       console.log('✅ GitHub 仓库配置已写入')
@@ -485,7 +461,6 @@ async function main() {
   console.log('当前结果：')
   console.log(`1. Worker 默认地址: ${context.apiBaseUrl || '未自动探测，请检查 workers.dev 是否可用'}`)
   console.log(`2. Frontend 默认地址: ${context.pagesDefaultUrl || '未自动准备，请稍后手动部署 Pages'}`)
-  console.log(`3. 默认允许来源: ${context.allowedOrigins || '未设置，当前按 Worker 运行时配置为准'}`)
   console.log()
   console.log('后续步骤：')
   console.log('1. 打开 Pages 默认地址，设置管理员账号密码')
