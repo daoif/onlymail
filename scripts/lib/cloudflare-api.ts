@@ -36,6 +36,11 @@ type PagesDomain = {
   name: string
 }
 
+type D1Database = {
+  uuid: string
+  name: string
+}
+
 type DnsRecord = {
   id: string
   type: string
@@ -193,6 +198,15 @@ export class CloudflareApiClient {
 
   async listPagesDomains(accountId: string, projectName: string) {
     return this.request<PagesDomain[]>('token', `/accounts/${accountId}/pages/projects/${projectName}/domains`)
+  }
+
+  async listD1Databases(accountId: string) {
+    return this.request<D1Database[]>('token', `/accounts/${accountId}/d1/database`)
+  }
+
+  async getD1DatabaseByName(accountId: string, databaseName: string) {
+    const databases = await this.listD1Databases(accountId)
+    return databases.find((item) => item.name === databaseName) ?? null
   }
 
   async addPagesDomain(accountId: string, projectName: string, domain: string) {

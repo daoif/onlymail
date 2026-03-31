@@ -250,8 +250,11 @@ async function main() {
     }
   } catch (error) {
     console.log('⚠️  创建数据库失败（可能已存在）')
+    const existingDatabase = reuseExistingDatabaseId && client
+      ? await client.getD1DatabaseByName(accountId, DB_NAME).catch(() => null)
+      : null
     databaseId = reuseExistingDatabaseId
-      ? process.env.D1_DATABASE_ID || process.env.DB_ID || detectExistingDatabaseId() || prompt('请输入已有的 database_id: ')
+      ? existingDatabase?.uuid || process.env.D1_DATABASE_ID || process.env.DB_ID || detectExistingDatabaseId() || prompt('请输入已有的 database_id: ')
       : prompt('请输入已有的 database_id: ')
   }
 
