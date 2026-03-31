@@ -25,6 +25,7 @@
 - Pages 默认来源和自定义前端域名现在统一走 D1 `settings.allowed_origins`；线上 smoke test 仍要确认 Pages 项目真实 `subdomain` 和 CORS 表现
 - 现有测试还没覆盖真实 Cloudflare API 交互；域名、Email Routing、自定义入口这几层仍主要靠代码约束和本地单测
 - `Upstream Sync` 只做 fast-forward，同步策略保守；如果用户默认分支带长期私有改动，仍然需要手动处理
+- `daoif/onlymail` 的正式 GitHub Release 还没发出去；更新提醒在首个 release 发布前会显示“还没有正式 release”
 
 ## 最近变更
 - 所有 Cloudflare API 调用通过 Provider 接口解耦
@@ -57,5 +58,6 @@
 - Node.js / Python SDK 已分别完成真实安装与真实 API 调用验证；当前线上可正常列域名、创建地址并读取空邮件列表
 - 地址页新增“生成临时邮箱”区域：直接拉取可用子域名、创建地址、展示结果、复制地址并跳到邮件页
 - 开源仓库基础面已补齐：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板、`DOCS/RELEASING.md`
+- 新增正式 release 更新提醒：Worker 每 24 小时检查一次 `daoif/onlymail` 的 GitHub Release；没接 GitHub 自动同步的实例会在后台顶部显示更新横幅，设置页也能手动检查和关闭提醒
 
 

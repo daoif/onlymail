@@ -194,6 +194,14 @@ pnpm setup:github
 - push 到默认分支，自动触发 `CI`、`Deploy Worker`、`Deploy Frontend`
 - 或手动跑对应 workflow
 
+如果你后面还想自动跟上上游版本，再到 GitHub 仓库里配置：
+
+```text
+UPSTREAM_REPOSITORY=daoif/onlymail
+```
+
+然后启用 `Upstream Sync`。这条 workflow 会按 fast-forward 把上游代码同步下来，再自动触发后续部署。
+
 ---
 
 ## 日常更新
@@ -215,3 +223,5 @@ pnpm run rebuild
 ```
 
 这条命令只会重建 D1 和重新部署，不碰 DNS、自定义域名和 Email Routing 外部入口。
+
+如果实例没接 GitHub 自动同步，后台设置页会自己检查 `daoif/onlymail` 的正式 release，并在有新版本时显示更新横幅。具体路径看 [UPDATE.md](UPDATE.md)。

@@ -1,5 +1,6 @@
 - [README](README.md)
 - [RUNBOOK](RUNBOOK.md)
+- [UPDATE](UPDATE.md)
 - [OVERVIEW](OVERVIEW.md)
 - [RELEASING](RELEASING.md)
 - [STATUS](STATUS.md)
@@ -21,3 +22,4 @@
   - [前端只用 Tailwind 手写样式](DECISIONS/0003-tailwind-only-admin-ui.md)
   - [平台抽象 Provider 层](DECISIONS/0005-provider-abstraction.md)
   - [D1 migration 机制](DECISIONS/0006-d1-migrations.md)
+  - [正式 Release 更新提醒](DECISIONS/0007-release-update-notifications.md)

@@ -11,9 +11,13 @@ vi.mock('./client', () => ({
 import {
   batchDeleteDomains,
   bootstrapDomain,
+  checkVersionState,
   createSubdomain,
+  dismissVersionUpdateOnce,
   getDomains,
+  getVersionState,
   removePagesDomain,
+  setVersionNotifications,
 } from './admin'
 
 describe('admin api helpers', () => {
@@ -73,6 +77,51 @@ describe('admin api helpers', () => {
       '/api/settings/pages-domains/onlymail.example.com',
       { method: 'DELETE' },
       'token-4',
+    )
+  })
+
+  it('getVersionState 会请求设置页版本状态', () => {
+    getVersionState('token-6')
+
+    expect(apiRequest).toHaveBeenCalledWith('/api/settings/version', {}, 'token-6')
+  })
+
+  it('checkVersionState 会手动触发检查', () => {
+    checkVersionState('token-7')
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/settings/version/check',
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+      'token-7',
+    )
+  })
+
+  it('dismissVersionUpdateOnce 会提交当前关闭的版本号', () => {
+    dismissVersionUpdateOnce('token-8', '0.2.0')
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/settings/version/dismiss-once',
+      {
+        method: 'POST',
+        body: JSON.stringify({ version: '0.2.0' }),
+      },
+      'token-8',
+    )
+  })
+
+  it('setVersionNotifications 会提交永久关闭开关', () => {
+    setVersionNotifications('token-9', true)
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/settings/version/notifications',
+      {
+        method: 'POST',
+        body: JSON.stringify({ disabled: true }),
+      },
+      'token-9',
     )
   })
 })

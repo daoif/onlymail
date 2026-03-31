@@ -73,6 +73,49 @@ pnpm run init
 
 ---
 
+## 🤖 发给 AI 的快速部署提示
+
+如果你不想先把仓库拉到本地，可以把下面这段直接发给**具有工具调用能力**的 AI，让它按 GitHub-only 路线去部署：
+
+```text
+你现在要帮我部署 OnlyMail，不需要把仓库拉到本地。
+
+仓库地址：
+https://github.com/daoif/onlymail
+
+部署方式：
+走 GitHub-only 部署，不走本地 init。
+
+我会提供这 5 个 GitHub Secrets：
+- CLOUDFLARE_API_TOKEN
+- CLOUDFLARE_ACCOUNT_ID
+- CF_EMAIL
+- CF_GLOBAL_API_KEY
+- JWT_SECRET
+
+要求你直接完成这些事：
+1. 检查仓库里的部署文档，优先看 DOCS/DEPLOY.md、DOCS/RUNBOOK.md、DOCS/UPDATE.md
+2. 在 GitHub 仓库里配置部署需要的 Secrets / Variables
+3. 手动触发 Bootstrap Cloudflare workflow
+4. 等 Worker 和 Pages 默认入口部署完成
+5. 告诉我默认前端地址和默认 Worker 地址
+6. 再告诉我接下来在后台里还要做什么（管理员初始化、API Key、绑定自定义域名、根域名 bootstrap）
+
+注意：
+- OnlyMail 当前固定使用 onlymail-worker / onlymail-frontend / onlymail-db
+- 管理面板固定请求 Worker 默认 workers.dev 地址
+- Worker / Pages 自定义域名只是别名，不改变面板默认调用路径
+- 只认 GitHub Release 作为正式版本来源，不要把普通 commit 当成正式更新
+```
+
+这条提示适合：
+
+- 想让 AI 直接在 GitHub 上完成首次部署
+- 不想先在本地装依赖、登录 Wrangler、跑 `pnpm run init`
+- 后面准备继续用 GitHub Actions 做自动部署
+
+---
+
 ## 🛠 本地开发
 
 ```bash
@@ -131,6 +174,7 @@ client = OnlyMailClient(
 | 文档 | 链接 |
 |------|------|
 | 部署与运维 | [DEPLOY.md](DOCS/DEPLOY.md) |
+| 更新路径 | [UPDATE.md](DOCS/UPDATE.md) |
 | 系统全貌 | [OVERVIEW.md](DOCS/OVERVIEW.md) |
 | 文档目录 | [SUMMARY.md](DOCS/SUMMARY.md) |
 | 当前状态 | [STATUS.md](DOCS/STATUS.md) |

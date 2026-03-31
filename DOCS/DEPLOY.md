@@ -96,7 +96,7 @@
 | `CF_EMAIL` | `.env.local` 手填 | GitHub Secret | 先在 `.env.local` 手填，再用 `setup:github` 写进 GitHub Secret |
 | `CF_GLOBAL_API_KEY` | `.env.local` 手填 | GitHub Secret | 先在 `.env.local` 手填，再用 `setup:github` 写进 GitHub Secret |
 | `D1_DATABASE_ID` | `init` / `rebuild` 自动回写到 `.env.local` | `Bootstrap Cloudflare` 自动写回 GitHub Variable | 本地先回写到 `.env.local`，再由 `setup:github` 写进 GitHub Variable |
-| `JWT_SECRET` | `init` / `rebuild` 自动回写到 `.env.local` | `Bootstrap Cloudflare` 自动写回 GitHub Secret | 本地先回写到 `.env.local`，再由 `setup:github` 写进 GitHub Secret |
+| `JWT_SECRET` | `init` / `rebuild` 自动回写到 `.env.local` | 先手动放进 GitHub Secret，`Bootstrap Cloudflare` 只复用它 | 本地先回写到 `.env.local`，再由 `setup:github` 写进 GitHub Secret |
 
 运行时实际读取规则也固定了：
 
@@ -373,7 +373,7 @@ pnpm run rebuild
 | `CLOUDFLARE_API_TOKEN` | 必需 | Cloudflare API Token |
 | `CF_EMAIL` | 必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
 | `CF_GLOBAL_API_KEY` | 必需 | 先作为仓库 secret 提供给 workflow；部署后的 Worker 也会把它作为运行时 secret 使用 |
-| `JWT_SECRET` | 首次可留空 | 第一次 `Bootstrap Cloudflare` 会自动生成并写回仓库；后续重跑会复用它 |
+| `JWT_SECRET` | 必需 | 当前 GitHub-only 路线不会自动回写 repo secret；先手动准备一个值，后续重跑会直接复用 |
 
 ### 步骤 4：运行首次初始化 workflow 🧑
 
@@ -385,9 +385,9 @@ pnpm run rebuild
 - 部署 Worker
 - 创建或确认 Pages 项目
 - 部署前端到 `pages.dev`
-- 把后续自动部署要用的 GitHub Secrets / Variables 写回仓库
+- 把后续自动部署要用的 `D1_DATABASE_ID` 写回仓库 Variable
 
-这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施。它会复用现有 `D1_DATABASE_ID` 和 `JWT_SECRET`；如果 GitHub 配置写回失败，workflow 会直接失败，不再留半套状态。
+这个 workflow 也可以重跑；效果和本地重复运行 `init` 一样，适合重新对齐基础设施。它会复用现有 `D1_DATABASE_ID` 和 `JWT_SECRET`；当前不会自动改写 repo secrets。
 
 ### 步骤 5：初始化管理员 🧑
 
@@ -411,6 +411,8 @@ pnpm run rebuild
 
 `Upstream Sync` 只做 fast-forward 同步。  
 如果你的默认分支已经有自己的提交，workflow 会停下来，不会替你自动 merge。
+
+如果你不想配 `Upstream Sync`，系统也不会自动拉代码。它会改成在后台设置页里提醒管理员“有新的正式 release 可以更新了”。更新提醒和自动部署是两条独立能力，具体看 [UPDATE.md](UPDATE.md)。
 
 ---
 
@@ -491,6 +493,8 @@ wrangler deploy / pages deploy
 - 你的默认分支如果已经有分叉提交，就会停下来，等你手动处理
 
 同步成功后，workflow 会再显式触发 `CI`，并按实际变更决定要不要触发 `Deploy Worker` / `Deploy Frontend`。这是故意这样设计的，避免 `GITHUB_TOKEN` push 不会自动带起下游 workflow 的问题，也避免自动 merge 把用户自己的仓库历史揉乱。
+
+如果你不启用这条 workflow，实例不会自己更新代码；后台设置页只会检查 `daoif/onlymail` 的正式 release，并提示管理员手动更新。
 
 ---
 

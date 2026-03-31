@@ -5,13 +5,21 @@ import { exec, one } from '../lib/db'
 import { generateApiKey, getApiKeyPreview, sha256 } from '../lib/crypto'
 import { DEFAULT_DEV_ALLOWED_ORIGINS } from '../lib/project-defaults'
 
-type SettingKey =
+export type SettingKey =
   | 'admin_user'
   | 'admin_pass_hash'
   | 'api_key_hash'
   | 'api_key_preview'
   | 'api_key_rotated_at'
   | 'allowed_origins'
+  | 'update_latest_version'
+  | 'update_latest_tag'
+  | 'update_latest_release_url'
+  | 'update_latest_published_at'
+  | 'update_last_checked_at'
+  | 'update_last_error'
+  | 'update_dismissed_version'
+  | 'update_notifications_disabled'
 
 type SettingRow = {
   key: SettingKey
@@ -26,11 +34,11 @@ type AllowedOriginsCache = {
 const ALLOWED_ORIGINS_CACHE_TTL_MS = 60_000
 let allowedOriginsCache: AllowedOriginsCache | null = null
 
-async function getSetting(env: AppBindings, key: SettingKey) {
+export async function getSettingValue(env: AppBindings, key: SettingKey) {
   return one<SettingRow>(env.DB.prepare('SELECT key, value FROM settings WHERE key = ?1').bind(key))
 }
 
-async function setSetting(env: AppBindings, key: SettingKey, value: string) {
+export async function setSettingValue(env: AppBindings, key: SettingKey, value: string) {
   await exec(
     env.DB.prepare(
       `INSERT INTO settings (key, value, created_at, updated_at)
@@ -50,13 +58,13 @@ function clearAllowedOriginsCache() {
 
 async function setAllowedOrigins(env: AppBindings, values: string[]) {
   const normalized = normalizeOrigins(values)
-  await setSetting(env, 'allowed_origins', JSON.stringify(normalized))
+  await setSettingValue(env, 'allowed_origins', JSON.stringify(normalized))
   clearAllowedOriginsCache()
   return normalized
 }
 
 export async function getAdminUsername(env: AppBindings) {
-  const row = await getSetting(env, 'admin_user')
+  const row = await getSettingValue(env, 'admin_user')
   return row?.value ?? null
 }
 
@@ -72,8 +80,8 @@ export async function initAdmin(env: AppBindings, username: string, password: st
   const passwordHash = await sha256(password)
 
   await Promise.all([
-    setSetting(env, 'admin_user', username),
-    setSetting(env, 'admin_pass_hash', passwordHash),
+    setSettingValue(env, 'admin_user', username),
+    setSettingValue(env, 'admin_pass_hash', passwordHash),
   ])
 
   return {
@@ -83,8 +91,8 @@ export async function initAdmin(env: AppBindings, username: string, password: st
 
 export async function verifyAdmin(env: AppBindings, username: string, password: string) {
   const [userRow, passwordRow] = await Promise.all([
-    getSetting(env, 'admin_user'),
-    getSetting(env, 'admin_pass_hash'),
+    getSettingValue(env, 'admin_user'),
+    getSettingValue(env, 'admin_pass_hash'),
   ])
 
   if (!userRow?.value || !passwordRow?.value) {
@@ -110,14 +118,14 @@ export async function changeAdminPassword(env: AppBindings, oldPassword: string,
     throw new AppError(401, '旧密码错误')
   }
 
-  await setSetting(env, 'admin_pass_hash', await sha256(newPassword))
+  await setSettingValue(env, 'admin_pass_hash', await sha256(newPassword))
 }
 
 export async function getApiKeyConfig(env: AppBindings) {
   const [hashRow, previewRow, rotatedAtRow] = await Promise.all([
-    getSetting(env, 'api_key_hash'),
-    getSetting(env, 'api_key_preview'),
-    getSetting(env, 'api_key_rotated_at'),
+    getSettingValue(env, 'api_key_hash'),
+    getSettingValue(env, 'api_key_preview'),
+    getSettingValue(env, 'api_key_rotated_at'),
   ])
 
   return {
@@ -145,9 +153,9 @@ export async function rotateApiKey(env: AppBindings) {
   const rotatedAt = new Date().toISOString()
 
   await Promise.all([
-    setSetting(env, 'api_key_hash', hash),
-    setSetting(env, 'api_key_preview', preview),
-    setSetting(env, 'api_key_rotated_at', rotatedAt),
+    setSettingValue(env, 'api_key_hash', hash),
+    setSettingValue(env, 'api_key_preview', preview),
+    setSettingValue(env, 'api_key_rotated_at', rotatedAt),
   ])
 
   return {
@@ -164,7 +172,7 @@ export async function getAllowedOriginPatterns(env: AppBindings) {
     return normalizeOrigins([...defaultOrigins, ...allowedOriginsCache.values])
   }
 
-  const row = await getSetting(env, 'allowed_origins')
+  const row = await getSettingValue(env, 'allowed_origins')
   let storedOrigins: string[] = []
   if (row?.value) {
     try {
@@ -186,14 +194,14 @@ export async function getAllowedOriginPatterns(env: AppBindings) {
 }
 
 export async function addAllowedOriginPattern(env: AppBindings, origin: string) {
-  const row = await getSetting(env, 'allowed_origins')
+  const row = await getSettingValue(env, 'allowed_origins')
   const current = row?.value ? JSON.parse(row.value) : []
   const values = Array.isArray(current) ? current.filter((item): item is string => typeof item === 'string') : []
   return setAllowedOrigins(env, [...values, origin])
 }
 
 export async function removeAllowedOriginPattern(env: AppBindings, origin: string) {
-  const row = await getSetting(env, 'allowed_origins')
+  const row = await getSettingValue(env, 'allowed_origins')
   const current = row?.value ? JSON.parse(row.value) : []
   const values = Array.isArray(current) ? current.filter((item): item is string => typeof item === 'string') : []
   return setAllowedOrigins(

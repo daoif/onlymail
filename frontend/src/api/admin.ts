@@ -7,6 +7,7 @@ import type {
   MailSummary,
   PaginationMeta,
   SettingsApiKeyState,
+  VersionUpdateState,
 } from '../types'
 
 import { apiRequest } from './client'
@@ -136,6 +137,40 @@ export function batchDeleteDomains(token: string, names: string[]) {
 
 export function getApiKeyState(token: string) {
   return apiRequest<ApiEnvelope<SettingsApiKeyState>>('/api/settings/api-key', {}, token)
+}
+
+export function getVersionState(token: string) {
+  return apiRequest<ApiEnvelope<VersionUpdateState>>('/api/settings/version', {}, token)
+}
+
+export function checkVersionState(token: string) {
+  return apiRequest<ApiEnvelope<VersionUpdateState>>(
+    '/api/settings/version/check',
+    { method: 'POST', body: JSON.stringify({}) },
+    token,
+  )
+}
+
+export function dismissVersionUpdateOnce(token: string, version: string) {
+  return apiRequest<ApiEnvelope<VersionUpdateState>>(
+    '/api/settings/version/dismiss-once',
+    {
+      method: 'POST',
+      body: JSON.stringify({ version }),
+    },
+    token,
+  )
+}
+
+export function setVersionNotifications(token: string, disabled: boolean) {
+  return apiRequest<ApiEnvelope<VersionUpdateState>>(
+    '/api/settings/version/notifications',
+    {
+      method: 'POST',
+      body: JSON.stringify({ disabled }),
+    },
+    token,
+  )
 }
 
 export function rotateApiKey(token: string) {

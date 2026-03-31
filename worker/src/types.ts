@@ -67,4 +67,20 @@ export interface DashboardStats {
   todayMailCount: number
 }
 
+export interface VersionUpdateState {
+  currentVersion: string
+  latestVersion: string | null
+  latestTag: string | null
+  latestReleaseUrl: string | null
+  latestPublishedAt: string | null
+  lastCheckedAt: string | null
+  lastError: string | null
+  notificationsDisabled: boolean
+  dismissedVersion: string | null
+  repositoryUrl: string
+  releasesUrl: string
+  updateGuideUrl: string
+  updateAvailable: boolean
+}
+
 

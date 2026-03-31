@@ -29,6 +29,7 @@ import {
   verifyAdmin,
 } from '../services/settings'
 import { getDashboardStats } from '../services/stats'
+import { checkVersionUpdates, dismissUpdateNoticeOnce, getVersionUpdateState, setUpdateNotificationsDisabled } from '../services/version-update'
 import { createProviders } from '../providers/index'
 
 // ── Schemas ───────────────────────────────────────────────────
@@ -65,6 +66,14 @@ const batchDeleteDomainsSchema = z.object({
 const changePasswordSchema = z.object({
   oldPassword: z.string().min(1),
   newPassword: z.string().min(1),
+})
+
+const dismissUpdateSchema = z.object({
+  version: z.string().min(1),
+})
+
+const updateNotificationPreferenceSchema = z.object({
+  disabled: z.boolean(),
 })
 
 export const apiRoutes = new Hono<AppEnv>()
@@ -228,6 +237,20 @@ apiRoutes.post('/settings/change-password', async (c) => {
   const payload = changePasswordSchema.parse(await c.req.json())
   await changeAdminPassword(c.env, payload.oldPassword, payload.newPassword)
   return jsonMessage(c, '密码已更新')
+})
+
+apiRoutes.get('/settings/version', async (c) => jsonSuccess(c, await getVersionUpdateState(c.env)))
+
+apiRoutes.post('/settings/version/check', async (c) => jsonSuccess(c, await checkVersionUpdates(c.env, { force: true })))
+
+apiRoutes.post('/settings/version/dismiss-once', async (c) => {
+  const payload = dismissUpdateSchema.parse(await c.req.json())
+  return jsonSuccess(c, await dismissUpdateNoticeOnce(c.env, payload.version))
+})
+
+apiRoutes.post('/settings/version/notifications', async (c) => {
+  const payload = updateNotificationPreferenceSchema.parse(await c.req.json())
+  return jsonSuccess(c, await setUpdateNotificationsDisabled(c.env, payload.disabled))
 })
 
 // ── 自定义域名绑定 ────────────────────────────────────────────

@@ -14,6 +14,35 @@
         </div>
       </div>
     </header>
+    <div v-if="showUpdateBanner" class="border-b border-amber-200 bg-amber-50/70">
+      <div class="mx-auto max-w-7xl px-6 py-3">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div class="min-w-0 space-y-1">
+            <p class="text-sm font-medium text-slate-900">
+              有新版本可更新：{{ formatVersionText(versionState?.latestVersion) }}
+            </p>
+            <p class="text-sm text-slate-600">
+              当前实例是 {{ formatVersionText(versionState?.currentVersion) }}。不自动更新的实例需要你手动跟进 release。
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <a :href="versionState?.updateGuideUrl || '#'" target="_blank" rel="noreferrer" class="button-secondary h-9 px-3">
+              查看如何更新
+            </a>
+            <a :href="versionState?.repositoryUrl || '#'" target="_blank" rel="noreferrer" class="button-secondary h-9 px-3">
+              查看项目仓库
+            </a>
+            <button class="button-secondary h-9 px-3" type="button" :disabled="bannerSubmitting" @click="dismissOnce">
+              仅关闭本次更新通知
+            </button>
+            <button class="button-secondary h-9 px-3" type="button" :disabled="bannerSubmitting" @click="disableForever">
+              永久关闭更新通知
+            </button>
+          </div>
+        </div>
+        <p v-if="bannerError" class="mt-2 text-sm text-rose-600">{{ bannerError }}</p>
+      </div>
+    </div>
     <main class="page-shell">
       <slot />
     </main>
@@ -21,14 +50,21 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 
+import { dismissVersionUpdateOnce, getVersionState, setVersionNotifications } from '../api/admin'
+import { ApiError } from '../api/client'
 import BrandLockup from './BrandLockup.vue'
+import { useSWR } from '../composables/useSWR'
+import { shouldShowUpdateBanner, formatVersionText } from '../lib/update-notice'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const bannerSubmitting = ref(false)
+const bannerError = ref('')
 
 const items = [
   { name: 'dashboard', label: '仪表盘', to: '/dashboard' },
@@ -37,6 +73,41 @@ const items = [
   { name: 'domains', label: '域名', to: '/domains' },
   { name: 'settings', label: '设置', to: '/settings' },
 ]
+
+const { data: versionData, mutate: mutateVersion } = useSWR({
+  key: 'settings-version',
+  fetcher: () => getVersionState(authStore.token),
+})
+
+const versionState = computed(() => versionData.value?.data ?? null)
+const showUpdateBanner = computed(() => shouldShowUpdateBanner(versionState.value))
+
+async function dismissOnce() {
+  if (!versionState.value?.latestVersion) return
+  bannerSubmitting.value = true
+  bannerError.value = ''
+  try {
+    await dismissVersionUpdateOnce(authStore.token, versionState.value.latestVersion)
+    await mutateVersion()
+  } catch (error) {
+    bannerError.value = error instanceof ApiError ? error.message : '关闭本次更新通知失败'
+  } finally {
+    bannerSubmitting.value = false
+  }
+}
+
+async function disableForever() {
+  bannerSubmitting.value = true
+  bannerError.value = ''
+  try {
+    await setVersionNotifications(authStore.token, true)
+    await mutateVersion()
+  } catch (error) {
+    bannerError.value = error instanceof ApiError ? error.message : '永久关闭更新通知失败'
+  } finally {
+    bannerSubmitting.value = false
+  }
+}
 
 function logout() {
   authStore.clearSession()

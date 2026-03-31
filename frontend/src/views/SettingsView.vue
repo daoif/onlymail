@@ -66,6 +66,68 @@
           </div>
         </div>
 
+        <div class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div class="space-y-1">
+              <h2 class="text-lg font-semibold text-slate-900">版本更新</h2>
+              <p class="text-sm text-slate-500">系统每天会自动检查一次正式 release。没接 GitHub 自动更新的实例，可以在这里手动检查并查看更新入口。</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button class="button-secondary h-9 px-3" type="button" :disabled="versionChecking" @click="checkNow">
+                {{ versionChecking ? '检查中…' : '立即检查更新' }}
+              </button>
+              <button
+                v-if="versionState?.notificationsDisabled"
+                class="button-secondary h-9 px-3"
+                type="button"
+                :disabled="versionChecking"
+                @click="enableNotifications"
+              >
+                重新启用更新通知
+              </button>
+              <a :href="versionState?.updateGuideUrl || '#'" target="_blank" rel="noreferrer" class="button-secondary h-9 px-3">
+                查看如何更新
+              </a>
+              <a :href="versionState?.repositoryUrl || '#'" target="_blank" rel="noreferrer" class="button-secondary h-9 px-3">
+                查看项目仓库
+              </a>
+            </div>
+          </div>
+
+          <div class="grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="space-y-1">
+              <p class="text-sm text-slate-500">当前版本</p>
+              <p class="text-base font-medium text-slate-900">{{ formatVersionText(versionState?.currentVersion) }}</p>
+            </div>
+            <div class="space-y-1">
+              <p class="text-sm text-slate-500">最新版本</p>
+              <p class="text-base font-medium text-slate-900">{{ formatVersionText(versionState?.latestVersion) }}</p>
+            </div>
+            <div class="space-y-1">
+              <p class="text-sm text-slate-500">更新状态</p>
+              <p class="text-base font-medium text-slate-900">
+                {{
+                  versionState?.updateAvailable
+                    ? '有可用更新'
+                    : versionState?.latestVersion
+                      ? '已是最新'
+                      : '尚未发现正式发布'
+                }}
+              </p>
+            </div>
+            <div class="space-y-1">
+              <p class="text-sm text-slate-500">上次检查</p>
+              <p class="text-base font-medium text-slate-900">
+                {{ versionState?.lastCheckedAt ? formatDate(versionState.lastCheckedAt) : '暂无' }}
+              </p>
+            </div>
+          </div>
+
+          <p v-if="versionState?.notificationsDisabled" class="text-sm text-slate-500">更新横幅已永久关闭，设置页仍然会保留版本状态和检查入口。</p>
+          <p v-if="versionState?.lastError" class="text-sm text-rose-600">{{ versionState.lastError }}</p>
+          <p v-if="versionMessage" class="text-sm text-slate-500">{{ versionMessage }}</p>
+        </div>
+
         <!-- Worker API 自定义域名 -->
         <div class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
           <div>
@@ -189,19 +251,23 @@ import { computed, onMounted, ref } from 'vue'
 import {
   addCustomDomain,
   addPagesDomain,
+  checkVersionState,
   changePassword,
+  getVersionState,
   getApiKeyState,
   getCustomDomains,
   getPagesDomains,
   removeCustomDomain,
   removePagesDomain,
   rotateApiKey,
+  setVersionNotifications,
 } from '../api/admin'
 import type { CustomDomainEntry, PagesDomainEntry } from '../api/admin'
 import { ApiError } from '../api/client'
 import AppShell from '../components/AppShell.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
+import { formatVersionText } from '../lib/update-notice'
 import type { ApiEnvelope, SettingsApiKeyState } from '../types'
 import { useSWR } from '../composables/useSWR'
 import { useAuthStore } from '../stores/auth'
@@ -234,6 +300,8 @@ const newPagesDomain = ref('')
 const pagesDomainMsg = ref('')
 const pagesDomainErr = ref('')
 const pendingRemovePagesDomain = ref('')
+const versionChecking = ref(false)
+const versionMessage = ref('')
 
 const { data, error, isLoading, mutate } = useSWR<ApiEnvelope<SettingsApiKeyState>>({
   key: 'settings-api-key',
@@ -246,6 +314,13 @@ const settings = computed(() => data.value?.data ?? {
   rotatedAt: null,
   adminUser: '',
 })
+
+const { data: versionData, mutate: mutateVersion } = useSWR({
+  key: 'settings-version',
+  fetcher: () => getVersionState(authStore.token),
+})
+
+const versionState = computed(() => versionData.value?.data ?? null)
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString('zh-CN')
@@ -300,6 +375,38 @@ function getPagesDomainError(domain: PagesDomainEntry) {
   }
 
   return message
+}
+
+async function checkNow() {
+  versionChecking.value = true
+  versionMessage.value = ''
+  try {
+    const response = await checkVersionState(authStore.token)
+    versionMessage.value = response.data.updateAvailable
+      ? `已检查到新版本 ${formatVersionText(response.data.latestVersion)}。`
+      : response.data.latestVersion
+        ? '已完成检查，当前已经是最新正式版本。'
+        : '已完成检查，当前仓库还没有正式 release。'
+    await mutateVersion()
+  } catch (err) {
+    versionMessage.value = err instanceof ApiError ? err.message : '检查更新失败'
+  } finally {
+    versionChecking.value = false
+  }
+}
+
+async function enableNotifications() {
+  versionChecking.value = true
+  versionMessage.value = ''
+  try {
+    await setVersionNotifications(authStore.token, false)
+    versionMessage.value = '更新横幅已重新启用。'
+    await mutateVersion()
+  } catch (err) {
+    versionMessage.value = err instanceof ApiError ? err.message : '重新启用更新通知失败'
+  } finally {
+    versionChecking.value = false
+  }
 }
 
 // ── API Key ───────────────────────────────────────────────────
