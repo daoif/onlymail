@@ -1,5 +1,5 @@
 import './lib/local-config'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { CloudflareApiClient } from './lib/cloudflare-api'
 import { inferGitHubRepository } from './lib/github-repo'
 
@@ -43,18 +43,16 @@ function ensureGhReady() {
 }
 
 function setSecret(repo: string, name: string, value: string) {
-  execSync(`gh secret set ${name} -R ${repo} --body @-`, {
-    input: value,
-    stdio: ['pipe', 'inherit', 'inherit'],
+  execFileSync('gh', ['secret', 'set', name, '-R', repo, '--body', value], {
+    stdio: ['ignore', 'inherit', 'inherit'],
     encoding: 'utf-8',
   })
   console.log(`已写入 secret: ${name}`)
 }
 
 function setVariable(repo: string, name: string, value: string) {
-  execSync(`gh variable set ${name} -R ${repo} --body @-`, {
-    input: value,
-    stdio: ['pipe', 'inherit', 'inherit'],
+  execFileSync('gh', ['variable', 'set', name, '-R', repo, '--body', value], {
+    stdio: ['ignore', 'inherit', 'inherit'],
     encoding: 'utf-8',
   })
   console.log(`已写入 variable: ${name}`)

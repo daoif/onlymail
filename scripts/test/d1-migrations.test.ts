@@ -31,10 +31,10 @@ test('parseWranglerD1RowsForTest 能解析 wrangler --json 结果', () => {
   assert.deepEqual(rows, [{ name: '0001_initial.sql' }, { name: '0002_add_index.sql' }])
 })
 
-test('buildMigrationWrapperSqlForTest 会包事务并记录版本', () => {
+test('buildMigrationWrapperSqlForTest 会追加 migration 记录且不显式包事务', () => {
   const sql = buildMigrationWrapperSqlForTest('0001_initial.sql', 'CREATE TABLE example (id INTEGER);')
-  assert.match(sql, /BEGIN TRANSACTION;/)
   assert.match(sql, /CREATE TABLE example/)
   assert.match(sql, /INSERT INTO schema_migrations/)
-  assert.match(sql, /COMMIT;/)
+  assert.doesNotMatch(sql, /BEGIN TRANSACTION;/)
+  assert.doesNotMatch(sql, /COMMIT;/)
 })

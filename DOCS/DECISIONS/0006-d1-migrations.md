@@ -21,6 +21,6 @@
 3. **实现简单**：现阶段用 SQL 文件就够，不需要先引入更重的迁移框架。
 
 ## 约束
-1. migration 文件默认不写 `BEGIN/COMMIT`，由执行器统一包事务。
+1. migration 文件和执行器都不显式写 `BEGIN/COMMIT`。`wrangler d1 execute --file` 的远程执行路径不接受这类事务语句。
 2. 新 migration 需要按“先兼容旧代码、再服务新代码”的思路写，避免部署窗口内前后版本互相打断。
 3. `rebuild` 仍然只处理 D1 和平台内部状态，不碰 DNS、自定义域名和 Email Routing 外部入口。

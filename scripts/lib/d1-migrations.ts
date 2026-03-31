@@ -30,10 +30,8 @@ function quoteSqlString(value: string) {
 
 function buildMigrationWrapperSql(name: string, sql: string) {
   return [
-    'BEGIN TRANSACTION;',
     sql.trim(),
     `INSERT INTO ${MIGRATION_TABLE} (name, applied_at) VALUES (${quoteSqlString(name)}, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));`,
-    'COMMIT;',
     '',
   ].join('\n')
 }
