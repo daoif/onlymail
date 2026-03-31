@@ -1,33 +1,42 @@
-# 当前状态（STATUS）
+# 当前状态
 
 ## 当前目标
-- 系统级重构已完成（P0-P6），基础设施、数据库迁移、测试、CI 和开源仓库基础面都已就位。当前把部署路径定成三条：本地部署、GitHub-only 部署、混合部署；`init` 只处理默认入口和基础设施，`rebuild` 只重建 D1 + 重新部署，不碰 Cloudflare 外部入口。
+
+系统级重构（P0–P6）已全部完成，基础设施、数据库迁移、测试、CI 和开源仓库基础面均已就位。当前阶段的重点是：
+
+- 部署路径归纳为三条：本地部署、GitHub-only 部署、混合部署
+- `init` 只处理默认入口和基础设施
+- `rebuild` 只重建 D1 + 重新部署，不碰 Cloudflare 外部入口
 
 ## 已完成
-- ✅ P0: 平台抽象层 — `lib/cloudflare.ts` 拆分为 `providers/` 接口 + CF 实现
-- ✅ P1: API 路由落定为 `/api/*`（管理员会话）+ `/call/*`（API Key）
-- ✅ P2: 敏感信息 + CI/CD — `wrangler.toml.template` + 模板现场生成，移除整文件 Secret 依赖
-- ✅ P3: SDK 重设计 — Node.js/Python 路径→`/call/*`，新增域名操作
-- ✅ P4: 初始化优化 — `scripts/init.ts` 一键初始化脚本
-- ✅ P5: 前端体验 — 骨架屏 + SWR 缓存，5 个视图全部改造
-- ✅ P6: 文档更新 — README、DEPLOY、STATUS、OVERVIEW 同步
-- ✅ P7: D1 migration — `worker/db/migrations/` + `schema_migrations` + `init` / `deploy:worker` 自动补齐未执行 migration
-- ✅ P8: 测试与 CI — 脚本、Worker、前端关键链路测试接入 `pnpm test`，新增 GitHub Actions `CI`
-- ✅ P9: 开源仓库面 — `LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板齐备
-- ✅ P10: 发布与维护面 — `DOCS/RELEASING.md`、版本策略、数据库变更要求和发布前检查齐备
 
-## 下一步（最多 3 条）
-1. 定首个公开版本号，整理对应的 release note
-2. 打正式 tag，并按 `DOCS/RELEASING.md` 发首个 GitHub Release
-3. 补第二批更贴近业务的测试，覆盖域名生命周期、Email Routing 失败分支和 SDK 关键路径
+- P0 — 平台抽象层：`lib/cloudflare.ts` 拆分为 `providers/` 接口 + CF 实现
+- P1 — API 路由落定：`/api/*`（管理员会话）+ `/call/*`（API Key）
+- P2 — 敏感信息 + CI/CD：`wrangler.toml.template` + 模板现场生成，移除整文件 Secret 依赖
+- P3 — SDK 重设计：Node.js / Python 路径 → `/call/*`，新增域名操作
+- P4 — 初始化优化：`scripts/init.ts` 一键初始化
+- P5 — 前端体验：骨架屏 + SWR 缓存，5 个视图全部改造
+- P6 — 文档更新：README、DEPLOY、STATUS、OVERVIEW 同步
+- P7 — D1 migration：`worker/db/migrations/` + `schema_migrations` + 自动补齐
+- P8 — 测试与 CI：脚本、Worker、前端关键链路测试接入 `pnpm test`，新增 GitHub Actions `CI`
+- P9 — 开源仓库面：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板齐备
+- P10 — 发布与维护面：`DOCS/RELEASING.md`、版本策略、数据库变更要求和发布前检查齐备
 
-## 阻塞/风险
-- Pages 默认来源和自定义前端域名现在统一走 D1 `settings.allowed_origins`；线上 smoke test 仍要确认 Pages 项目真实 `subdomain` 和 CORS 表现
-- 现有测试还没覆盖真实 Cloudflare API 交互；域名、Email Routing、自定义入口这几层仍主要靠代码约束和本地单测
-- `Upstream Sync` 只做 fast-forward，同步策略保守；如果用户默认分支带长期私有改动，仍然需要手动处理
-- `daoif/onlymail` 的正式 GitHub Release 还没发出去；更新提醒在首个 release 发布前会显示“还没有正式 release”
+## 下一步
+
+1. 定首个公开版本号，整理对应 release note
+2. 打正式 tag，按 `DOCS/RELEASING.md` 流程发首个 GitHub Release
+3. 补第二批贴近业务的测试，覆盖域名生命周期、Email Routing 失败分支和 SDK 关键路径
+
+## 阻塞 / 风险
+
+- **CORS 验证** - Pages 默认来源和自定义前端域名统一走 D1 `settings.allowed_origins`；线上 smoke test 仍需确认 Pages 项目真实 `subdomain` 和 CORS 表现
+- **测试覆盖** - 现有测试还没覆盖真实 Cloudflare API 交互；域名、Email Routing、自定义入口仍主要靠代码约束和本地单测
+- **Upstream Sync** - 只做 fast-forward，策略保守；如果用户默认分支带长期私有改动，仍需手动处理
+- **首个 Release** - `daoif/onlymail` 的正式 GitHub Release 还没发出去；更新提醒在首个 release 发布前会显示“还没有正式 release”
 
 ## 最近变更
+
 - 所有 Cloudflare API 调用通过 Provider 接口解耦
 - API 路由固定为 `/api/*`（管理员会话）+ `/call/*`（API Key）
 - `wrangler.toml` 不再提交 Git，本地和 CI/CD 都按模板现场生成
@@ -59,5 +68,3 @@
 - 地址页新增“生成临时邮箱”区域：直接拉取可用子域名、创建地址、展示结果、复制地址并跳到邮件页
 - 开源仓库基础面已补齐：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板、`DOCS/RELEASING.md`
 - 新增正式 release 更新提醒：Worker 每 24 小时检查一次 `daoif/onlymail` 的 GitHub Release；没接 GitHub 自动同步的实例会在后台顶部显示更新横幅，设置页也能手动检查和关闭提醒
-
-
