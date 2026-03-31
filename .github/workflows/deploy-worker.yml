@@ -1,4 +1,5 @@
 name: Deploy Worker
+# Re-pushed once after public repo creation so GitHub indexes this workflow reliably.
 
 on:
   push:

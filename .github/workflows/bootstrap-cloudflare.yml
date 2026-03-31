@@ -1,4 +1,5 @@
 name: Bootstrap Cloudflare
+# Re-pushed once after public repo creation so GitHub indexes this workflow reliably.
 
 on:
   workflow_dispatch:
