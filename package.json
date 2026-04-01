@@ -21,6 +21,8 @@
     "build:worker": "pnpm --dir worker run build",
     "build:frontend": "pnpm --dir frontend run build",
     "build:sdk:node": "pnpm --dir sdk/nodejs run build",
+    "build:sdk:artifacts": "npx tsx scripts/build-sdk-artifacts.ts",
+    "check:sdk:artifacts": "npx tsx scripts/verify-sdk-artifacts.ts",
     "check:python": "python -m compileall sdk/python"
   },
   "devDependencies": {

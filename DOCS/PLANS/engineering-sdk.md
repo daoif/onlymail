@@ -52,9 +52,13 @@ Python 和 Node.js 两套 SDK 同时维护，保持 API 一致性。
 ### 分发方式
 
 - 第一阶段不发 npm / PyPI。
-- Node.js 主推荐通过 GitHub 仓库子目录安装：`pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"`。
-- Python 主推荐通过 GitHub 仓库子目录安装：`python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"`。
-- Node.js 当前不主推 `npm`，因为官方文档只保证 Git 依赖直接指向仓库根目录里的包，不保证这种子目录安装方式。
+- 正式发布版通过 GitHub Release 附件分发：
+  - Node.js：`onlymail-sdk-nodejs-<version>.tgz`
+  - Python：`onlymail_sdk-<version>-py3-none-any.whl`
+  - Python：`onlymail_sdk-<version>.tar.gz`
+- Node.js 开发版通过 GitHub 仓库子目录安装：`pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"`。
+- Python 开发版通过 GitHub 仓库子目录安装：`python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"`。
+- Node.js 不再把 Git 子目录安装当正式分发方式，因为这条路把消费方绑定到了 `pnpm`。
 
 ### 方法清单
 

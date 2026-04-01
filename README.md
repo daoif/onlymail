@@ -167,6 +167,25 @@ pnpm --dir frontend dev     # 启动前端（http://localhost:5173）
 
 ## 🔌 SDK
 
+正式发布的 SDK 走 GitHub Release 附件分发，不要求你用 `pnpm`。
+
+**Node.js 安装**
+
+```bash
+npm install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail-sdk-nodejs-<version>.tgz"
+```
+
+**Python 安装**
+
+```bash
+python -m pip install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail_sdk-<version>-py3-none-any.whl"
+```
+
+如果你要直接跟未发版的仓库代码：
+
+- Node.js：`pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"`
+- Python：`python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"`
+
 **Node.js**
 
 ```ts

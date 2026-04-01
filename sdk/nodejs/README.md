@@ -2,27 +2,29 @@
 
 ## 安装
 
-主推荐方式是用 `pnpm` 直接从 GitHub 仓库安装子目录包。
+正式发布版主推荐直接安装 GitHub Release 附件里的 `.tgz` 包。
 
 ```bash
-pnpm add "git+https://github.com/<owner>/<repo>.git#master&path:/sdk/nodejs"
+npm install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail-sdk-nodejs-<version>.tgz"
 ```
 
-如果你要固定到某个 tag、分支或 commit，把 `master` 换成对应引用即可：
+这条安装方式不绑包管理器，`npm`、`pnpm`、`yarn`、`bun` 都可以直接装同一个 tarball。
+
+如果你要直接跟未发版的仓库代码，再走 `pnpm` 的 Git 子目录安装：
 
 ```bash
 pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"
 ```
 
 这条路径要求你的项目用 `pnpm`。  
-`npm` 官方文档只保证 Git 依赖直接指向仓库根目录里的包，不保证这种子目录安装方式。
+`npm` 官方文档只保证 Git 依赖直接指向仓库根目录里的包，不保证这种子目录安装方式，所以这里只把它当开发版入口。
 
 如果你想把依赖直接写进 `package.json`：
 
 ```json
 {
   "dependencies": {
-    "@onlymail/sdk-nodejs": "git+https://github.com/<owner>/<repo>.git#master&path:/sdk/nodejs"
+    "@onlymail/sdk-nodejs": "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail-sdk-nodejs-<version>.tgz"
   }
 }
 ```

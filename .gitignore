@@ -61,5 +61,6 @@ temp/
 *.tmp
 __pycache__/
 *.pyc
+*.egg-info/
 .venv/
 dist-sdk/

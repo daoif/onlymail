@@ -61,9 +61,12 @@ pnpm set:version 0.1.0
 2. 跑完 `pnpm build`
 3. 跑完 `pnpm check:scripts`
 4. 如果改了 Python SDK，再跑 `pnpm check:python`
-5. 检查 `CHANGELOG.md`
-6. 检查有没有新增 migration
-7. 检查 `DOCS/STATUS.md` 是否还是现场事实
+5. 跑完 `python -m pip install build`
+6. 跑完 `pnpm build:sdk:artifacts`
+7. 跑完 `pnpm check:sdk:artifacts`
+8. 检查 `CHANGELOG.md`
+9. 检查有没有新增 migration
+10. 检查 `DOCS/STATUS.md` 是否还是现场事实
 
 ## 发布步骤
 
@@ -78,6 +81,7 @@ pnpm set:version 0.1.0
 7. 创建 tag
 8. 推送 tag
 9. 在 GitHub 上创建 Release
+10. 等 `Release SDK Assets` workflow 把 Node.js `.tgz` 和 Python `.whl` / `.tar.gz` 附件挂到当前 Release
 
 本地命令顺序：
 
@@ -88,31 +92,35 @@ pnpm test
 pnpm build
 pnpm check:scripts
 pnpm check:python
+python -m pip install build
+pnpm build:sdk:artifacts
+pnpm check:sdk:artifacts
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
 ## 发版发的是什么
 
-当前项目没有单独需要上传的“安装包产物”作为正式发布主体。
-
-现在的正式发布，发的是两部分：
+现在的正式发布，发的是三部分：
 
 1. **源码版本**
    - Git tag
    - GitHub Release
    - GitHub 自动生成的 source tarball / zipball
 
-2. **发布说明**
+2. **SDK 安装产物**
+   - Node.js SDK：`onlymail-sdk-nodejs-<version>.tgz`
+   - Python SDK：`onlymail_sdk-<version>-py3-none-any.whl`
+   - Python SDK：`onlymail_sdk-<version>.tar.gz`
+
+3. **发布说明**
    - 这次版本做了什么
    - 用户要不要重新部署
    - 用户要不要手工处理数据或配置
 
 因此当前发版的本质是：
 
-**发布源码版本，而非独立的二进制安装包。**
-
-SDK 当前也跟随主仓库源码发布，未独立发布到 npm / PyPI。
+**发布源码版本 + SDK 安装附件，而不是单独发 npm / PyPI。**
 
 ## GitHub Release 要写什么
 
@@ -123,6 +131,7 @@ Release 页面至少写清楚这几件事：
 - 这次改了什么
 - 是否有破坏性变更
 - 是否需要手工操作
+- 当前 Release 附带了哪些 SDK 安装文件
 - 文档入口：
   - `README.md`
   - `DOCS/DEPLOY.md`
