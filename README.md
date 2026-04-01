@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="CHANGELOG.md">
-    <img src="https://img.shields.io/badge/version-v0.1.0-111827?style=flat-square" alt="version" />
+    <img src="https://img.shields.io/badge/version-v0.1.1-111827?style=flat-square" alt="version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-111827?style=flat-square" alt="license" />
@@ -167,7 +167,7 @@ pnpm --dir frontend dev     # 启动前端（http://localhost:5173）
 
 ## 🔌 SDK
 
-正式发布的 SDK 走 GitHub Release 附件分发，不要求你用 `pnpm`。
+正式版走 GitHub Release 附件，npm / pnpm / yarn / bun 都能装。
 
 **Node.js 安装**
 
@@ -181,7 +181,7 @@ npm install "https://github.com/<owner>/<repo>/releases/download/v<version>/only
 python -m pip install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail_sdk-<version>-py3-none-any.whl"
 ```
 
-如果你要直接跟未发版的仓库代码：
+要跟未发版代码，也可以从仓库子目录装：
 
 - Node.js：`pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"`
 - Python：`python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"`

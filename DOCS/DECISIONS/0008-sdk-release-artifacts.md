@@ -1,15 +1,13 @@
-# 0008: SDK 正式分发改为 Release 附件
+# 0008: SDK 改用 Release 附件分发
 
 ## 状态
 已实施
 
 ## 背景
-Node.js SDK 之前主推 `pnpm` 的 Git 仓库子目录安装，Python SDK 之前主推 `pip` 的 Git 子目录安装。
+之前 Node.js 和 Python SDK 都推荐从 Git 仓库子目录安装。这样做有两个问题：
 
-这条路有两个问题：
-
-1. Node.js 会把消费方绑定到 `pnpm`
-2. 外部项目很容易把它误用成机器相关的本地 `file:` 路径，安装方式不可移植
+1. Node.js 这条路只有 `pnpm` 能走通，把消费方绑死在一个包管理器上
+2. 实际使用中很容易被误写成本地 `file:` 路径，换台机器就装不上
 
 ## 决策
 SDK 当前不发 npm / PyPI。
@@ -19,13 +17,13 @@ SDK 当前不发 npm / PyPI。
 - Node.js：发布 `.tgz`
 - Python：同时发布 `.whl` 和 `.tar.gz`
 
-Git 仓库子目录安装继续保留，但只作为未发版代码的开发入口，不再当正式分发方式。
+仓库子目录安装继续保留，但只给开发用，不再当正式分发方式。
 
 ## 理由
-1. **不绑定包管理器**：Node.js 用户不需要为了装 SDK 额外切到 `pnpm`
-2. **不急着上 registry**：在版本节奏和发布流程还没完全独立前，先不引入 npm / PyPI 运维成本
-3. **和主仓库 Release 对齐**：用户只认正式 GitHub Release，就能同时拿到源码版本和 SDK 安装文件
-4. **更容易验证**：CI 可以直接构建附件，再在临时项目里做本地安装冒烟测试
+1. **不绑包管理器** — npm / pnpm / yarn / bun 都能装 tarball
+2. **不急着上 registry** — 版本节奏还没独立，先不引入 npm / PyPI 运维成本
+3. **和 Release 对齐** — 用户只看 GitHub Release，就能拿到源码和 SDK
+4. **容易验证** — CI 直接构建产物，再在临时项目里做安装冒烟测试
 
 ## 影响
 - 新增 `Release SDK Assets` workflow，在正式 Release 发布后自动上传 SDK 附件

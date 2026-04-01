@@ -110,13 +110,13 @@ pnpm run init
 
 ### Node.js SDK
 
-安装：
+安装（从 Release 附件）：
 
 ```bash
 npm install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail-sdk-nodejs-<version>.tgz"
 ```
 
-如果你要直接跟未发版代码，再用：
+跟未发版代码：
 
 ```bash
 pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"
@@ -139,13 +139,13 @@ const mails = await client.getMailList(created.address.name)
 
 ### Python SDK
 
-安装：
+安装（从 Release 附件）：
 
 ```bash
 python -m pip install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail_sdk-<version>-py3-none-any.whl"
 ```
 
-如果你要直接跟未发版代码，再用：
+跟未发版代码：
 
 ```bash
 python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"

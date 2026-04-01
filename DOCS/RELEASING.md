@@ -81,7 +81,7 @@ pnpm set:version 0.1.0
 7. 创建 tag
 8. 推送 tag
 9. 在 GitHub 上创建 Release
-10. 等 `Release SDK Assets` workflow 把 Node.js `.tgz` 和 Python `.whl` / `.tar.gz` 附件挂到当前 Release
+10. 等 `Release SDK Assets` workflow 把 SDK 附件挂到当前 Release
 
 本地命令顺序：
 
@@ -118,9 +118,7 @@ git push origin v0.1.0
    - 用户要不要重新部署
    - 用户要不要手工处理数据或配置
 
-因此当前发版的本质是：
-
-**发布源码版本 + SDK 安装附件，而不是单独发 npm / PyPI。**
+当前发版的本质：**发布源码 + SDK 安装包，不单独发 npm / PyPI。**
 
 ## GitHub Release 要写什么
 
@@ -131,7 +129,7 @@ Release 页面至少写清楚这几件事：
 - 这次改了什么
 - 是否有破坏性变更
 - 是否需要手工操作
-- 当前 Release 附带了哪些 SDK 安装文件
+- 当前 Release 附带了哪些 SDK 安装包
 - 文档入口：
   - `README.md`
   - `DOCS/DEPLOY.md`

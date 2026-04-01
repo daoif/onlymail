@@ -52,13 +52,13 @@
 - `waitForMail` 是重点能力，负责轮询、超时和首封匹配。
 - SDK 只面向用户自己部署的实例，不提供公共服务地址。
 - 第一阶段不发 npm / PyPI。
-- 正式发布版通过 GitHub Release 附件分发。
-- 仓库子目录安装只保留给要跟未发版代码的开发场景。
+- 正式版通过 GitHub Release 附件分发。
+- 仓库子目录安装只留给开发用。
 
 ## Node.js SDK
 - 目录：`sdk/nodejs/`
-- 主推荐安装方式：`npm install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail-sdk-nodejs-<version>.tgz"`
-- 开发版安装方式：`pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"`
+- 主推荐：`npm install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail-sdk-nodejs-<version>.tgz"`
+- 开发版：`pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"`
 - 核心接口：
   - `createAddress(address, project, ttlHours?)`
   - `getMailList(address, page?, size?)`
@@ -70,8 +70,8 @@
 
 ## Python SDK
 - 目录：`sdk/python/`
-- 主推荐安装方式：`python -m pip install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail_sdk-<version>-py3-none-any.whl"`
-- 开发版安装方式：`python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"`
+- 主推荐：`pip install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail_sdk-<version>-py3-none-any.whl"`
+- 开发版：`pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"`
 - 和 Node.js 对齐的接口：
   - `create_address(address, project, ttl_hours=None)`
   - `get_mail_list(address, page=1, size=20)`

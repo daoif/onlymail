@@ -41,4 +41,4 @@
 - [平台抽象 Provider 层](DECISIONS/0005-provider-abstraction.md)
 - [D1 migration 机制](DECISIONS/0006-d1-migrations.md)
 - [正式 Release 更新提醒](DECISIONS/0007-release-update-notifications.md)
-- [SDK 正式分发改为 Release 附件](DECISIONS/0008-sdk-release-artifacts.md)
+- [SDK 改用 Release 附件分发](DECISIONS/0008-sdk-release-artifacts.md)

@@ -2,24 +2,21 @@
 
 ## 安装
 
-正式发布版主推荐直接安装 GitHub Release 附件里的 `.tgz` 包。
+推荐直接装 GitHub Release 附件里的 `.tgz`：
 
 ```bash
 npm install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail-sdk-nodejs-<version>.tgz"
 ```
 
-这条安装方式不绑包管理器，`npm`、`pnpm`、`yarn`、`bun` 都可以直接装同一个 tarball。
+`npm`、`pnpm`、`yarn`、`bun` 都能装。
 
-如果你要直接跟未发版的仓库代码，再走 `pnpm` 的 Git 子目录安装：
+要跟未发版代码，可以用 `pnpm` 从仓库子目录装（需要项目本身用 pnpm）：
 
 ```bash
 pnpm add "git+https://github.com/<owner>/<repo>.git#<ref>&path:/sdk/nodejs"
 ```
 
-这条路径要求你的项目用 `pnpm`。  
-`npm` 官方文档只保证 Git 依赖直接指向仓库根目录里的包，不保证这种子目录安装方式，所以这里只把它当开发版入口。
-
-如果你想把依赖直接写进 `package.json`：
+写进 `package.json`：
 
 ```json
 {

@@ -62,10 +62,10 @@
 - `Deploy Worker` / `Deploy Frontend` 现在按默认分支和真实依赖触发；改到共享部署脚本、migration、模板或根依赖时也会自动跑
 - `Upstream Sync` 在 fast-forward 后会显式补触发 `CI` 和相关 deploy workflow，不再停在“代码同步了但后续检查和部署没跑”
 - 新增前端、Worker、脚本层测试入口，根目录 `pnpm test` 现在会统一跑完
-- SDK 正式分发路径改为“GitHub Release 附件”：Node.js 提供 `.tgz`，Python 提供 `.whl` 和 `.tar.gz`；当前仍不发 npm / PyPI
-- CI 新增 SDK 产物构建和安装冒烟验证：先生成 Release 附件，再在临时 Node / Python 项目里完成本地安装和最小导入
-- `Release SDK Assets` workflow 已接通：正式 Release 发布后，会自动把 Node.js `.tgz` 和 Python `.whl` / `.tar.gz` 上传到 GitHub Release
-- Node.js / Python SDK 已分别完成真实 API 调用验证；当前线上可正常列域名、创建地址并读取空邮件列表
+- SDK 改用 GitHub Release 附件分发：Node.js `.tgz`、Python `.whl` 和 `.tar.gz`；仍不发 npm / PyPI
+- CI 新增 SDK 产物构建和安装冒烟测试
+- `Release SDK Assets` workflow 已接通：发布 Release 后自动上传 SDK 附件
+- Node.js / Python SDK 均已完成线上 API 调用验证
 - 地址页新增“生成临时邮箱”区域：直接拉取可用子域名、创建地址、展示结果、复制地址并跳到邮件页
 - 开源仓库基础面已补齐：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板、`DOCS/RELEASING.md`
 - 新增正式 release 更新提醒：Worker 每 24 小时检查一次 `daoif/onlymail` 的 GitHub Release；没接 GitHub 自动同步的实例会在后台顶部显示更新横幅，设置页也能手动检查和关闭提醒

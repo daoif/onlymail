@@ -2,19 +2,19 @@
 
 ## 安装
 
-正式发布版主推荐直接安装 GitHub Release 附件里的 wheel：
+推荐直接装 GitHub Release 附件里的 wheel：
 
 ```bash
 python -m pip install "https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail_sdk-<version>-py3-none-any.whl"
 ```
 
-如果你要直接跟未发版的仓库代码，再走 Git 仓库子目录安装：
+要跟未发版代码，可以从仓库子目录装：
 
 ```bash
 python -m pip install "git+https://github.com/<owner>/<repo>.git@<ref>#subdirectory=sdk/python"
 ```
 
-如果你想把依赖写进 `requirements.txt`：
+写进 `requirements.txt`：
 
 ```txt
 https://github.com/<owner>/<repo>/releases/download/v<version>/onlymail_sdk-<version>-py3-none-any.whl

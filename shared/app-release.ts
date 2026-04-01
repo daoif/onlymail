@@ -1,4 +1,4 @@
-export const APP_VERSION = '0.1.0'
+export const APP_VERSION = '0.1.1'
 export const APP_RELEASE_TAG = `v${APP_VERSION}`
 export const APP_REPOSITORY = 'daoif/onlymail'
 export const APP_REPOSITORY_URL = `https://github.com/${APP_REPOSITORY}`

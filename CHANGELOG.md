@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.1] - 2026-04-01
+
+### Added
+- GitHub Actions `Release SDK Assets` workflow，正式 Release 发布后自动上传 Node.js `.tgz` 和 Python `.whl` / `.tar.gz`。
+- SDK 发布产物构建与安装冒烟验证：先生成 Release 附件，再在临时 Node / Python 项目里完成本地安装检查。
+
+### Changed
+- Node.js / Python SDK 的正式分发方式改成 GitHub Release 附件，不再把仓库子目录安装当唯一正式入口。
+- SDK 相关文档、运行手册和发布流程已统一到新的分发口径。
+
 ## [v0.1.0] - 2026-03-31
 
 ### Added
