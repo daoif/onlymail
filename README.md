@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  完全运行在 Cloudflare 上的自部署邮箱系统 —— Workers · D1 · Email Routing · Pages，四件套开箱即用。
+  完全运行在 Cloudflare 上的自部署邮箱系统 —— Workers · D1 · Email Routing · Pages，支持“根域名直收 + managed subdomain”两种收件域模式。
 </p>
 
 <p align="center">
@@ -31,9 +31,26 @@
 |------|------|
 | **临时邮箱** | 一键创建收件地址，自动接收并展示邮件，到期自动清理 |
 | **管理面板** | Vue 3 前端，统一管理地址、邮件、域名和系统设置 |
-| **域名自动化** | 根域名初始化、子域名创建、DNS 记录和 Email Routing 规则全自动，并支持脏状态修复与旧子域自动回收 |
+| **域名自动化** | 支持两种收件域模式：根域名 bootstrap 后可直接收 `abc@root.com`，也可显式托管 managed subdomain 做项目隔离；DNS / Email Routing 自动化，并支持脏状态修复与旧子域自动回收 |
 | **双路认证** | 面板走管理员会话（`/api/*`），SDK 走 API Key（`/call/*`），权限隔离 |
 | **多语言 SDK** | 提供 Node.js 和 Python SDK，封装地址创建与收件轮询 |
+
+---
+
+## 📮 两种邮箱域名管理方式
+
+### 1. 根域名直收
+
+- 在 **域名** 页完成根域名 bootstrap 后，就能直接创建 `abc@yourdomain.com`
+- 适合想尽快开收、域名数量少、维护成本低的场景
+
+### 2. managed subdomain（托管子域）
+
+- 在已初始化根域名下显式创建 `m1.yourdomain.com`、`m1.m1.yourdomain.com`
+- 适合按项目 / 批次 / 租户隔离收件域名的场景
+- 系统会自动补齐 MX / SPF TXT / Email Routing 规则，并在额度紧张时按 root 自动回收最旧的托管子域
+
+地址页会把两类已就绪域名一起列出来，创建邮箱时直接选择即可。
 
 ---
 
@@ -83,7 +100,10 @@ pnpm run init
 
 **3. 打开面板**
 
-部署完成后，用 Pages 默认地址（`*.pages.dev`）打开管理面板，创建管理员账号，然后就能在应用内绑定正式域名。
+部署完成后，用 Pages 默认地址（`*.pages.dev`）打开管理面板，创建管理员账号。随后在应用内完成两类配置：
+
+- **Web 入口（可选但推荐）**：绑定 Worker / Pages 自定义域名
+- **收件域（必做）**：先初始化根域名；之后可直接用根域名收件，或按项目再创建 managed subdomain
 
 ---
 
@@ -121,7 +141,7 @@ https://github.com/daoif/onlymail
 3. 手动触发 Bootstrap Cloudflare workflow
 4. 等 Worker 和 Pages 默认入口部署完成
 5. 告诉我默认前端地址和默认 Worker 地址
-6. 再告诉我接下来在后台里还要做什么（管理员初始化、API Key、绑定自定义域名、根域名 bootstrap）
+6. 再告诉我接下来在后台里还要做什么（管理员初始化、API Key、绑定自定义域名、根域名 bootstrap，以及选择“根域名直收”还是“managed subdomain”）
 
 注意：
 - OnlyMail 当前固定使用 onlymail-worker / onlymail-frontend / onlymail-db
@@ -216,6 +236,7 @@ client = OnlyMailClient(
 
 | 文档 | 说明 |
 |------|------|
+| [SUMMARY.md](DOCS/SUMMARY.md) | DOCS 总入口与索引 |
 | [DOMAIN-SETUP.md](DOCS/DOMAIN-SETUP.md) | 把域名从域名商接入 Cloudflare |
 | [RUNBOOK.md](DOCS/RUNBOOK.md) | 从零开始的完整操作路径 |
 | [DEPLOY.md](DOCS/DEPLOY.md) | 三种部署方式的详细步骤 |
@@ -239,6 +260,7 @@ client = OnlyMailClient(
 - `rebuild` 平台重建：删除并重建 D1，然后重跑 `init`；不碰 DNS 和外部入口
 - 管理面板始终请求 Worker 默认 `workers.dev` 地址
 - Worker / Pages 自定义域名仅作为对外别名，不影响面板的 API 调用路径
+- 收件域名支持两种模式：根域名直收，或在已初始化根域名下显式创建 managed subdomain
 - 平台状态以 D1 为唯一事实来源；Cloudflare 上的外部残留不会被自动接管
 
 </details>

@@ -18,7 +18,7 @@
 - `MINOR`：向后兼容的新功能
 - `PATCH`：向后兼容的问题修复和文档修正
 
-首个公开版本固定为：
+历史上首个公开版本为：
 
 - `v0.1.0`
 
@@ -48,7 +48,7 @@
 不要手动逐个修改，直接用：
 
 ```bash
-pnpm set:version 0.1.0
+pnpm set:version <x.y.z>
 ```
 
 这个命令只做一件事：把指定的版本号同步到上述 4 个位置，不做自动递增。
@@ -87,7 +87,7 @@ pnpm set:version 0.1.0
 
 ```bash
 git status
-pnpm set:version 0.1.0
+pnpm set:version <x.y.z>
 pnpm test
 pnpm build
 pnpm check:scripts
@@ -95,8 +95,8 @@ pnpm check:python
 python -m pip install build
 pnpm build:sdk:artifacts
 pnpm check:sdk:artifacts
-git tag v0.1.0
-git push origin v0.1.0
+git tag v<x.y.z>
+git push origin v<x.y.z>
 ```
 
 ## 发版发的是什么
@@ -136,15 +136,15 @@ Release 页面至少写清楚这几件事：
   - `DOCS/RUNBOOK.md`
   - `DOCS/UPDATE.md`
 
-## 这次首发建议写法
+## 当前阶段 release note 建议重点
 
-`v0.1.0` 的 release note 至少应包含：
+现在的 release note 至少应覆盖这些用户真正会关心的变化：
 
-- OnlyMail 已完成本地部署、GitHub-only 部署、混合部署三条主路径
-- 平台状态模型固定成 `4 + 1`
-- 后台登录改成 D1 管理的管理员会话
-- GitHub 自动更新和后台版本提醒都已接通
-- Node.js / Python SDK 已完成真实安装和真实调用验证
+- 三条部署路径（本地 / GitHub-only / 混合）有没有新增前置条件、命令边界或人工步骤
+- 两种收件域模式有没有变化：根域名直收、managed subdomain 生命周期 / 自动回收 / 脏状态对账
+- 管理员面板和 SDK 的权限边界有没有变化（`/api/*` vs `/call/*`）
+- 更新方式有没有变化：Upstream Sync、后台更新提醒、是否需要手动 `rebuild`
+- SDK Release 附件、安装方式和兼容性有没有变化
 
 ## 数据库变更要求
 

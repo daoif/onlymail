@@ -125,6 +125,15 @@
 
 ---
 
+## 收件域名的两种模式
+
+- **根域名直收**：在应用内完成根域名 bootstrap 后，就可以直接创建 `abc@root.com` 这样的地址。
+- **managed subdomain（托管子域）**：如果要按项目 / 批次 / 租户隔离，再额外创建 `m1.root.com`、`m1.m1.root.com` 这类显式子域。系统会自动补齐 MX / SPF TXT / Email Routing 规则，并在到达上限时回收最旧托管子域。
+
+两种模式都依赖同一个前置条件：**根域名已在 Cloudflare 托管，并已在 OnlyMail 中完成 bootstrap。**
+
+---
+
 ## 一、先选部署方式
 
 ### 方式 A：本地部署
@@ -259,7 +268,7 @@ Variables：
 - `https://你的-pages-subdomain.pages.dev` 已经能进入登录页
 - `https://你的-worker.你的-account-subdomain.workers.dev/` 已经能返回 Worker 健康检查
 
-### 步骤 7：在设置页绑定正式入口 🧑
+### 步骤 7：在设置页绑定正式入口（可选但推荐）🧑
 
 登录后进入 **设置** 页面：
 - 绑定 Worker API 自定义域名，例如 `onlymail-api.你的域名`
@@ -273,7 +282,12 @@ Pages 自定义域名绑定时，系统会自动将 CNAME 对齐到 Pages 项目
 
 ### 步骤 9：初始化根域名 🧑
 
-进入 **域名** 页面，填入根域名，点击 **初始化根域名**。系统会按域名自动解析 Zone。之后就可以创建子域名用于收件了。
+进入 **域名** 页面，填入根域名，点击 **初始化根域名**。系统会按域名自动解析 Zone，并把根域名 catch-all 指到 Worker。
+
+初始化完成后有两种收件方式：
+
+- 直接使用根域名收件：创建 `abc@根域名`
+- 额外创建 managed subdomain：例如 `abc@m1.根域名`，适合按项目隔离
 
 ### 步骤 10：做一次从 0 验证 🧑
 
@@ -281,8 +295,8 @@ Pages 自定义域名绑定时，系统会自动将 CNAME 对齐到 Pages 项目
 
 1. 打开 `https://你的-pages-subdomain.pages.dev`，确认前端能访问
 2. 打开 `https://你的-worker.你的-account-subdomain.workers.dev/`，确认 Worker 健康检查能访问
-3. 在设置页绑定 `onlymail-api.你的域名` 和 `onlymail.你的域名`
-4. 在 **域名** 页面创建一个子域名
+3. 如需正式 Web 入口，在设置页绑定 `onlymail-api.你的域名` 和 `onlymail.你的域名`
+4. 在 **域名** 页面初始化根域名；如需隔离，再额外创建一个 managed subdomain
 5. 用 **地址** 页面创建一个真实地址
 6. 往这个地址发一封测试邮件，确认能在 **邮件** 页面看到
 
@@ -369,11 +383,14 @@ pnpm run rebuild
 
 打开 workflow 输出里对应的 Pages 默认地址，进入登录页，完成管理员初始化。
 
-### 步骤 6：在应用内绑定正式域名 🧑
+### 步骤 6：在应用内完成正式入口与收件域配置 🧑
 
-登录后进入设置页：
-- 绑定 Worker API 自定义域名
-- 绑定 Pages 自定义域名
+登录后进入应用：
+
+- （可选但推荐）在设置页绑定 Worker API 自定义域名
+- （可选但推荐）在设置页绑定 Pages 自定义域名
+- 在域名页初始化根域名
+- 按需选择：直接使用根域名收件，或额外创建 managed subdomain 做隔离
 
 ### 步骤 7：后续更新 🤖
 
@@ -516,13 +533,17 @@ pnpm --dir frontend dev     # 启动前端（http://localhost:5173，已代理�
 🤖 pnpm install
 🤖 pnpm run init
 🧑 打开 Pages 默认地址，创建管理员
-🧑 在设置页绑定 Worker / Pages 自定义域名
+🧑（可选）在设置页绑定 Worker / Pages 自定义域名
+🧑 在域名页初始化根域名
+🧑 按需：直接用根域名收件，或创建 managed subdomain
 
 GitHub-only 部署：
 🧑 配 GitHub Secrets
 🧑 运行 Bootstrap Cloudflare
 🧑 打开 Pages 默认地址，创建管理员
-🧑 在设置页绑定 Worker / Pages 自定义域名
+🧑（可选）在设置页绑定 Worker / Pages 自定义域名
+🧑 在域名页初始化根域名
+🧑 按需：直接用根域名收件，或创建 managed subdomain
 
 本地重部署：
 🤖 pnpm deploy:worker      # 改了 Worker 代码后

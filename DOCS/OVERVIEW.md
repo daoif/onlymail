@@ -2,7 +2,7 @@
 
 ## 一句话
 
-基于 Cloudflare Workers、D1、Email Routing、DNS API 和 Pages 构建的自部署邮箱系统，同时服务于管理面板和 SDK 外部调用。
+基于 Cloudflare Workers、D1、Email Routing、DNS API 和 Pages 构建的自部署邮箱系统，支持根域名直收和 managed subdomain 两种收件域模式，同时服务于管理面板和 SDK 外部调用。
 
 ## 模块边界
 
@@ -39,6 +39,7 @@
 - 邮件正文在收件时解析并落库；前端只做安全渲染
 - 管理面板采用白色主色调，Tailwind 手写样式，骨架屏占位 + SWR 缓存
 - 所有 Cloudflare API 调用通过 `providers/` 接口解耦，禁止 service 层直接调用
+- 收件域名有两种正式模式：根域名 bootstrap 后可直接收 `abc@root`；也可在已初始化根域名下显式创建 managed subdomain 做隔离
 - managed subdomain 创建 / 删除以 Cloudflare 当前真实状态对账：创建会补齐缺失资源，删除会精确回收当前仍存在的 MX / TXT / literal Email Routing 规则
 - `wrangler.toml` 不提交 Git；本地和 CI/CD 均按模板现场生成
 - Worker CORS 运行时只读 D1 `settings.allowed_origins`，再固定补一个本地开发来源 `http://localhost:5173`

@@ -1,6 +1,6 @@
 # 域名接入 Cloudflare
 
-这份文档只解决一件事：**把你的主域名从当前域名商接入 Cloudflare**，让 OnlyMail 后续的根域名 bootstrap、子域名收件、Worker / Pages 自定义域名都能继续往下做。
+这份文档只解决一件事：**把你的主域名从当前域名商接入 Cloudflare**，让 OnlyMail 后续的根域名 bootstrap、根域名直收、managed subdomain 收件、Worker / Pages 自定义域名都能继续往下做。
 
 > 这一步和 OnlyMail 的部署（`init` / `deploy`）是独立的。做完这里的操作后，再去看 [RUNBOOK](RUNBOOK.md) 或 [DEPLOY](DEPLOY.md) 继续部署。
 
@@ -14,7 +14,7 @@ OnlyMail 涉及 3 类域名操作，本文档只处理第 1 类：
 |---|------|--------------|
 | 1 | 域名商 → Cloudflare：建 Zone、改 NS、等激活 | ✅ 本文档 |
 | 2 | Cloudflare → OnlyMail Web 入口：Worker / Pages 自定义域名 | ❌ 见 DEPLOY |
-| 3 | Cloudflare → OnlyMail 收件：根域名 bootstrap、子域名、Email Routing | ❌ 见 RUNBOOK |
+| 3 | Cloudflare → OnlyMail 收件：根域名 bootstrap、根域名直收 / managed subdomain、Email Routing | ❌ 见 RUNBOOK |
 
 ---
 
@@ -127,7 +127,7 @@ Zone 激活后，这份文档的职责就结束了。接下来按顺序继续：
 
 1. **部署 OnlyMail** → [RUNBOOK](RUNBOOK.md) 或 [DEPLOY](DEPLOY.md)
 2. **绑定自定义域名** → 在管理面板的设置页操作
-3. **根域名 bootstrap + 子域名收件** → 在管理面板的域名页操作
+3. **根域名 bootstrap + 选择根域名直收 / managed subdomain 收件** → 在管理面板的域名页操作
 
 ---
 
