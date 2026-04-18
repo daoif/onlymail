@@ -30,6 +30,7 @@
 - [工程化与 SDK 方案](PLANS/engineering-sdk.md)
 - [邮件收发六层边界](PLANS/mail-flow-boundaries.md)
 - [开源化硬化状态](PLANS/open-source-hardening.md)
+- [域名生命周期与脏状态修复方案](PLANS/domain-lifecycle-reconciliation.md)
 
 ## 决策
 
@@ -42,3 +43,4 @@
 - [D1 migration 机制](DECISIONS/0006-d1-migrations.md)
 - [正式 Release 更新提醒](DECISIONS/0007-release-update-notifications.md)
 - [SDK 改用 Release 附件分发](DECISIONS/0008-sdk-release-artifacts.md)
+- [managed subdomain 脏状态对账生命周期](DECISIONS/0009-managed-domain-lifecycle-reconciliation.md)

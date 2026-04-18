@@ -70,3 +70,7 @@
 - 开源仓库基础面已补齐：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板、`DOCS/RELEASING.md`
 - 新增正式 release 更新提醒：Worker 每 24 小时检查一次 `daoif/onlymail` 的 GitHub Release；没接 GitHub 自动同步的实例会在后台顶部显示更新横幅，设置页也能手动检查和关闭提醒
 - 公开仓库已切到 `daoif/onlymail`，首个正式版本按 `v0.1.0` 发布
+- Email Routing 规则读取已补齐完整分页；子域删除改为按 Cloudflare 当前真实 MX/TXT/规则对账，不再因旧 ID 缺失而中断
+- `createSubdomain` 不再因为 D1 已有旧记录就直接返回；当 Cloudflare 资源缺失时会自动补齐并回写最新资源 ID
+- Cloudflare API 错误现在会透传具体 `code/message`，便于现场识别 `81045` 这类配额类错误
+- 新增 `ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT`（默认 5）；达到上限时会先回收当前 root 下最旧的 managed subdomain，再创建新的

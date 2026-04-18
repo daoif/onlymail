@@ -13,6 +13,25 @@ type Envelope<T> = {
   result: T
   errors?: Array<{ code: number; message: string }>
   messages?: Array<{ code: number; message: string }>
+  result_info?: {
+    page?: number
+    per_page?: number
+    count?: number
+    total_count?: number
+    total_pages?: number
+  }
+}
+
+function formatCloudflareIssues(payload: Envelope<unknown>) {
+  const issues = [...(payload.errors ?? []), ...(payload.messages ?? [])]
+    .filter((item) => item && (typeof item.code === 'number' || typeof item.message === 'string'))
+    .map((item) => (
+      typeof item.code === 'number'
+        ? `code=${item.code}, ${item.message || 'unknown error'}`
+        : item.message || 'unknown error'
+    ))
+
+  return issues.join('; ')
 }
 
 export class CloudflareBase {
@@ -39,7 +58,7 @@ export class CloudflareBase {
     }
   }
 
-  protected async request<T>(path: string, init?: RequestInit, authMode: 'token' | 'global' = 'token') {
+  protected async requestEnvelope<T>(path: string, init?: RequestInit, authMode: 'token' | 'global' = 'token') {
     const authHeaders = authMode === 'global' ? this.getGlobalHeaders() : this.getTokenHeaders()
     const response = await fetch(`${BASE_URL}${path}`, {
       ...init,
@@ -52,10 +71,19 @@ export class CloudflareBase {
 
     const payload = (await response.json()) as Envelope<T>
     if (!response.ok || !payload.success) {
-      throw new AppError(502, 'Cloudflare API 调用失败', payload.errors ?? payload.messages ?? payload)
+      const issueText = formatCloudflareIssues(payload)
+      throw new AppError(
+        502,
+        issueText ? `Cloudflare API 调用失败: ${issueText}` : 'Cloudflare API 调用失败',
+        payload.errors ?? payload.messages ?? payload,
+      )
     }
 
-    return payload.result
+    return payload
+  }
+
+  protected async request<T>(path: string, init?: RequestInit, authMode: 'token' | 'global' = 'token') {
+    return (await this.requestEnvelope<T>(path, init, authMode)).result
   }
 }
 

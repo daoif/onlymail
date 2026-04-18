@@ -37,9 +37,12 @@
 - 一个 Worker 可以接多个域名和子域名的邮件，区分来源靠 `message.to`。
 - 需要的 Token 权限至少包括 `Zone - DNS - Edit`、`Zone - Email Routing Rules - Write`、`Zone - Zone - Read`。
 - 根域名初始化和子域名创建是两步，不要把“参考项目里常见的手工控制台流程”和“平台 API 能自动化”混成一件事。
+- 按 2026-04-19 复核 Cloudflare 官方文档，当前可自动化的是“显式子域名”模式：先给具体子域名补 MX / TXT，再创建把 `*@子域名` 指向 Worker 的规则。
+- 当前没有可直接落地到本项目的“任意 `*.bucket.root` 子域名无需逐条建 DNS/规则就能被 Email Routing 自动接收”的官方能力口径；如果继续做多层子域，仍要把它当成显式 managed subdomain。
 
 ## 对本项目的直接结论
 - 后端需要一个根域名初始化接口，而不只是“添加子域名”接口。
 - `domains` 表除了存 `route_rule_id`，还要能存多条 MX 记录 ID。
 - 域名删除要按资源 ID 删除，不能靠名字模糊匹配。
 - 管理面板要能显示根域名是否已经完成初始化，否则用户不知道为什么子域名创建失败。
+- 子域生命周期需要 dirty-state reconciliation：删除不能假设 DB 里存下来的 Cloudflare 资源 ID 永远有效，创建也不能因为 DB 有旧记录就直接跳过修复。

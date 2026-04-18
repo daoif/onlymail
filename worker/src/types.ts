@@ -5,6 +5,7 @@ export interface AppBindings {
   CF_AUTH_EMAIL?: string
   CF_GLOBAL_API_KEY?: string
   CF_ACCOUNT_ID?: string
+  ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT?: string
 }
 
 export type AppEnv = {

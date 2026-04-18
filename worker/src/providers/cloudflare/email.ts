@@ -33,7 +33,25 @@ export class CloudflareEmailProvider extends CloudflareBase implements EmailProv
   }
 
   async listEmailRules(zoneId: string) {
-    return this.request<EmailRule[]>(`/zones/${zoneId}/email/routing/rules`, undefined, 'global')
+    const rules: EmailRule[] = []
+
+    for (let page = 1; ; page += 1) {
+      const envelope = await this.requestEnvelope<EmailRule[]>(
+        `/zones/${zoneId}/email/routing/rules?per_page=50&page=${page}`,
+        undefined,
+        'global',
+      )
+
+      const items = envelope.result ?? []
+      rules.push(...items)
+
+      const totalPages = envelope.result_info?.total_pages ?? 0
+      if ((totalPages > 0 && page >= totalPages) || (totalPages === 0 && items.length < 50)) {
+        break
+      }
+    }
+
+    return rules
   }
 
   async createEmailRule(zoneId: string, payload: Record<string, unknown>) {

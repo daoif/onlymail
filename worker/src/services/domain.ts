@@ -2,8 +2,11 @@ import { exec, many, one } from '../lib/db'
 import { createProviders } from '../providers/index'
 import { AppError } from '../lib/http'
 import { DEFAULT_WORKER_NAME } from '../lib/project-defaults'
+import type { DnsRecord, EmailRule } from '../providers/types'
 import type { AppBindings, DomainRecord } from '../types'
 import { findNearestRootDomainName, getManagedSubdomainConstants, planSubdomainProvision } from './domain-reconciliation'
+
+const DEFAULT_MANAGED_SUBDOMAIN_LIMIT = 5
 
 function requireEmailRoutingAuth(env: AppBindings) {
   const authEmail = env.CF_AUTH_EMAIL || env.CF_EMAIL
@@ -34,6 +37,83 @@ async function resolveRootDomainRecord(env: AppBindings, name: string, explicitR
   const roots = await findRootDomains(env)
   const matchedRootName = findNearestRootDomainName(name, roots.map((root) => root.name))
   return roots.find((root) => root.name === matchedRootName) ?? null
+}
+
+function normalizeManagedName(value: string) {
+  return value.trim().toLowerCase().replace(/\.+$/, '')
+}
+
+function getManagedSubdomainLimit(env: AppBindings) {
+  const raw = env.ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT?.trim()
+  if (!raw) {
+    return DEFAULT_MANAGED_SUBDOMAIN_LIMIT
+  }
+
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_MANAGED_SUBDOMAIN_LIMIT
+  }
+
+  return parsed > 0 ? parsed : null
+}
+
+function hasManagedRouteMatcher(rule: EmailRule, name: string) {
+  const pattern = `*@${normalizeManagedName(name)}`
+  return (rule.matchers ?? []).some((matcher) => (
+    matcher.type === 'literal'
+      && matcher.field === 'to'
+      && matcher.value === pattern
+  ))
+}
+
+function isManagedDnsRecord(record: DnsRecord, name: string) {
+  return (
+    (record.type === 'MX' || record.type === 'TXT')
+      && normalizeManagedName(record.name) === normalizeManagedName(name)
+  )
+}
+
+async function listManagedSubdomainResources(env: AppBindings, record: Pick<DomainRecord, 'name' | 'cf_zone_id' | 'route_rule_id'>) {
+  const providers = createProviders(env)
+  const [dnsRecords, emailRules] = await Promise.all([
+    providers.dns.listDnsRecords(record.cf_zone_id, { name: record.name }),
+    providers.email.listEmailRules(record.cf_zone_id),
+  ])
+
+  const exactDnsRecords = dnsRecords.filter((item) => isManagedDnsRecord(item, record.name))
+  const routeRule = emailRules.find((rule) => (
+    (record.route_rule_id && rule.id === record.route_rule_id)
+      || hasManagedRouteMatcher(rule, record.name)
+  )) ?? null
+
+  return {
+    providers,
+    dnsRecords: exactDnsRecords,
+    routeRule,
+  }
+}
+
+async function enforceManagedSubdomainLimit(
+  env: AppBindings,
+  rootName: string,
+  incomingName: string,
+) {
+  const limit = getManagedSubdomainLimit(env)
+  if (limit === null) {
+    return
+  }
+
+  const existing = (await listDomains(env, { type: 'sub', root: rootName }))
+    .filter((record) => record.name !== incomingName)
+
+  while (existing.length >= limit) {
+    const oldest = existing.shift()
+    if (!oldest) {
+      break
+    }
+
+    await deleteSubdomain(env, oldest.name)
+  }
 }
 
 export async function listDomains(
@@ -129,15 +209,20 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
   requireEmailRoutingAuth(env)
   const name = payload.name.trim().toLowerCase()
   const existing = await findDomain(env, name)
-  if (existing) {
+  if (existing?.is_root === 1) {
     return existing
   }
 
-  const rootRecord = await resolveRootDomainRecord(env, name, payload.rootName?.trim().toLowerCase())
+  const explicitRootName = payload.rootName?.trim().toLowerCase() ?? existing?.root_name
+  const rootRecord = await resolveRootDomainRecord(env, name, explicitRootName)
   if (!rootRecord) {
     throw new AppError(400, '请先初始化根域名，再创建子域名')
   }
   const rootName = rootRecord.name
+
+  if (!existing) {
+    await enforceManagedSubdomainLimit(env, rootName, name)
+  }
 
   const providers = createProviders(env)
   const { mxTargets, spfContent } = getManagedSubdomainConstants()
@@ -149,13 +234,14 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
     throw new AppError(409, '这个子域名已经有现成的 Email Routing 规则，但目标不是当前 Worker，请先手动清理后再重试')
   }
 
-  const mxIds: string[] = []
-  let txtRecordId: string | null = null
-  let routeRuleId: string | null = null
+  const mxIds: string[] = [...provisionPlan.reusableMxRecordIds]
+  const createdMxIds: string[] = []
+  let txtRecordId: string | null = provisionPlan.txtRecordId
+  let createdTxtRecordId: string | null = null
+  let routeRuleId: string | null = provisionPlan.routeRuleId
+  let createdRouteRuleId: string | null = null
 
   try {
-    mxIds.push(...provisionPlan.reusableMxRecordIds)
-
     for (const target of provisionPlan.mxTargetsToCreate) {
       const record = await providers.dns.createDnsRecord(rootRecord.cf_zone_id, {
         type: 'MX',
@@ -164,9 +250,9 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
         priority: target.priority,
       })
       mxIds.push(record.id)
+      createdMxIds.push(record.id)
     }
 
-    txtRecordId = provisionPlan.txtRecordId
     if (provisionPlan.needsTxtRecord) {
       const txtRecord = await providers.dns.createDnsRecord(rootRecord.cf_zone_id, {
         type: 'TXT',
@@ -174,9 +260,9 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
         content: spfContent,
       })
       txtRecordId = txtRecord.id
+      createdTxtRecordId = txtRecord.id
     }
 
-    routeRuleId = provisionPlan.routeRuleId
     if (provisionPlan.needsRouteRule) {
       const rule = await providers.email.createEmailRule(rootRecord.cf_zone_id, {
         actions: [{ type: 'worker', value: [DEFAULT_WORKER_NAME] }],
@@ -186,6 +272,7 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
         priority: 0,
       })
       routeRuleId = rule.id
+      createdRouteRuleId = rule.id
     }
 
     await exec(
@@ -204,9 +291,9 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
   } catch (error) {
     await rollbackDomainProvision(env, {
       zoneId: rootRecord.cf_zone_id,
-      mxIds,
-      txtRecordId,
-      routeRuleId,
+      mxIds: createdMxIds,
+      txtRecordId: createdTxtRecordId,
+      routeRuleId: createdRouteRuleId,
     })
     throw error
   }
@@ -276,19 +363,14 @@ export async function deleteSubdomain(env: AppBindings, name: string) {
     throw new AppError(400, '根域名不能在这里删除')
   }
 
-  const providers = createProviders(env)
-  const mxIds = JSON.parse(record.mx_record_ids || '[]') as string[]
+  const resources = await listManagedSubdomainResources(env, record)
 
-  if (record.route_rule_id) {
-    await providers.email.deleteEmailRule(record.cf_zone_id, record.route_rule_id)
+  if (resources.routeRule) {
+    await resources.providers.email.deleteEmailRule(record.cf_zone_id, resources.routeRule.id)
   }
 
-  if (record.txt_record_id) {
-    await providers.dns.deleteDnsRecord(record.cf_zone_id, record.txt_record_id)
-  }
-
-  for (const recordId of mxIds) {
-    await providers.dns.deleteDnsRecord(record.cf_zone_id, recordId)
+  for (const dnsRecord of resources.dnsRecords) {
+    await resources.providers.dns.deleteDnsRecord(record.cf_zone_id, dnsRecord.id)
   }
 
   const result = await exec(env.DB.prepare('DELETE FROM domains WHERE name = ?1').bind(name.toLowerCase()))
