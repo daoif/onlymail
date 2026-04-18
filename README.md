@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="CHANGELOG.md">
-    <img src="https://img.shields.io/badge/version-v0.1.1-111827?style=flat-square" alt="version" />
+    <img src="https://img.shields.io/badge/version-v0.2.0-111827?style=flat-square" alt="version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-111827?style=flat-square" alt="license" />
@@ -31,7 +31,7 @@
 |------|------|
 | **临时邮箱** | 一键创建收件地址，自动接收并展示邮件，到期自动清理 |
 | **管理面板** | Vue 3 前端，统一管理地址、邮件、域名和系统设置 |
-| **域名自动化** | 根域名初始化、子域名创建、DNS 记录和 Email Routing 规则全自动 |
+| **域名自动化** | 根域名初始化、子域名创建、DNS 记录和 Email Routing 规则全自动，并支持脏状态修复与旧子域自动回收 |
 | **双路认证** | 面板走管理员会话（`/api/*`），SDK 走 API Key（`/call/*`），权限隔离 |
 | **多语言 SDK** | 提供 Node.js 和 Python SDK，封装地址创建与收件轮询 |
 

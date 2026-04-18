@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.2.0] - 2026-04-19
+
+### Added
+- managed subdomain 生命周期治理：创建前会按 root 自动回收最旧子域，默认上限为 5，可通过 `ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT` 调整。
+- 子域脏状态对账：删除会按 Cloudflare 当前真实 MX/TXT/Email Routing 规则精确回收，创建会补齐缺失资源并回写最新资源 ID。
+- 补充域名生命周期修复方案与决策文档，明确多层子域仍按显式 managed subdomain 管理。
+
+### Changed
+- Cloudflare API 错误改为透传具体 `code/message`，例如 `81045 Record quota exceeded` 之类的现场错误可直接回显。
+- Email Routing 规则读取改为完整分页，不再只看第一页结果。
+- 删除与回滚流程只处理本次实际创建的 Cloudflare 资源，不再误删复用中的旧记录。
+
+### Fixed
+- 修复 `createSubdomain` 在 D1 已有旧记录时直接返回，导致 TXT / Email Routing 规则缺失无法自动修复的问题。
+- 修复批量删除中途中断后遗留半残 DNS / 丢失规则 / D1 残留时，后续删除仍无法清理干净的问题。
+
 ## [v0.1.1] - 2026-04-01
 
 ### Added
