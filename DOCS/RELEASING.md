@@ -68,6 +68,25 @@ pnpm set:version <x.y.z>
 9. 检查有没有新增 migration
 10. 检查 `DOCS/STATUS.md` 是否还是现场事实
 
+## GitHub workflow 与发版边界
+
+发布时要区分两条线：
+
+1. **默认分支 push 线**
+   - 触发 `CI`
+   - 按路径触发 `Deploy Worker` / `Deploy Frontend`
+   - 更新 Cloudflare 上正在运行的 Worker / Pages
+   - **不会**自动创建 GitHub Release
+
+2. **GitHub Release 线**
+   - 由维护者手动创建 Release，推荐用 `gh release create`
+   - 触发 `Release SDK Assets`
+   - 上传 Node.js `.tgz`、Python `.whl`、Python `.tar.gz`
+   - 成为后台更新提醒识别的正式版本来源
+   - **不会**替你部署 Cloudflare
+
+`Release SDK Assets` 的定位很窄：**只给已经 published 的 Release 构建并挂载 SDK 附件**。它不会创建 Release，也不应该承担发版决策。
+
 ## 发布步骤
 
 按以下顺序执行：
@@ -78,16 +97,18 @@ pnpm set:version <x.y.z>
 4. 更新 `CHANGELOG.md`
 5. 检查 README、DEPLOY、RUNBOOK、UPDATE 中与本次版本相关的说明
 6. 执行发布前检查
-7. 创建 tag
-8. 推送 tag
-9. 在 GitHub 上创建 Release
+7. 提交版本号、`CHANGELOG.md` 和文档变更
+8. push 到默认分支，等待 `CI` 和必要的部署 workflow 成功
+9. 创建 GitHub Release（推荐 `gh release create`，由它在目标分支上创建 tag）
 10. 等 `Release SDK Assets` workflow 把 SDK 附件挂到当前 Release
+11. 检查 Release 页面是否已经出现源码包和 SDK 附件
 
-本地命令顺序：
+推荐命令顺序：
 
 ```bash
 git status
 pnpm set:version <x.y.z>
+# 手动更新 CHANGELOG.md、README.md 和 DOCS/ 中与本次版本相关的内容
 pnpm test
 pnpm build
 pnpm check:scripts
@@ -95,9 +116,21 @@ pnpm check:python
 python -m pip install build
 pnpm build:sdk:artifacts
 pnpm check:sdk:artifacts
-git tag v<x.y.z>
-git push origin v<x.y.z>
+git add --all
+git commit -m "发布<x.y.z>版本"
+git push origin <default-branch>
+gh release create v<x.y.z> --target <default-branch> --title "v<x.y.z>" --notes-file <release-notes-file>
+gh run list --workflow "Release SDK Assets" --limit 5
 ```
+
+如果不用 `gh` CLI，也可以在 GitHub 网页上创建 Release：
+
+1. tag 名使用 `v<x.y.z>`
+2. target 选择刚刚 push 的默认分支 commit
+3. Release 内容填写本次发布说明
+4. 发布后等待 `Release SDK Assets` 自动运行
+
+也可以先手动 `git tag` / `git push origin v<x.y.z>`，再基于这个 tag 创建 Release；但当前推荐路径是直接让 `gh release create` 在目标分支上创建 tag，减少“tag 已推送但 Release 未发布”的中间状态。
 
 ## 发版发的是什么
 
@@ -135,6 +168,14 @@ Release 页面至少写清楚这几件事：
   - `DOCS/DEPLOY.md`
   - `DOCS/RUNBOOK.md`
   - `DOCS/UPDATE.md`
+
+创建 Release 后必须再确认两件事：
+
+1. `Release SDK Assets` workflow 已成功结束
+2. Release assets 中至少有：
+   - `onlymail-sdk-nodejs-<version>.tgz`
+   - `onlymail_sdk-<version>-py3-none-any.whl`
+   - `onlymail_sdk-<version>.tar.gz`
 
 ## 当前阶段 release note 建议重点
 

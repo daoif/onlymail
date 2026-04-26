@@ -2,12 +2,21 @@
 
 这份文档只解答一个问题：OnlyMail 部署好以后，怎么跟上新版本？
 
-系统把"更新"拆成两层：
+系统把"更新"拆成三层：
 
-1. **代码自动部署** —— 代码变了就自动上线
-2. **新版本提醒** —— 告诉你有新的正式 Release
+1. **代码自动部署** —— 默认分支代码变了，就通过 GitHub Actions 更新 Cloudflare 上的 Worker / Pages
+2. **正式版本发布** —— 维护者创建 GitHub Release，形成用户可识别的版本号、发布说明和 SDK 附件
+3. **新版本提醒** —— 已部署实例检查正式 GitHub Release，告诉管理员有新版本
 
-两者是独立的能力，可以分开配置。
+三者是独立能力，不要混在一起理解：
+
+| 事情 | 触发方式 | 结果 |
+|------|----------|------|
+| 更新正在运行的 Cloudflare 服务 | push 到默认分支，或手动运行部署 workflow | 执行 `CI` / `Deploy Worker` / `Deploy Frontend`，把代码部署到 Worker / Pages |
+| 发布一个正式版本 | 手动创建 GitHub Release，例如 `gh release create v0.3.0 ...` | 生成正式 Release，触发 `Release SDK Assets` 上传 SDK 附件 |
+| 后台提示有新版本 | Worker 定时或设置页手动检查 GitHub Release | 管理面板显示更新横幅或版本信息 |
+
+> 重点：**push 会部署，但不会自动创建 GitHub Release；`Release SDK Assets` 会给已发布的 Release 挂附件，但不会替你创建 Release。**
 
 ---
 
@@ -19,11 +28,41 @@
 - `Deploy Worker`
 - `Deploy Frontend`
 
-这种情况不需要额外配置更新提醒——你自己就是代码维护者。
+这种情况只是在更新你自己的线上服务，不一定需要发正式版本。
+
+如果这次变更只是你自用，流程到 push 成功、部署 workflow 成功就结束。
+
+如果这次变更要作为对外正式版本，例如 `v0.3.0`：
+
+1. 先按 [`RELEASING.md`](RELEASING.md) 更新版本号、`CHANGELOG.md` 和相关文档
+2. 提交并 push 到默认分支，让 `CI` / 部署 workflow 先跑完
+3. 再创建 GitHub Release
+4. 等 `Release SDK Assets` workflow 把 SDK 附件挂到这个 Release
 
 ---
 
-## 2. fork 上游仓库，并且想自动跟上更新
+## 2. GitHub workflow 分工
+
+当前仓库内的 workflow 分工如下：
+
+| Workflow | 主要触发 | 负责什么 | 不负责什么 |
+|----------|----------|----------|------------|
+| `CI` | push / pull request | 测试、构建、脚本检查、SDK 产物校验 | 不部署 Cloudflare，不创建 Release |
+| `Bootstrap Cloudflare` | 手动运行 | 首次 GitHub-only 初始化，执行 `pnpm run init` | 不用于日常发版 |
+| `Deploy Worker` | 默认分支相关路径变更，或手动运行 | 执行 D1 migration，并部署 `onlymail-worker` | 不创建 Release，不上传 SDK 附件 |
+| `Deploy Frontend` | 默认分支相关路径变更，或手动运行 | 构建并部署 `onlymail-frontend` Pages | 不创建 Release |
+| `Upstream Sync` | 定时或手动运行 | fork 仓库 fast-forward 同步上游，并补触发 `CI` / deploy workflow | 不自动 merge 分叉提交，不创建 Release |
+| `Release SDK Assets` | GitHub Release published，或手动运行 | 构建 Node.js / Python SDK 安装包，并挂到当前 Release | 不创建 Release，不部署 Cloudflare |
+
+因此，日常可以按这个判断：
+
+- **我要更新 Cloudflare 上正在跑的服务**：push 默认分支，确认 `CI` / `Deploy Worker` / `Deploy Frontend` 成功
+- **我要发布一个用户可见的新版本**：在 push 部署成功后，再创建 GitHub Release
+- **我要让未自动同步的实例看到更新提醒**：必须创建正式 GitHub Release，普通 commit 不会触发提醒
+
+---
+
+## 3. fork 上游仓库，并且想自动跟上更新
 
 这是推荐的自动更新路径。
 
@@ -55,7 +94,7 @@ UPSTREAM_REPOSITORY=daoif/onlymail
 
 ---
 
-## 3. 没配自动同步，或者是本地部署
+## 4. 没配自动同步，或者是本地部署
 
 这类实例不会自动更新代码。
 
@@ -74,7 +113,7 @@ UPSTREAM_REPOSITORY=daoif/onlymail
 
 ---
 
-## 4. 更新横幅
+## 5. 更新横幅
 
 当实例版本落后于最新正式 release 时，登录管理面板就会在顶部看到一条更新横幅。
 
@@ -103,7 +142,7 @@ UPSTREAM_REPOSITORY=daoif/onlymail
 
 ---
 
-## 5. 设置页
+## 6. 设置页
 
 设置页的"版本更新"区块会显示：
 
@@ -120,7 +159,7 @@ UPSTREAM_REPOSITORY=daoif/onlymail
 
 ---
 
-## 6. 手动更新
+## 7. 手动更新
 
 ### 本地部署
 
@@ -142,9 +181,11 @@ pnpm run rebuild
 
 如果没配 `Upstream Sync`，手动把上游新版本合进默认分支后 push 即可。后续的 `CI`、`Deploy Worker`、`Deploy Frontend` 会自动执行。
 
+如果你是项目维护者，并且这次 push 对应一个新的正式版本，还需要继续按 [`RELEASING.md`](RELEASING.md) 创建 GitHub Release。否则 Cloudflare 服务虽然已经更新，但其他实例的更新提醒和 SDK Release 附件都不会出现。
+
 ---
 
-## 7. 当前限制
+## 8. 当前限制
 
 这套更新提醒**不会**做这些事：
 

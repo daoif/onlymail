@@ -399,6 +399,8 @@ pnpm run rebuild
 - push 到自己的仓库 → 自动部署 Worker / Pages
 - 或在 Actions 页面手动运行 `Deploy Worker` / `Deploy Frontend`
 
+这只代表“线上服务已更新”，不等于“项目已发正式版本”。如果这次变更要让其他实例收到更新提醒，或要提供 SDK 安装附件，还需要创建 GitHub Release；发布 Release 后 `Release SDK Assets` workflow 会自动挂载 SDK 附件。
+
 如果使用 fork 并想接收上游更新：
 
 - 设置仓库变量 `UPSTREAM_REPOSITORY=上游owner/repo`
@@ -433,10 +435,11 @@ pnpm run rebuild
 
 ## 五、后续推送（CI/CD 自动部署）
 
-配置好 GitHub Secrets 后，推送到默认分支会自动触发部署：
+配置好 GitHub Secrets 后，推送到默认分支会自动触发检查，并按变更路径触发部署：
 
 | 触发条件 | Workflow | 动作 |
 |---------|----------|------|
+| 任意默认分支 push | CI | 测试、构建、脚本检查和 SDK 产物校验 |
 | `worker/` 有变更 | Deploy Worker | 自动部署 Worker |
 | `frontend/` 有变更 | Deploy Frontend | 自动构建并部署 Pages |
 | 手动触发 | `gh workflow run` | 两个 workflow 均支持 |
@@ -458,6 +461,14 @@ wrangler deploy / pages deploy
 ```
 
 > `wrangler.toml` 不提交 Git（已 `.gitignore`），本地和 CI 均现场生成。
+
+### 推送和 Release 的边界
+
+- push 到默认分支：负责让当前仓库对应的 Cloudflare Worker / Pages 更新
+- GitHub Release：负责形成正式版本、更新提醒来源和 SDK 附件
+- `Release SDK Assets`：只在 Release published 后上传 SDK 附件，不创建 Release，也不部署 Cloudflare
+
+也就是说，GitHub-only / 混合部署里的“后续推送”已经能更新你自己的服务；如果你是维护者并准备对外发版，还要继续执行 [`RELEASING.md`](RELEASING.md)。
 
 ---
 
@@ -552,6 +563,7 @@ GitHub-only 部署：
 长期更新：
 ⚡ push 到自己的 GitHub 仓库，自动部署
 ⚡ 可选启用 Upstream Sync，自动接收上游 fast-forward 更新
+⚡ 正式发版另走 GitHub Release，Release SDK Assets 只负责上传 SDK 附件
 ```
 
 

@@ -65,6 +65,7 @@
 - SDK 改用 GitHub Release 附件分发：Node.js `.tgz`、Python `.whl` 和 `.tar.gz`；仍不发 npm / PyPI
 - CI 新增 SDK 产物构建和安装冒烟测试
 - `Release SDK Assets` workflow 已接通：发布 Release 后自动上传 SDK 附件
+- 发布工作流边界已明确：push 默认分支负责 `CI` / Cloudflare 部署；GitHub Release 需要维护者手动创建；`Release SDK Assets` 只给已发布 Release 上传 SDK 附件，不负责创建 Release 或部署服务
 - Node.js / Python SDK 均已完成线上 API 调用验证
 - 地址页新增“生成临时邮箱”区域：直接拉取可用子域名、创建地址、展示结果、复制地址并跳到邮件页
 - 开源仓库基础面已补齐：`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CHANGELOG.md`、Issue / PR 模板、`DOCS/RELEASING.md`

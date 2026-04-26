@@ -198,6 +198,8 @@ pnpm setup:github
 - push 到默认分支 → 自动触发 `CI`、`Deploy Worker`、`Deploy Frontend`
 - 或在 Actions 页面手动运行对应 workflow
 
+这一步是“部署更新”，不是“正式发版”。如果你维护的是公开版本，还需要按 [`RELEASING.md`](RELEASING.md) 手动创建 GitHub Release；发布 Release 后 `Release SDK Assets` 才会上传 SDK 附件，后台更新提醒也只认正式 Release。
+
 如果还想自动跟上游版本，在 GitHub 仓库变量里设置：
 
 ```text
