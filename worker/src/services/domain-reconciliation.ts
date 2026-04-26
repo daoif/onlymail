@@ -1,4 +1,5 @@
 import type { DnsRecord, EmailRule } from '../providers/types'
+import type { SubdomainDnsMode } from '../types'
 
 const MX_TARGETS = [
   { content: 'route1.mx.cloudflare.net', priority: 86 },
@@ -10,6 +11,14 @@ const SPF_CONTENT = 'v=spf1 include:_spf.mx.cloudflare.net ~all'
 
 function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\.+$/, '')
+}
+
+function normalizeRecordContent(value: string) {
+  return value.trim().toLowerCase().replace(/\.+$/, '').replace(/^"|"$/g, '')
+}
+
+function getMxTargets(dnsMode: SubdomainDnsMode) {
+  return dnsMode === 'minimal' ? [MX_TARGETS[0]] : [...MX_TARGETS]
 }
 
 export function findNearestRootDomainName(name: string, rootNames: string[]) {
@@ -38,21 +47,28 @@ function hasLiteralMatcher(rule: EmailRule, emailPattern: string) {
   ))
 }
 
-export function planSubdomainProvision(name: string, workerName: string, records: DnsRecord[], rules: EmailRule[]) {
+export function planSubdomainProvision(
+  name: string,
+  workerName: string,
+  records: DnsRecord[],
+  rules: EmailRule[],
+  dnsMode: SubdomainDnsMode = 'compatible',
+) {
   const normalizedName = normalizeName(name)
   const emailPattern = `*@${normalizedName}`
+  const mxTargets = getMxTargets(dnsMode)
+  const shouldCreateTxtRecord = dnsMode === 'compatible'
 
-  const reusableMxRecords = MX_TARGETS.map((target) => records.find((record) => (
+  const reusableMxRecords = mxTargets.map((target) => records.find((record) => (
     record.type === 'MX'
       && normalizeName(record.name) === normalizedName
-      && record.content === target.content
-      && record.priority === target.priority
+      && normalizeRecordContent(record.content) === normalizeRecordContent(target.content)
   ))).filter((record): record is DnsRecord => Boolean(record))
 
   const reusableTxtRecord = records.find((record) => (
     record.type === 'TXT'
       && normalizeName(record.name) === normalizedName
-      && record.content === SPF_CONTENT
+      && normalizeRecordContent(record.content) === normalizeRecordContent(SPF_CONTENT)
   )) ?? null
 
   const exactRouteRule = rules.find((rule) => (
@@ -67,21 +83,25 @@ export function planSubdomainProvision(name: string, workerName: string, records
   )) ?? null
 
   return {
-    mxTargetsToCreate: MX_TARGETS.filter((target) => !reusableMxRecords.some((record) => (
-      record.content === target.content && record.priority === target.priority
+    mxTargetsToCreate: mxTargets.filter((target) => !reusableMxRecords.some((record) => (
+      normalizeRecordContent(record.content) === normalizeRecordContent(target.content)
     ))),
     reusableMxRecordIds: reusableMxRecords.map((record) => record.id),
     txtRecordId: reusableTxtRecord?.id ?? null,
-    needsTxtRecord: !reusableTxtRecord,
+    needsTxtRecord: shouldCreateTxtRecord && !reusableTxtRecord,
     routeRuleId: exactRouteRule?.id ?? null,
     needsRouteRule: !exactRouteRule,
     conflictingRouteRuleId: conflictingRouteRule?.id ?? null,
   }
 }
 
-export function getManagedSubdomainConstants() {
+export function getManagedSubdomainConstants(dnsMode: SubdomainDnsMode = 'compatible') {
+  const mxTargets = getMxTargets(dnsMode)
+  const spfContent = dnsMode === 'compatible' ? SPF_CONTENT : null
+
   return {
-    mxTargets: [...MX_TARGETS],
-    spfContent: SPF_CONTENT,
+    mxTargets,
+    spfContent,
+    dnsRecordsPerSubdomain: mxTargets.length + (spfContent ? 1 : 0),
   }
 }

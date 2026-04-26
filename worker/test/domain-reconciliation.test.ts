@@ -60,6 +60,38 @@ test('planSubdomainProvision 会识别缺失资源和冲突规则', () => {
   assert.equal(plan.conflictingRouteRuleId, 'rule-2')
 })
 
+test('planSubdomainProvision 在精简 DNS 模式只要求 1 条 MX', () => {
+  const plan = planSubdomainProvision(
+    'm1.example.com',
+    'onlymail-worker',
+    [],
+    [],
+    'minimal',
+  )
+
+  assert.deepEqual(
+    plan.mxTargetsToCreate.map((item) => item.content),
+    ['route1.mx.cloudflare.net'],
+  )
+  assert.equal(plan.needsTxtRecord, false)
+  assert.equal(plan.txtRecordId, null)
+})
+
+test('planSubdomainProvision 会复用不同优先级或尾点格式的 MX', () => {
+  const plan = planSubdomainProvision(
+    'm1.example.com',
+    'onlymail-worker',
+    [
+      { id: 'mx-1', type: 'MX', name: 'm1.example.com.', content: 'route1.mx.cloudflare.net.', priority: 39 },
+    ],
+    [],
+    'minimal',
+  )
+
+  assert.deepEqual(plan.reusableMxRecordIds, ['mx-1'])
+  assert.deepEqual(plan.mxTargetsToCreate, [])
+})
+
 test('findNearestRootDomainName 会匹配最近的已初始化根域名', () => {
   assert.equal(
     findNearestRootDomainName('m1.m1.ainiaini.xyz', ['ainiaini.xyz', 'other.com']),

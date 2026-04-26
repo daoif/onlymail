@@ -10,6 +10,7 @@ export interface AppBindings {
 
 export type SubdomainType = 'permanent' | 'temporary'
 export type DomainType = 'root' | SubdomainType
+export type SubdomainDnsMode = 'compatible' | 'minimal'
 
 export type AppEnv = {
   Bindings: AppBindings

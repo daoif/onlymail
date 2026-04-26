@@ -1,4 +1,4 @@
-import type { AppBindings } from '../types'
+import type { AppBindings, SubdomainDnsMode } from '../types'
 
 import { revokeAllAdminSessions } from './admin-session'
 import { AppError } from '../lib/http'
@@ -22,6 +22,7 @@ export type SettingKey =
   | 'update_dismissed_version'
   | 'update_notifications_disabled'
   | 'subdomain_rotation_limit'
+  | 'subdomain_dns_mode'
 
 type SettingRow = {
   key: SettingKey
@@ -35,6 +36,7 @@ type AllowedOriginsCache = {
 
 const ALLOWED_ORIGINS_CACHE_TTL_MS = 60_000
 const DEFAULT_SUBDOMAIN_ROTATION_LIMIT = 5
+const DEFAULT_SUBDOMAIN_DNS_MODE: SubdomainDnsMode = 'compatible'
 const MIN_SUBDOMAIN_ROTATION_LIMIT = 1
 const MAX_SUBDOMAIN_ROTATION_LIMIT = 500
 let allowedOriginsCache: AllowedOriginsCache | null = null
@@ -80,6 +82,10 @@ function normalizeSubdomainRotationLimit(value: number) {
   return normalized
 }
 
+function normalizeSubdomainDnsMode(value?: string | null): SubdomainDnsMode {
+  return value === 'minimal' ? 'minimal' : DEFAULT_SUBDOMAIN_DNS_MODE
+}
+
 export async function getSubdomainRotationLimit(env: AppBindings) {
   const row = await getSettingValue(env, 'subdomain_rotation_limit')
   const stored = row?.value ? Number.parseInt(row.value, 10) : Number.NaN
@@ -91,18 +97,32 @@ export async function getSubdomainRotationLimit(env: AppBindings) {
     ?? DEFAULT_SUBDOMAIN_ROTATION_LIMIT
 }
 
+export async function getSubdomainDnsMode(env: AppBindings) {
+  const row = await getSettingValue(env, 'subdomain_dns_mode')
+  return normalizeSubdomainDnsMode(row?.value)
+}
+
 export async function getDomainLifecycleSettings(env: AppBindings) {
   return {
     subdomainRotationLimit: await getSubdomainRotationLimit(env),
+    subdomainDnsMode: await getSubdomainDnsMode(env),
   }
 }
 
-export async function updateDomainLifecycleSettings(env: AppBindings, payload: { subdomainRotationLimit: number }) {
+export async function updateDomainLifecycleSettings(
+  env: AppBindings,
+  payload: { subdomainRotationLimit: number; subdomainDnsMode: SubdomainDnsMode },
+) {
   const subdomainRotationLimit = normalizeSubdomainRotationLimit(payload.subdomainRotationLimit)
-  await setSettingValue(env, 'subdomain_rotation_limit', String(subdomainRotationLimit))
+  const subdomainDnsMode = normalizeSubdomainDnsMode(payload.subdomainDnsMode)
+  await Promise.all([
+    setSettingValue(env, 'subdomain_rotation_limit', String(subdomainRotationLimit)),
+    setSettingValue(env, 'subdomain_dns_mode', subdomainDnsMode),
+  ])
 
   return {
     subdomainRotationLimit,
+    subdomainDnsMode,
   }
 }
 

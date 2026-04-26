@@ -90,8 +90,9 @@
 - 前端：`frontend/src/views/DomainsView.vue` 子域名表单
 
 负责：
-- 在根域名所在 Zone 下，为子域名创建 3 条 MX 记录（指向 Cloudflare MX）
-- 为子域名创建 1 条 SPF TXT 记录
+- 在根域名所在 Zone 下，按 DNS 模式为子域名创建 Cloudflare MX / SPF TXT 记录
+  - 官方兼容模式：3 条 MX + 1 条 SPF TXT
+  - 精简模式：1 条 MX
 - 为子域名创建 1 条 Email Routing 规则：`*@子域名` → Worker
 - 在删除子域名时，按存下来的 `mx_record_ids` / `txt_record_id` / `route_rule_id` 回收这些资源
 - 在 `domains` 表中记录每个子域名及其关联的 Cloudflare 资源 ID

@@ -47,7 +47,10 @@
 - 轮换总数从 D1 `settings.subdomain_rotation_limit` 读取，默认 `5`；旧的 `ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT` 只作为未写入 D1 时的兼容回退。
 - 轮换总数按 root 独立生效：每个根域名最多保留 N 个临时子域名。
 - 达到上限时，只删除当前 root 下最旧的 `temporary` 子域名，再创建新的临时子域名。
-- 每个 managed subdomain 约占 `3 MX + 1 TXT = 4` 条 DNS 记录；`GET /api/domains` 会在根域名行返回已管理 DNS、剩余可用 DNS、可管理 DNS 容量（已管理 + 按当前轮换总数还能新增的临时 DNS）、长期/临时子域数量。
+- 子域名 DNS 模式从 D1 `settings.subdomain_dns_mode` 读取：
+  - `compatible`：官方兼容模式，创建 `3 MX + 1 TXT = 4` 条 DNS，默认值。
+  - `minimal`：精简模式，只创建 1 条 MX，用于 DNS 配额紧张场景；Cloudflare 面板可能提示 DNS 未完整配置，且少了 MX 冗余。
+- `GET /api/domains` 会按当前 DNS 模式在根域名行返回已管理 DNS、剩余可用 DNS、可管理 DNS 容量（已管理 + 按当前轮换总数还能新增的临时 DNS）、长期/临时子域数量。
 
 ### 4. 删除流程
 

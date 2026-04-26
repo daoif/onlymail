@@ -147,14 +147,14 @@ describe('admin api helpers', () => {
     expect(apiRequest).toHaveBeenCalledWith('/api/settings/domain-lifecycle', {}, 'token-12')
   })
 
-  it('updateDomainLifecycleSettings 会保存轮换总数', () => {
-    updateDomainLifecycleSettings('token-13', 8)
+  it('updateDomainLifecycleSettings 会保存轮换总数和 DNS 模式', () => {
+    updateDomainLifecycleSettings('token-13', 8, 'minimal')
 
     expect(apiRequest).toHaveBeenCalledWith(
       '/api/settings/domain-lifecycle',
       {
         method: 'PUT',
-        body: JSON.stringify({ subdomainRotationLimit: 8 }),
+        body: JSON.stringify({ subdomainRotationLimit: 8, subdomainDnsMode: 'minimal' }),
       },
       'token-13',
     )

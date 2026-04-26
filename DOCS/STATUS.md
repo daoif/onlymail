@@ -75,5 +75,6 @@
 - Cloudflare API 错误现在会透传具体 `code/message`，便于现场识别 `81045` 这类配额类错误
 - 子域名生命周期拆成长期 / 临时：长期子域名不参与自动轮换；临时子域名按每个 root 独立的轮换总数回收最旧项
 - 轮换总数已从只能靠 `ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT` 调整，改为设置页写入 D1 `settings.subdomain_rotation_limit`；旧环境变量只保留兼容回退
+- 子域名 DNS 模式新增 `compatible` / `minimal`：默认官方兼容模式 4 条 DNS；精简模式只创建 1 条 MX
 - 域名页根域名行新增 DNS 使用信息：已管理 DNS、剩余可用 DNS、可管理 DNS 容量，以及长期 / 临时子域名数量
 - 邮件页标题区新增刷新按钮，可重新拉取邮件列表而不刷新整页

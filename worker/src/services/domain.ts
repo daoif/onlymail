@@ -3,11 +3,9 @@ import { createProviders } from '../providers/index'
 import { AppError } from '../lib/http'
 import { DEFAULT_WORKER_NAME } from '../lib/project-defaults'
 import type { DnsRecord, EmailRule } from '../providers/types'
-import type { AppBindings, DomainRecord, DomainType, SubdomainType } from '../types'
+import type { AppBindings, DomainRecord, DomainType, SubdomainDnsMode, SubdomainType } from '../types'
 import { findNearestRootDomainName, getManagedSubdomainConstants, planSubdomainProvision } from './domain-reconciliation'
-import { getSubdomainRotationLimit } from './settings'
-
-const MANAGED_DNS_RECORDS_PER_SUBDOMAIN = getManagedSubdomainConstants().mxTargets.length + 1
+import { getSubdomainDnsMode, getSubdomainRotationLimit } from './settings'
 
 function requireEmailRoutingAuth(env: AppBindings) {
   const authEmail = env.CF_AUTH_EMAIL || env.CF_EMAIL
@@ -69,7 +67,7 @@ function parseStoredMxRecordIds(value: string) {
   return []
 }
 
-function getManagedDnsCount(record: DomainRecord) {
+function getManagedDnsCount(record: DomainRecord, dnsUnitSize: number) {
   if (record.is_root === 1) {
     return 0
   }
@@ -78,7 +76,7 @@ function getManagedDnsCount(record: DomainRecord) {
   const txtCount = record.txt_record_id ? 1 : 0
   const storedCount = mxCount + txtCount
 
-  return storedCount > 0 ? storedCount : MANAGED_DNS_RECORDS_PER_SUBDOMAIN
+  return storedCount > 0 ? storedCount : dnsUnitSize
 }
 
 function hasManagedRouteMatcher(rule: EmailRule, name: string) {
@@ -137,13 +135,15 @@ async function enforceTemporarySubdomainLimit(
 }
 
 async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
+  const dnsMode = await getSubdomainDnsMode(env)
+  const dnsUnitSize = getDomainDnsUnitSize(dnsMode)
   const rootNames = Array.from(new Set(rows.filter((item) => item.is_root === 1).map((item) => item.name)))
   if (rootNames.length === 0) {
     return rows.map((row) => ({
       ...row,
       subdomain_type: getDomainType(row),
-      managed_dns_count: getManagedDnsCount(row),
-      dns_records_per_subdomain: MANAGED_DNS_RECORDS_PER_SUBDOMAIN,
+      managed_dns_count: getManagedDnsCount(row, dnsUnitSize),
+      dns_records_per_subdomain: dnsUnitSize,
     }))
   }
 
@@ -174,7 +174,7 @@ async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
       continue
     }
 
-    rootStats.managedDnsCount += getManagedDnsCount(subdomain)
+    rootStats.managedDnsCount += getManagedDnsCount(subdomain, dnsUnitSize)
     if (getDomainType(subdomain) === 'temporary') {
       rootStats.temporaryCount += 1
     } else {
@@ -187,8 +187,8 @@ async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
       return {
         ...row,
         subdomain_type: getDomainType(row),
-        managed_dns_count: getManagedDnsCount(row),
-        dns_records_per_subdomain: MANAGED_DNS_RECORDS_PER_SUBDOMAIN,
+        managed_dns_count: getManagedDnsCount(row, dnsUnitSize),
+        dns_records_per_subdomain: dnsUnitSize,
       }
     }
 
@@ -198,7 +198,7 @@ async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
       temporaryCount: 0,
     }
     const remainingTemporarySlots = Math.max(0, rotationLimit - rootStats.temporaryCount)
-    const remainingDnsCount = remainingTemporarySlots * MANAGED_DNS_RECORDS_PER_SUBDOMAIN
+    const remainingDnsCount = remainingTemporarySlots * dnsUnitSize
 
     return {
       ...row,
@@ -206,7 +206,7 @@ async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
       managed_dns_count: rootStats.managedDnsCount,
       remaining_dns_count: remainingDnsCount,
       manageable_dns_count: rootStats.managedDnsCount + remainingDnsCount,
-      dns_records_per_subdomain: MANAGED_DNS_RECORDS_PER_SUBDOMAIN,
+      dns_records_per_subdomain: dnsUnitSize,
       permanent_subdomain_count: rootStats.permanentCount,
       temporary_subdomain_count: rootStats.temporaryCount,
       subdomain_rotation_limit: rotationLimit,
@@ -333,16 +333,20 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
   }
 
   const providers = createProviders(env)
-  const { mxTargets, spfContent } = getManagedSubdomainConstants()
+  const dnsMode = await getSubdomainDnsMode(env)
+  const { spfContent } = getManagedSubdomainConstants(dnsMode)
   const existingRecords = await providers.dns.listDnsRecords(rootRecord.cf_zone_id, { name })
   const existingRules = await providers.email.listEmailRules(rootRecord.cf_zone_id)
-  const provisionPlan = planSubdomainProvision(name, DEFAULT_WORKER_NAME, existingRecords, existingRules)
+  const provisionPlan = planSubdomainProvision(name, DEFAULT_WORKER_NAME, existingRecords, existingRules, dnsMode)
 
   if (provisionPlan.conflictingRouteRuleId) {
     throw new AppError(409, '这个子域名已经有现成的 Email Routing 规则，但目标不是当前 Worker，请先手动清理后再重试')
   }
 
-  const mxIds: string[] = [...provisionPlan.reusableMxRecordIds]
+  const existingMxIds = existingRecords
+    .filter((record) => record.type === 'MX' && isManagedDnsRecord(record, name))
+    .map((record) => record.id)
+  const mxIds: string[] = Array.from(new Set([...existingMxIds, ...provisionPlan.reusableMxRecordIds]))
   const createdMxIds: string[] = []
   let txtRecordId: string | null = provisionPlan.txtRecordId
   let createdTxtRecordId: string | null = null
@@ -361,7 +365,7 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
       createdMxIds.push(record.id)
     }
 
-    if (provisionPlan.needsTxtRecord) {
+    if (provisionPlan.needsTxtRecord && spfContent) {
       const txtRecord = await providers.dns.createDnsRecord(rootRecord.cf_zone_id, {
         type: 'TXT',
         name,
@@ -410,8 +414,8 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
   return (await findDomain(env, name))!
 }
 
-export function getDomainDnsUnitSize() {
-  return MANAGED_DNS_RECORDS_PER_SUBDOMAIN
+export function getDomainDnsUnitSize(dnsMode: SubdomainDnsMode = 'compatible') {
+  return getManagedSubdomainConstants(dnsMode).dnsRecordsPerSubdomain
 }
 
 export async function deleteSubdomains(env: AppBindings, names: string[]) {

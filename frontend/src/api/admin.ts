@@ -25,6 +25,7 @@ export type AddressCreateResult = {
 
 type QueryValue = string | number | boolean | undefined
 export type SubdomainType = 'permanent' | 'temporary'
+export type SubdomainDnsMode = DomainLifecycleSettings['subdomainDnsMode']
 
 function toSearchString(params?: URLSearchParams | Record<string, QueryValue>) {
   if (!params) return ''
@@ -186,12 +187,12 @@ export function getDomainLifecycleSettings(token: string) {
   return apiRequest<ApiEnvelope<DomainLifecycleSettings>>('/api/settings/domain-lifecycle', {}, token)
 }
 
-export function updateDomainLifecycleSettings(token: string, subdomainRotationLimit: number) {
+export function updateDomainLifecycleSettings(token: string, subdomainRotationLimit: number, subdomainDnsMode: SubdomainDnsMode) {
   return apiRequest<ApiEnvelope<DomainLifecycleSettings>>(
     '/api/settings/domain-lifecycle',
     {
       method: 'PUT',
-      body: JSON.stringify({ subdomainRotationLimit }),
+      body: JSON.stringify({ subdomainRotationLimit, subdomainDnsMode }),
     },
     token,
   )

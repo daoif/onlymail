@@ -81,6 +81,7 @@ const updateNotificationPreferenceSchema = z.object({
 
 const domainLifecycleSettingsSchema = z.object({
   subdomainRotationLimit: z.number().int().min(1).max(500),
+  subdomainDnsMode: z.enum(['compatible', 'minimal']),
 })
 
 export const apiRoutes = new Hono<AppEnv>()
@@ -277,7 +278,7 @@ apiRoutes.get('/settings/domain-lifecycle', async (c) => {
   const settings = await getDomainLifecycleSettings(c.env)
   return jsonSuccess(c, {
     ...settings,
-    dnsRecordsPerSubdomain: getDomainDnsUnitSize(),
+    dnsRecordsPerSubdomain: getDomainDnsUnitSize(settings.subdomainDnsMode),
   })
 })
 
@@ -286,7 +287,7 @@ apiRoutes.put('/settings/domain-lifecycle', async (c) => {
   const settings = await updateDomainLifecycleSettings(c.env, payload)
   return jsonSuccess(c, {
     ...settings,
-    dnsRecordsPerSubdomain: getDomainDnsUnitSize(),
+    dnsRecordsPerSubdomain: getDomainDnsUnitSize(settings.subdomainDnsMode),
   })
 })
 

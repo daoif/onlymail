@@ -136,10 +136,17 @@
 
           <SkeletonLoader v-if="domainLifecycleLoading" variant="text" :rows="2" />
           <template v-else>
-            <form class="grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-[220px_auto] sm:items-end" @submit.prevent="submitDomainLifecycle">
+            <form class="grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-[220px_260px_auto] sm:items-end" @submit.prevent="submitDomainLifecycle">
               <label class="block space-y-2 text-sm text-slate-600">
                 <span>轮换总数</span>
                 <input v-model.number="subdomainRotationLimitInput" class="input-base" type="number" min="1" max="500" />
+              </label>
+              <label class="block space-y-2 text-sm text-slate-600">
+                <span>DNS 模式</span>
+                <select v-model="subdomainDnsModeInput" class="input-base">
+                  <option value="compatible">官方兼容（4 条）</option>
+                  <option value="minimal">精简模式（1 条）</option>
+                </select>
               </label>
               <button class="button-primary h-10 w-full sm:w-28" type="submit" :disabled="domainLifecycleSubmitting">
                 {{ domainLifecycleSubmitting ? '保存中…' : '保存' }}
@@ -147,8 +154,11 @@
             </form>
             <div class="grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
               <p>每个根域名最多保留 {{ lifecycleSettings.subdomainRotationLimit }} 个临时子域名。</p>
-              <p>每个子域名约占 {{ lifecycleSettings.dnsRecordsPerSubdomain }} 条 DNS 记录。</p>
+              <p>当前 {{ formatSubdomainDnsMode(lifecycleSettings.subdomainDnsMode) }}，每个子域名约占 {{ lifecycleSettings.dnsRecordsPerSubdomain }} 条 DNS。</p>
             </div>
+            <p v-if="lifecycleSettings.subdomainDnsMode === 'minimal'" class="text-sm text-amber-700">
+              精简模式只创建 1 条 MX，能显著节省 DNS；Cloudflare 面板可能提示 DNS 未完整配置，且少了 MX 冗余。
+            </p>
           </template>
           <p v-if="domainLifecycleMessage" class="text-sm text-slate-500">{{ domainLifecycleMessage }}</p>
           <p v-if="domainLifecycleError || domainLifecycleLoadError" class="text-sm text-rose-600">
@@ -333,6 +343,7 @@ const pendingRemovePagesDomain = ref('')
 const versionChecking = ref(false)
 const versionMessage = ref('')
 const subdomainRotationLimitInput = ref(5)
+const subdomainDnsModeInput = ref<DomainLifecycleSettings['subdomainDnsMode']>('compatible')
 const domainLifecycleSubmitting = ref(false)
 const domainLifecycleMessage = ref('')
 const domainLifecycleError = ref('')
@@ -368,11 +379,13 @@ const {
 
 const lifecycleSettings = computed(() => domainLifecycleData.value?.data ?? {
   subdomainRotationLimit: 5,
+  subdomainDnsMode: 'compatible' as const,
   dnsRecordsPerSubdomain: 4,
 })
 
 watch(lifecycleSettings, (value) => {
   subdomainRotationLimitInput.value = value.subdomainRotationLimit
+  subdomainDnsModeInput.value = value.subdomainDnsMode
 }, { immediate: true })
 
 function formatDate(value: string) {
@@ -430,6 +443,10 @@ function getPagesDomainError(domain: PagesDomainEntry) {
   return message
 }
 
+function formatSubdomainDnsMode(value: DomainLifecycleSettings['subdomainDnsMode']) {
+  return value === 'minimal' ? '精简模式' : '官方兼容模式'
+}
+
 async function checkNow() {
   versionChecking.value = true
   versionMessage.value = ''
@@ -467,8 +484,8 @@ async function submitDomainLifecycle() {
   domainLifecycleMessage.value = ''
   domainLifecycleError.value = ''
   try {
-    const response = await updateDomainLifecycleSettings(authStore.token, subdomainRotationLimitInput.value)
-    domainLifecycleMessage.value = `轮换总数已更新为 ${response.data.subdomainRotationLimit}。`
+    const response = await updateDomainLifecycleSettings(authStore.token, subdomainRotationLimitInput.value, subdomainDnsModeInput.value)
+    domainLifecycleMessage.value = `轮换总数已更新为 ${response.data.subdomainRotationLimit}，DNS 模式为${formatSubdomainDnsMode(response.data.subdomainDnsMode)}。`
     await mutateDomainLifecycle()
   } catch (err) {
     domainLifecycleError.value = err instanceof ApiError ? err.message : '保存域名轮换设置失败'

@@ -72,6 +72,7 @@ export interface SettingsApiKeyState {
 
 export interface DomainLifecycleSettings {
   subdomainRotationLimit: number
+  subdomainDnsMode: 'compatible' | 'minimal'
   dnsRecordsPerSubdomain: number
 }
 
