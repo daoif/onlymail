@@ -2,7 +2,7 @@ import { exec, many, one } from '../lib/db'
 import { createProviders } from '../providers/index'
 import { AppError } from '../lib/http'
 import { DEFAULT_WORKER_NAME } from '../lib/project-defaults'
-import type { DnsRecord, EmailRule } from '../providers/types'
+import type { DnsRecord, DnsRecordInventory, EmailRule } from '../providers/types'
 import type { AppBindings, DomainRecord, DomainType, SubdomainDnsMode, SubdomainType } from '../types'
 import { findNearestRootDomainName, getManagedSubdomainConstants, planSubdomainProvision } from './domain-reconciliation'
 import { getSubdomainDnsMode, getSubdomainRotationLimit } from './settings'
@@ -95,6 +95,17 @@ function isManagedDnsRecord(record: DnsRecord, name: string) {
   )
 }
 
+function getLiveManagedDnsCount(records: DnsRecord[] | undefined, subdomainNames: Set<string>, fallbackCount: number) {
+  if (!records) {
+    return fallbackCount
+  }
+
+  return records.filter((record) => (
+    (record.type === 'MX' || record.type === 'TXT')
+      && subdomainNames.has(normalizeManagedName(record.name))
+  )).length
+}
+
 async function listManagedSubdomainResources(env: AppBindings, record: Pick<DomainRecord, 'name' | 'cf_zone_id' | 'route_rule_id'>) {
   const providers = createProviders(env)
   const [dnsRecords, emailRules] = await Promise.all([
@@ -154,17 +165,21 @@ async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
     ).bind(...rootNames),
   )
   const rotationLimit = await getSubdomainRotationLimit(env)
+  const providers = createProviders(env)
   const stats = new Map<string, {
-    managedDnsCount: number
+    storedManagedDnsCount: number
     permanentCount: number
     temporaryCount: number
+    subdomainNames: Set<string>
   }>()
+  const inventoryByRootName = new Map<string, DnsRecordInventory>()
 
   for (const rootName of rootNames) {
     stats.set(rootName, {
-      managedDnsCount: 0,
+      storedManagedDnsCount: 0,
       permanentCount: 0,
       temporaryCount: 0,
+      subdomainNames: new Set(),
     })
   }
 
@@ -174,13 +189,22 @@ async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
       continue
     }
 
-    rootStats.managedDnsCount += getManagedDnsCount(subdomain, dnsUnitSize)
+    rootStats.storedManagedDnsCount += getManagedDnsCount(subdomain, dnsUnitSize)
+    rootStats.subdomainNames.add(normalizeManagedName(subdomain.name))
     if (getDomainType(subdomain) === 'temporary') {
       rootStats.temporaryCount += 1
     } else {
       rootStats.permanentCount += 1
     }
   }
+
+  await Promise.all(rows.filter((row) => row.is_root === 1).map(async (row) => {
+    try {
+      inventoryByRootName.set(row.name, await providers.dns.getDnsRecordInventory(row.cf_zone_id))
+    } catch {
+      // DNS 配额统计是展示用的实时信息；Cloudflare 凭据缺失或临时失败时，不阻断域名列表。
+    }
+  }))
 
   return rows.map((row) => {
     if (row.is_root !== 1) {
@@ -193,19 +217,26 @@ async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
     }
 
     const rootStats = stats.get(row.name) ?? {
-      managedDnsCount: 0,
+      storedManagedDnsCount: 0,
       permanentCount: 0,
       temporaryCount: 0,
+      subdomainNames: new Set<string>(),
     }
-    const remainingTemporarySlots = Math.max(0, rotationLimit - rootStats.temporaryCount)
-    const remainingDnsCount = remainingTemporarySlots * dnsUnitSize
+    const inventory = inventoryByRootName.get(row.name)
+    const liveManagedDnsCount = getLiveManagedDnsCount(
+      inventory?.records,
+      rootStats.subdomainNames,
+      rootStats.storedManagedDnsCount,
+    )
 
     return {
       ...row,
       subdomain_type: 'root' as const,
-      managed_dns_count: rootStats.managedDnsCount,
-      remaining_dns_count: remainingDnsCount,
-      manageable_dns_count: rootStats.managedDnsCount + remainingDnsCount,
+      managed_dns_count: liveManagedDnsCount,
+      remaining_dns_count: inventory?.remaining,
+      manageable_dns_count: inventory?.limit,
+      cf_dns_record_count: inventory?.totalCount,
+      cf_dns_record_limit: inventory?.limit,
       dns_records_per_subdomain: dnsUnitSize,
       permanent_subdomain_count: rootStats.permanentCount,
       temporary_subdomain_count: rootStats.temporaryCount,
@@ -341,6 +372,17 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
 
   if (provisionPlan.conflictingRouteRuleId) {
     throw new AppError(409, '这个子域名已经有现成的 Email Routing 规则，但目标不是当前 Worker，请先手动清理后再重试')
+  }
+
+  const dnsRecordsToCreate = provisionPlan.mxTargetsToCreate.length + (provisionPlan.needsTxtRecord && spfContent ? 1 : 0)
+  if (dnsRecordsToCreate > 0) {
+    const inventory = await providers.dns.getDnsRecordInventory(rootRecord.cf_zone_id)
+    if (inventory.remaining < dnsRecordsToCreate) {
+      throw new AppError(
+        400,
+        `Cloudflare DNS 剩余 ${inventory.remaining} 条，不足以创建 ${name} 需要的 ${dnsRecordsToCreate} 条记录；请删除无用 DNS 记录或切换 DNS 模式后重试`,
+      )
+    }
   }
 
   const existingMxIds = existingRecords

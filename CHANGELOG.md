@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.3.1] - 2026-04-27
+
+### Fixed
+- 修正域名页根域名 DNS 统计口径：`remaining_dns_count` 现在按 Cloudflare 当前 Zone 的真实 DNS 已用数和计划上限计算，不再误用临时子域名轮换空位。
+- 创建子域名前增加 Cloudflare DNS 剩余配额预检，剩余额度不足时提前返回清晰错误，避免依赖 Cloudflare 创建失败后的模糊报错。
+
+### Changed
+- 域名页文案改为显示 `CF DNS 剩余 / 上限`、`CF 当前已用`、`OnlyMail 已管理 DNS` 和按当前 DNS 模式估算的可新增子域数量。
+
 ## [v0.3.0] - 2026-04-27
 
 ### Added

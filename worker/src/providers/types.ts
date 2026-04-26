@@ -15,6 +15,13 @@ export interface DnsRecord {
   priority?: number
 }
 
+export interface DnsRecordInventory {
+  records: DnsRecord[]
+  totalCount: number
+  limit: number
+  remaining: number
+}
+
 export interface ZoneInfo {
   id: string
   name: string
@@ -27,6 +34,7 @@ export interface DnsProvider {
   createZone(zoneName: string, accountId: string): Promise<ZoneInfo>
   getZoneStatus(zoneId: string): Promise<ZoneInfo>
   listDnsRecords(zoneId: string, params?: { type?: string; name?: string }): Promise<DnsRecord[]>
+  getDnsRecordInventory(zoneId: string): Promise<DnsRecordInventory>
   createDnsRecord(zoneId: string, record: Record<string, unknown>): Promise<DnsRecord>
   updateDnsRecord(zoneId: string, recordId: string, record: Record<string, unknown>): Promise<DnsRecord>
   deleteDnsRecord(zoneId: string, recordId: string): Promise<DnsRecord>

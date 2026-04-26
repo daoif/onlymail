@@ -39,6 +39,8 @@ export interface DomainRecord {
   managed_dns_count?: number
   remaining_dns_count?: number
   manageable_dns_count?: number
+  cf_dns_record_count?: number
+  cf_dns_record_limit?: number
   dns_records_per_subdomain?: number
   permanent_subdomain_count?: number
   temporary_subdomain_count?: number

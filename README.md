@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="CHANGELOG.md">
-    <img src="https://img.shields.io/badge/version-v0.3.0-111827?style=flat-square" alt="version" />
+    <img src="https://img.shields.io/badge/version-v0.3.1-111827?style=flat-square" alt="version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-111827?style=flat-square" alt="license" />
@@ -50,7 +50,7 @@
 - 适合按项目 / 批次 / 租户隔离收件域名的场景
 - 长期子域名不会被自动轮换删除；临时子域名达到设置页里的轮换总数后，按 root 自动回收最旧临时项
 - 设置页可选择 DNS 模式：官方兼容模式每个子域名 4 条 DNS；精简模式每个子域名 1 条 MX
-- 域名页会按根域名显示已管理 DNS、剩余可用 DNS 和可管理 DNS 容量
+- 域名页会按根域名实时读取 Cloudflare DNS 已用数 / 剩余额度 / 上限，并显示 OnlyMail 当前管理的 DNS 数量
 
 地址页会把两类已就绪域名一起列出来，创建邮箱时直接选择即可。
 

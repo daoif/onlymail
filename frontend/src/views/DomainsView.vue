@@ -97,10 +97,13 @@
                       长期 {{ group.root.permanent_subdomain_count ?? 0 }} / 临时 {{ group.root.temporary_subdomain_count ?? 0 }}
                     </span>
                     <span class="rounded-full bg-white px-2 py-1 text-xs text-slate-500 ring-1 ring-slate-200">
-                      DNS 剩余 {{ group.root.remaining_dns_count ?? 0 }} / 可管理 {{ group.root.manageable_dns_count ?? 0 }}
+                      CF DNS 剩余 {{ formatOptionalCount(group.root.remaining_dns_count) }} / 上限 {{ formatOptionalCount(group.root.cf_dns_record_limit ?? group.root.manageable_dns_count) }}
                     </span>
                   </div>
-                  <p class="text-sm text-slate-500">已管理 DNS {{ group.root.managed_dns_count ?? 0 }} 条；轮换总数 {{ group.root.subdomain_rotation_limit ?? 0 }} 个/根域名。</p>
+                  <p class="text-sm text-slate-500">
+                    CF 当前已用 {{ formatOptionalCount(group.root.cf_dns_record_count) }} 条；OnlyMail 已管理 DNS {{ group.root.managed_dns_count ?? 0 }} 条；
+                    当前模式每个子域约 {{ group.root.dns_records_per_subdomain ?? 0 }} 条 DNS，可新增约 {{ formatAdditionalSubdomainCapacity(group.root) }} 个子域；轮换总数 {{ group.root.subdomain_rotation_limit ?? 0 }} 个/根域名。
+                  </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <button
@@ -346,6 +349,26 @@ watch(domains, (items) => {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString('zh-CN')
+}
+
+function formatOptionalCount(value?: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? String(value) : '未知'
+}
+
+function formatAdditionalSubdomainCapacity(item: DomainRecord) {
+  const remaining = item.remaining_dns_count
+  const unitSize = item.dns_records_per_subdomain
+  if (
+    typeof remaining !== 'number'
+      || typeof unitSize !== 'number'
+      || !Number.isFinite(remaining)
+      || !Number.isFinite(unitSize)
+      || unitSize <= 0
+  ) {
+    return '未知'
+  }
+
+  return String(Math.floor(remaining / unitSize))
 }
 
 function subdomainTypeLabel(value: DomainRecord['subdomain_type']) {

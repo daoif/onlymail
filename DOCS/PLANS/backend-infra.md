@@ -134,7 +134,8 @@ worker/
 - `POST /api/domains/bootstrap`
   - 初始化根域名；首次启用 Email Routing 时走这里。
 - `GET /api/domains`
-  - 根域名行返回 `managed_dns_count`、`remaining_dns_count`、`manageable_dns_count`、长期/临时子域数量。
+  - 根域名行返回长期/临时子域数量。
+  - 根域名行会实时读取 Cloudflare Zone DNS：`cf_dns_record_count` 是当前已用 DNS 数，`remaining_dns_count` 是当前剩余可新增 DNS 数，`cf_dns_record_limit` / `manageable_dns_count` 是当前 Zone DNS 上限，`managed_dns_count` 是 OnlyMail managed subdomain 当前仍存在的 MX/TXT 数。
 - `POST /api/domains`
   - 创建子域名的 MX、TXT 和路由规则；`subdomainType=permanent|temporary`，管理端默认长期。
 - `DELETE /api/domains/:name`
@@ -165,9 +166,10 @@ worker/
 1. 先调用根域名初始化接口。
 2. 初始化成功后，`domains` 表写入一条 `is_root=1` 记录。
 3. 添加长期子域名时，按当前 DNS 模式创建 DNS 和 1 条 Email Routing 规则，不参与临时轮换。
-4. 添加临时子域名时，先按当前 root 的 `subdomain_rotation_limit` 判断是否需要回收最旧临时子域名。
-5. DNS 模式默认 `compatible`（3 MX + 1 TXT）；可切换 `minimal`（1 MX）。
-6. 删除子域名时，按 Cloudflare 当前真实 MX/TXT/Email Routing 规则对账后删除。
+4. 添加子域名前，按 Cloudflare 当前 Zone DNS 已用数和上限预检剩余额度；额度不足时提前返回明确错误。
+5. 添加临时子域名时，先按当前 root 的 `subdomain_rotation_limit` 判断是否需要回收最旧临时子域名。
+6. DNS 模式默认 `compatible`（3 MX + 1 TXT）；可切换 `minimal`（1 MX）。
+7. 删除子域名时，按 Cloudflare 当前真实 MX/TXT/Email Routing 规则对账后删除。
 
 ## 邮件接收流程
 1. 收到邮件后取 `message.to`。

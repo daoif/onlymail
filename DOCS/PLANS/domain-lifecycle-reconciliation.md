@@ -50,7 +50,13 @@
 - 子域名 DNS 模式从 D1 `settings.subdomain_dns_mode` 读取：
   - `compatible`：官方兼容模式，创建 `3 MX + 1 TXT = 4` 条 DNS，默认值。
   - `minimal`：精简模式，只创建 1 条 MX，用于 DNS 配额紧张场景；Cloudflare 面板可能提示 DNS 未完整配置，且少了 MX 冗余。
-- `GET /api/domains` 会按当前 DNS 模式在根域名行返回已管理 DNS、剩余可用 DNS、可管理 DNS 容量（已管理 + 按当前轮换总数还能新增的临时 DNS）、长期/临时子域数量。
+- `GET /api/domains` 会在根域名行实时读取 Cloudflare 当前 Zone DNS 清单和计划上限：
+  - `cf_dns_record_count`：Cloudflare 当前已用 DNS 记录数，包含 OnlyMail 外部创建的记录。
+  - `remaining_dns_count`：Cloudflare 当前还可新增的 DNS 记录数，即 DNS 上限减去当前已用数。
+  - `manageable_dns_count` / `cf_dns_record_limit`：当前 Zone 的 DNS 记录上限。
+  - `managed_dns_count`：OnlyMail 已知 managed subdomain 在 Cloudflare 当前仍存在的 MX/TXT 数量。
+  - 前端会再按当前 DNS 模式估算“还可新增多少个 managed subdomain”。
+- 创建子域名前会按 Cloudflare 实时剩余额度预检需要新增的 MX/TXT 数量；额度不足时提前报错。
 
 ### 4. 删除流程
 
