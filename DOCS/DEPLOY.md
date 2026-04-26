@@ -128,7 +128,7 @@
 ## 收件域名的两种模式
 
 - **根域名直收**：在应用内完成根域名 bootstrap 后，就可以直接创建 `abc@root.com` 这样的地址。
-- **managed subdomain（托管子域）**：如果要按项目 / 批次 / 租户隔离，再额外创建 `m1.root.com`、`m1.m1.root.com` 这类显式子域。系统会自动补齐 MX / SPF TXT / Email Routing 规则，并在到达上限时回收最旧托管子域。
+- **managed subdomain（托管子域）**：如果要按项目 / 批次 / 租户隔离，再额外创建 `m1.root.com`、`m1.m1.root.com` 这类显式子域。长期子域名不会被轮换删除；临时子域名达到设置页轮换总数后，只回收当前 root 下最旧的临时项。
 
 两种模式都依赖同一个前置条件：**根域名已在 Cloudflare 托管，并已在 OnlyMail 中完成 bootstrap。**
 

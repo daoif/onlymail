@@ -70,9 +70,9 @@ getMail(id)                                   → MailDetail
 waitForMail(address, timeout?, interval?)     → MailDetail
 
 # 域名操作（新增）
-listDomains(type?, root?, limit?)             → DomainRecord[]
+listDomains(type?, root?, limit?)             → DomainRecord[]（根域名含 DNS 统计）
 getDomain(name)                               → DomainDetail（含按项目统计）
-createSubdomain(name, rootName?)              → DomainRecord
+createSubdomain(name, rootName?, subdomainType?) → DomainRecord
 ```
 
 ### 删除的方法
@@ -84,10 +84,9 @@ Key 泄露时不会造成数据丢失。
 
 ### 域名轮换策略
 
-- 可以内置，但**必须显式启用**（opt-in）
-- 默认不启用，避免新用户困惑
-- 调用方可以自行实现策略，SDK 只提供数据查询能力
-- 具体策略逻辑后续实测再调整，当前优先让 SDK 能跑起来
+- `/call/domains` 默认创建 `temporary` 子域名，参与服务端按 root 独立轮换。
+- 如调用方要创建长期子域名，需要显式传 `subdomainType=permanent`。
+- 轮换总数由后台设置页写入 D1，SDK 不自行实现删除策略。
 
 ---
 

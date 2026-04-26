@@ -71,6 +71,7 @@ worker/
 | `name` | 域名 |
 | `root_name` | 所属根域名 |
 | `is_root` | 1 表示根域名 |
+| `subdomain_type` | `root` / `permanent` / `temporary`，长期子域名不参与临时轮换 |
 | `routing_enabled` | 根域名是否已完成初始化 |
 | `cf_zone_id` | Cloudflare zone id |
 | `mx_record_ids` | JSON 数组，保存多条 MX 记录 ID |
@@ -87,7 +88,7 @@ worker/
 | `updated_at` | 更新时间 |
 
 ## 关键实现调整
-- `settings` 表保留并启用，至少存 `admin_user`、`admin_pass_hash`、`api_key_hash`、`api_key_preview`、`api_key_rotated_at`。
+- `settings` 表保留并启用，至少存 `admin_user`、`admin_pass_hash`、`api_key_hash`、`api_key_preview`、`api_key_rotated_at`、`subdomain_rotation_limit`。
 - 管理员密码只存 SHA-256 哈希，首次初始化后不再依赖环境变量里的管理员账号密码。
 - API Key 生成后只返回明文一次，数据库只存哈希和预览值。
 - 邮件入库时就解析出 `subject`、`source`、`text`、`html`，前端详情页不在浏览器里二次解析原始 MIME。
@@ -133,8 +134,9 @@ worker/
 - `POST /api/domains/bootstrap`
   - 初始化根域名；首次启用 Email Routing 时走这里。
 - `GET /api/domains`
+  - 根域名行返回 `managed_dns_count`、`remaining_dns_count`、`manageable_dns_count`、长期/临时子域数量。
 - `POST /api/domains`
-  - 创建子域名的 MX、TXT 和路由规则。
+  - 创建子域名的 MX、TXT 和路由规则；`subdomainType=permanent|temporary`，管理端默认长期。
 - `DELETE /api/domains/:name`
 - `GET /api/settings/api-key`
   - 返回管理员账号、遮挡后的 key 预览和轮换时间。
@@ -142,6 +144,10 @@ worker/
   - 校验旧密码后更新管理员密码。
 - `POST /api/settings/api-key/rotate`
   - 生成新 key，返回一次性明文。
+- `GET /api/settings/domain-lifecycle`
+  - 返回临时子域名轮换总数和每个子域名占用的 DNS 记录数。
+- `PUT /api/settings/domain-lifecycle`
+  - 更新轮换总数；按根域名独立生效。
 - `GET /api/settings/custom-domains`
   - 返回 Worker 自定义域名列表。
 - `POST /api/settings/custom-domains`
@@ -158,8 +164,9 @@ worker/
 ## 域名管理顺序
 1. 先调用根域名初始化接口。
 2. 初始化成功后，`domains` 表写入一条 `is_root=1` 记录。
-3. 添加子域名时，按顺序创建 3 条 MX、1 条 SPF TXT、1 条 Email Routing 规则。
-4. 删除子域名时，只按存下来的资源 ID 删除。
+3. 添加长期子域名时，按顺序创建 3 条 MX、1 条 SPF TXT、1 条 Email Routing 规则，不参与临时轮换。
+4. 添加临时子域名时，先按当前 root 的 `subdomain_rotation_limit` 判断是否需要回收最旧临时子域名。
+5. 删除子域名时，按 Cloudflare 当前真实 MX/TXT/Email Routing 规则对账后删除。
 
 ## 邮件接收流程
 1. 收到邮件后取 `message.to`。

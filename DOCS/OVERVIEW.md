@@ -41,6 +41,7 @@
 - 所有 Cloudflare API 调用通过 `providers/` 接口解耦，禁止 service 层直接调用
 - 收件域名有两种正式模式：根域名 bootstrap 后可直接收 `abc@root`；也可在已初始化根域名下显式创建 managed subdomain 做隔离
 - managed subdomain 创建 / 删除以 Cloudflare 当前真实状态对账：创建会补齐缺失资源，删除会精确回收当前仍存在的 MX / TXT / literal Email Routing 规则
+- managed subdomain 分长期 / 临时两类；长期不参与自动轮换，临时按每个 root 的轮换总数独立回收
 - `wrangler.toml` 不提交 Git；本地和 CI/CD 均按模板现场生成
 - Worker CORS 运行时只读 D1 `settings.allowed_origins`，再固定补一个本地开发来源 `http://localhost:5173`
 - SDK 只暴露 `/call/*` 受控子集（创建 + 只读），Key 泄露不会导致数据丢失

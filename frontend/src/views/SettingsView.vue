@@ -128,6 +128,34 @@
           <p v-if="versionMessage" class="text-sm text-slate-500">{{ versionMessage }}</p>
         </div>
 
+        <div class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
+          <div>
+            <h2 class="text-lg font-semibold text-slate-900">域名轮换</h2>
+            <p class="mt-1 text-sm text-slate-500">临时子域名按根域名独立轮换；长期子域名不参与自动回收。</p>
+          </div>
+
+          <SkeletonLoader v-if="domainLifecycleLoading" variant="text" :rows="2" />
+          <template v-else>
+            <form class="grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-[220px_auto] sm:items-end" @submit.prevent="submitDomainLifecycle">
+              <label class="block space-y-2 text-sm text-slate-600">
+                <span>轮换总数</span>
+                <input v-model.number="subdomainRotationLimitInput" class="input-base" type="number" min="1" max="500" />
+              </label>
+              <button class="button-primary h-10 w-full sm:w-28" type="submit" :disabled="domainLifecycleSubmitting">
+                {{ domainLifecycleSubmitting ? '保存中…' : '保存' }}
+              </button>
+            </form>
+            <div class="grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
+              <p>每个根域名最多保留 {{ lifecycleSettings.subdomainRotationLimit }} 个临时子域名。</p>
+              <p>每个子域名约占 {{ lifecycleSettings.dnsRecordsPerSubdomain }} 条 DNS 记录。</p>
+            </div>
+          </template>
+          <p v-if="domainLifecycleMessage" class="text-sm text-slate-500">{{ domainLifecycleMessage }}</p>
+          <p v-if="domainLifecycleError || domainLifecycleLoadError" class="text-sm text-rose-600">
+            {{ domainLifecycleError || domainLifecycleLoadError }}
+          </p>
+        </div>
+
         <!-- Worker API 自定义域名 -->
         <div class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
           <div>
@@ -246,13 +274,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import {
   addCustomDomain,
   addPagesDomain,
   checkVersionState,
   changePassword,
+  getDomainLifecycleSettings,
   getVersionState,
   getApiKeyState,
   getCustomDomains,
@@ -261,6 +290,7 @@ import {
   removePagesDomain,
   rotateApiKey,
   setVersionNotifications,
+  updateDomainLifecycleSettings,
 } from '../api/admin'
 import type { CustomDomainEntry, PagesDomainEntry } from '../api/admin'
 import { ApiError } from '../api/client'
@@ -268,7 +298,7 @@ import AppShell from '../components/AppShell.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 import { formatVersionText } from '../lib/update-notice'
-import type { ApiEnvelope, SettingsApiKeyState } from '../types'
+import type { ApiEnvelope, DomainLifecycleSettings, SettingsApiKeyState } from '../types'
 import { useSWR } from '../composables/useSWR'
 import { useAuthStore } from '../stores/auth'
 
@@ -302,6 +332,10 @@ const pagesDomainErr = ref('')
 const pendingRemovePagesDomain = ref('')
 const versionChecking = ref(false)
 const versionMessage = ref('')
+const subdomainRotationLimitInput = ref(5)
+const domainLifecycleSubmitting = ref(false)
+const domainLifecycleMessage = ref('')
+const domainLifecycleError = ref('')
 
 const { data, error, isLoading, mutate } = useSWR<ApiEnvelope<SettingsApiKeyState>>({
   key: 'settings-api-key',
@@ -321,6 +355,25 @@ const { data: versionData, mutate: mutateVersion } = useSWR({
 })
 
 const versionState = computed(() => versionData.value?.data ?? null)
+
+const {
+  data: domainLifecycleData,
+  error: domainLifecycleLoadError,
+  isLoading: domainLifecycleLoading,
+  mutate: mutateDomainLifecycle,
+} = useSWR<ApiEnvelope<DomainLifecycleSettings>>({
+  key: 'settings-domain-lifecycle',
+  fetcher: () => getDomainLifecycleSettings(authStore.token),
+})
+
+const lifecycleSettings = computed(() => domainLifecycleData.value?.data ?? {
+  subdomainRotationLimit: 5,
+  dnsRecordsPerSubdomain: 4,
+})
+
+watch(lifecycleSettings, (value) => {
+  subdomainRotationLimitInput.value = value.subdomainRotationLimit
+}, { immediate: true })
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString('zh-CN')
@@ -406,6 +459,21 @@ async function enableNotifications() {
     versionMessage.value = err instanceof ApiError ? err.message : '重新启用更新通知失败'
   } finally {
     versionChecking.value = false
+  }
+}
+
+async function submitDomainLifecycle() {
+  domainLifecycleSubmitting.value = true
+  domainLifecycleMessage.value = ''
+  domainLifecycleError.value = ''
+  try {
+    const response = await updateDomainLifecycleSettings(authStore.token, subdomainRotationLimitInput.value)
+    domainLifecycleMessage.value = `轮换总数已更新为 ${response.data.subdomainRotationLimit}。`
+    await mutateDomainLifecycle()
+  } catch (err) {
+    domainLifecycleError.value = err instanceof ApiError ? err.message : '保存域名轮换设置失败'
+  } finally {
+    domainLifecycleSubmitting.value = false
   }
 }
 

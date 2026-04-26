@@ -32,9 +32,17 @@ export interface DomainRecord {
   name: string
   root_name: string
   is_root: number
+  subdomain_type: 'root' | 'permanent' | 'temporary'
   routing_enabled: number
   cf_zone_id: string
   created_at: string
+  managed_dns_count?: number
+  remaining_dns_count?: number
+  manageable_dns_count?: number
+  dns_records_per_subdomain?: number
+  permanent_subdomain_count?: number
+  temporary_subdomain_count?: number
+  subdomain_rotation_limit?: number
 }
 
 export interface DomainDetail extends DomainRecord {
@@ -117,10 +125,10 @@ export class OnlyMailApiClient {
     return this.requestData<DomainDetail>(`/call/domains/${encodeURIComponent(name)}`)
   }
 
-  createSubdomain(name: string, rootName?: string) {
+  createSubdomain(name: string, rootName?: string, subdomainType: 'permanent' | 'temporary' = 'temporary') {
     return this.requestData<DomainRecord>('/call/domains', {
       method: 'POST',
-      body: JSON.stringify({ name, rootName: rootName || undefined }),
+      body: JSON.stringify({ name, rootName: rootName || undefined, subdomainType }),
     })
   }
 }

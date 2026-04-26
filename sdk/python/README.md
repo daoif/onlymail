@@ -33,6 +33,12 @@ mail = client.wait_for_mail(created['address']['name'], timeout_ms=60000, interv
 print(mail['subject'])
 ```
 
+创建子域名时，SDK 默认创建参与轮换的临时子域名；如果要长期保留，传 `subdomain_type`：
+
+```python
+client.create_subdomain('m1.example.com', subdomain_type='permanent')
+```
+
 这个 SDK 只面向你自己部署的实例：
 - 第一个参数是你自己的后端地址
 - `api_key` 是你在后台设置页生成的 API Key

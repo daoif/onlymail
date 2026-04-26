@@ -3,7 +3,7 @@
     <section class="space-y-8">
       <div class="space-y-1">
         <h1 class="page-title">域名</h1>
-        <p class="page-subtitle">先初始化根域名，再直接输入完整域名创建子域名。系统会自动归属到最近的已初始化根域名。</p>
+        <p class="page-subtitle">先初始化根域名，再创建长期或临时子域名。长期子域名不会被轮换删除。</p>
       </div>
 
       <div class="grid gap-6 lg:grid-cols-2">
@@ -19,9 +19,15 @@
         <form class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70" @submit.prevent="submitSubdomain">
           <div>
             <h2 class="text-lg font-semibold text-slate-900">新增子域名</h2>
-            <p class="mt-1 text-sm text-slate-500">只填完整域名。支持多级子域名，例如 `m1.ainiaini.xyz`、`m1.m1.ainiaini.xyz`，系统会自动挂到最近的已初始化根域名下。</p>
+            <p class="mt-1 text-sm text-slate-500">长期子域名独立保留；临时子域名按根域名轮换，达到设置里的轮换总数后只回收最早临时项。</p>
           </div>
-          <input v-model="createForm.name" class="input-base" type="text" placeholder="m1.ainiaini.xyz" />
+          <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
+            <input v-model="createForm.name" class="input-base" type="text" placeholder="m1.ainiaini.xyz" />
+            <select v-model="createForm.subdomainType" class="input-base">
+              <option value="permanent">长期子域名</option>
+              <option value="temporary">临时子域名</option>
+            </select>
+          </div>
           <button class="button-primary" type="submit">创建子域名</button>
         </form>
       </div>
@@ -88,10 +94,13 @@
                     <h3 class="text-sm font-semibold text-slate-900">{{ group.root.name }}</h3>
                     <span class="rounded-full bg-white px-2 py-1 text-xs text-slate-500 ring-1 ring-slate-200">根域名</span>
                     <span class="rounded-full bg-white px-2 py-1 text-xs text-slate-500 ring-1 ring-slate-200">
-                      {{ group.subdomains.length }} 个子域名
+                      长期 {{ group.root.permanent_subdomain_count ?? 0 }} / 临时 {{ group.root.temporary_subdomain_count ?? 0 }}
+                    </span>
+                    <span class="rounded-full bg-white px-2 py-1 text-xs text-slate-500 ring-1 ring-slate-200">
+                      DNS 剩余 {{ group.root.remaining_dns_count ?? 0 }} / 可管理 {{ group.root.manageable_dns_count ?? 0 }}
                     </span>
                   </div>
-                  <p class="text-sm text-slate-500">创建于 {{ formatDate(group.root.created_at) }}</p>
+                  <p class="text-sm text-slate-500">已管理 DNS {{ group.root.managed_dns_count ?? 0 }} 条；轮换总数 {{ group.root.subdomain_rotation_limit ?? 0 }} 个/根域名。</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <button
@@ -108,7 +117,7 @@
               <div class="divide-y divide-slate-100">
                 <div
                   v-if="group.rootVisible"
-                  class="grid gap-3 px-4 py-4 sm:grid-cols-[28px_minmax(0,1.5fr)_130px_180px_110px] sm:items-center"
+                  class="grid gap-3 px-4 py-4 sm:grid-cols-[28px_minmax(0,1.5fr)_90px_130px_180px_110px] sm:items-center"
                 >
                   <div class="flex items-center justify-center">
                     <span class="h-4 w-4 rounded border border-transparent" aria-hidden="true"></span>
@@ -116,6 +125,9 @@
                   <div class="min-w-0">
                     <p class="truncate text-sm font-medium text-slate-900">{{ group.root.name }}</p>
                     <p class="mt-1 text-sm text-slate-500">当前根域名的收件入口已经初始化完成。</p>
+                  </div>
+                  <div>
+                    <span class="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">根域名</span>
                   </div>
                   <div class="text-sm text-slate-500">Routing：{{ group.root.routing_enabled === 1 ? '已启用' : '未启用' }}</div>
                   <div class="text-sm text-slate-500">创建时间：{{ formatDate(group.root.created_at) }}</div>
@@ -125,7 +137,7 @@
                 <div
                   v-for="item in group.subdomains"
                   :key="item.id"
-                  class="grid gap-3 px-4 py-4 sm:grid-cols-[28px_minmax(0,1.5fr)_130px_180px_110px] sm:items-center"
+                  class="grid gap-3 px-4 py-4 sm:grid-cols-[28px_minmax(0,1.5fr)_90px_130px_180px_110px] sm:items-center"
                 >
                   <label class="flex items-center justify-center">
                     <input
@@ -137,7 +149,12 @@
                   </label>
                   <div class="min-w-0">
                     <p class="truncate text-sm font-medium text-slate-900">{{ item.name }}</p>
-                    <p class="mt-1 text-sm text-slate-500">归属根域名：{{ item.root_name }}</p>
+                    <p class="mt-1 text-sm text-slate-500">归属根域名：{{ item.root_name }}；DNS {{ item.managed_dns_count ?? 0 }} 条</p>
+                  </div>
+                  <div>
+                    <span class="rounded-full px-2 py-1 text-xs" :class="subdomainTypeClass(item.subdomain_type)">
+                      {{ subdomainTypeLabel(item.subdomain_type) }}
+                    </span>
                   </div>
                   <div class="text-sm text-slate-500">Routing：{{ item.routing_enabled === 1 ? '已启用' : '未启用' }}</div>
                   <div class="text-sm text-slate-500">创建时间：{{ formatDate(item.created_at) }}</div>
@@ -173,6 +190,7 @@ import { computed, reactive, ref, watch } from 'vue'
 
 import { ApiError } from '../api/client'
 import { batchDeleteDomains, bootstrapDomain, createSubdomain, deleteDomain, getDomains } from '../api/admin'
+import type { SubdomainType } from '../api/admin'
 import AppShell from '../components/AppShell.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
@@ -180,7 +198,7 @@ import type { ApiEnvelope, DomainRecord } from '../types'
 import { useSWR } from '../composables/useSWR'
 import { useAuthStore } from '../stores/auth'
 
-type DomainFilterType = 'all' | 'root' | 'sub'
+type DomainFilterType = 'all' | 'root' | SubdomainType
 
 type DomainGroup = {
   root: DomainRecord
@@ -190,7 +208,10 @@ type DomainGroup = {
 
 const authStore = useAuthStore()
 const bootstrapForm = reactive({ rootDomain: '' })
-const createForm = reactive({ name: '' })
+const createForm = reactive<{ name: string; subdomainType: SubdomainType }>({
+  name: '',
+  subdomainType: 'permanent',
+})
 const filters = reactive<{ query: string; type: DomainFilterType; root: string }>({
   query: '',
   type: 'all',
@@ -204,7 +225,8 @@ const actionError = ref('')
 const typeOptions: Array<{ value: DomainFilterType; label: string }> = [
   { value: 'all', label: '全部' },
   { value: 'root', label: '根域名' },
-  { value: 'sub', label: '子域名' },
+  { value: 'permanent', label: '长期子域名' },
+  { value: 'temporary', label: '临时子域名' },
 ]
 
 const { data, error: loadError, isLoading, mutate } = useSWR<ApiEnvelope<DomainRecord[]>>({
@@ -224,7 +246,7 @@ const filteredRootDomains = computed(() => {
       return false
     }
 
-    if (filters.type === 'sub') {
+    if (filters.type === 'permanent' || filters.type === 'temporary') {
       return false
     }
 
@@ -245,6 +267,10 @@ const filteredSubdomains = computed(() => {
     }
 
     if (filters.type === 'root') {
+      return false
+    }
+
+    if ((filters.type === 'permanent' || filters.type === 'temporary') && item.subdomain_type !== filters.type) {
       return false
     }
 
@@ -322,6 +348,24 @@ function formatDate(value: string) {
   return new Date(value).toLocaleString('zh-CN')
 }
 
+function subdomainTypeLabel(value: DomainRecord['subdomain_type']) {
+  if (value === 'temporary') {
+    return '临时'
+  }
+
+  if (value === 'permanent') {
+    return '长期'
+  }
+
+  return '根域名'
+}
+
+function subdomainTypeClass(value: DomainRecord['subdomain_type']) {
+  return value === 'temporary'
+    ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
+    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+}
+
 function areAllSelected(items: DomainRecord[]) {
   return items.length > 0 && items.every((item) => selectedNames.value.includes(item.name))
 }
@@ -383,8 +427,8 @@ async function submitSubdomain() {
   actionError.value = ''
 
   try {
-    const response = await createSubdomain(authStore.token, createForm.name)
-    message.value = `子域名 ${response.data.name} 已创建，归属于根域名 ${response.data.root_name}。`
+    const response = await createSubdomain(authStore.token, createForm.name, createForm.subdomainType)
+    message.value = `${subdomainTypeLabel(response.data.subdomain_type)}子域名 ${response.data.name} 已创建，归属于根域名 ${response.data.root_name}。`
     createForm.name = ''
     await mutate()
   } catch (err) {

@@ -21,6 +21,7 @@ export type SettingKey =
   | 'update_last_error'
   | 'update_dismissed_version'
   | 'update_notifications_disabled'
+  | 'subdomain_rotation_limit'
 
 type SettingRow = {
   key: SettingKey
@@ -33,6 +34,9 @@ type AllowedOriginsCache = {
 }
 
 const ALLOWED_ORIGINS_CACHE_TTL_MS = 60_000
+const DEFAULT_SUBDOMAIN_ROTATION_LIMIT = 5
+const MIN_SUBDOMAIN_ROTATION_LIMIT = 1
+const MAX_SUBDOMAIN_ROTATION_LIMIT = 500
 let allowedOriginsCache: AllowedOriginsCache | null = null
 
 export async function getSettingValue(env: AppBindings, key: SettingKey) {
@@ -47,6 +51,59 @@ export async function setSettingValue(env: AppBindings, key: SettingKey, value: 
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     ).bind(key, value),
   )
+}
+
+function parseLegacyRotationLimit(value?: string) {
+  const raw = value?.trim()
+  if (!raw) {
+    return null
+  }
+
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed < MIN_SUBDOMAIN_ROTATION_LIMIT) {
+    return null
+  }
+
+  return Math.min(parsed, MAX_SUBDOMAIN_ROTATION_LIMIT)
+}
+
+function normalizeSubdomainRotationLimit(value: number) {
+  if (!Number.isFinite(value)) {
+    throw new AppError(400, '轮换总数必须是数字')
+  }
+
+  const normalized = Math.floor(value)
+  if (normalized < MIN_SUBDOMAIN_ROTATION_LIMIT || normalized > MAX_SUBDOMAIN_ROTATION_LIMIT) {
+    throw new AppError(400, `轮换总数必须在 ${MIN_SUBDOMAIN_ROTATION_LIMIT} 到 ${MAX_SUBDOMAIN_ROTATION_LIMIT} 之间`)
+  }
+
+  return normalized
+}
+
+export async function getSubdomainRotationLimit(env: AppBindings) {
+  const row = await getSettingValue(env, 'subdomain_rotation_limit')
+  const stored = row?.value ? Number.parseInt(row.value, 10) : Number.NaN
+  if (Number.isFinite(stored) && stored >= MIN_SUBDOMAIN_ROTATION_LIMIT) {
+    return Math.min(stored, MAX_SUBDOMAIN_ROTATION_LIMIT)
+  }
+
+  return parseLegacyRotationLimit(env.ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT)
+    ?? DEFAULT_SUBDOMAIN_ROTATION_LIMIT
+}
+
+export async function getDomainLifecycleSettings(env: AppBindings) {
+  return {
+    subdomainRotationLimit: await getSubdomainRotationLimit(env),
+  }
+}
+
+export async function updateDomainLifecycleSettings(env: AppBindings, payload: { subdomainRotationLimit: number }) {
+  const subdomainRotationLimit = normalizeSubdomainRotationLimit(payload.subdomainRotationLimit)
+  await setSettingValue(env, 'subdomain_rotation_limit', String(subdomainRotationLimit))
+
+  return {
+    subdomainRotationLimit,
+  }
 }
 
 function normalizeOrigins(values: string[]) {

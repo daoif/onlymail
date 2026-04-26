@@ -40,12 +40,20 @@ export interface DomainRecord {
   name: string
   root_name: string
   is_root: number
+  subdomain_type: 'root' | 'permanent' | 'temporary'
   routing_enabled: number
   cf_zone_id: string
   mx_record_ids: string
   txt_record_id: string | null
   route_rule_id: string | null
   created_at: string
+  managed_dns_count?: number
+  remaining_dns_count?: number
+  manageable_dns_count?: number
+  dns_records_per_subdomain?: number
+  permanent_subdomain_count?: number
+  temporary_subdomain_count?: number
+  subdomain_rotation_limit?: number
 }
 
 export interface DashboardStats {
@@ -60,6 +68,11 @@ export interface SettingsApiKeyState {
   preview: string | null
   rotatedAt: string | null
   adminUser: string
+}
+
+export interface DomainLifecycleSettings {
+  subdomainRotationLimit: number
+  dnsRecordsPerSubdomain: number
 }
 
 export interface VersionUpdateState {

@@ -3,7 +3,7 @@
 ## 结论
 
 - onlymail 继续只管理“显式创建并记入 D1 的 managed subdomain”。
-- 创建时允许自动回收最旧子域，但前提是它本身也属于 onlymail managed domain。
+- 子域名分为长期和临时两类；只有临时子域名允许自动回收最旧项，长期子域名由用户手动管理。
 - 删除时以 Cloudflare 当前真实状态为准，不再假设 D1 里保存的资源 ID 一定完整可用。
 - Cloudflare API 错误必须透传具体 `code/message`。
 - 当前不落地“任意 `*.bucket.root` 无需逐条 DNS/规则即可自动收件”的模式。
@@ -20,7 +20,8 @@
 
 - 把“删除是否成功”改成对账式删除：按子域名精确查询当前 MX/TXT 和 literal rule，再删真实存在的资源。
 - 把“已有 D1 记录”改成可修复状态，而不是直接视为成功。
-- 给 managed subdomain 增加按 root 的数量上限，避免 DNS 记录只增不减。
+- 给 temporary managed subdomain 增加按 root 的数量上限，避免 DNS 记录只增不减；长期子域名不参与这个上限。
+- 轮换总数进入 D1 `settings`，允许运行时在设置页调整，而不是只能靠环境变量更新。
 
 ### 没有选择什么
 

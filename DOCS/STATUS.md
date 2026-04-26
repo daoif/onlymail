@@ -73,4 +73,7 @@
 - Email Routing 规则读取已补齐完整分页；子域删除改为按 Cloudflare 当前真实 MX/TXT/规则对账，不再因旧 ID 缺失而中断
 - `createSubdomain` 不再因为 D1 已有旧记录就直接返回；当 Cloudflare 资源缺失时会自动补齐并回写最新资源 ID
 - Cloudflare API 错误现在会透传具体 `code/message`，便于现场识别 `81045` 这类配额类错误
-- 新增 `ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT`（默认 5）；达到上限时会先回收当前 root 下最旧的 managed subdomain，再创建新的
+- 子域名生命周期拆成长期 / 临时：长期子域名不参与自动轮换；临时子域名按每个 root 独立的轮换总数回收最旧项
+- 轮换总数已从只能靠 `ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT` 调整，改为设置页写入 D1 `settings.subdomain_rotation_limit`；旧环境变量只保留兼容回退
+- 域名页根域名行新增 DNS 使用信息：已管理 DNS、剩余可用 DNS、可管理 DNS 容量，以及长期 / 临时子域名数量
+- 邮件页标题区新增刷新按钮，可重新拉取邮件列表而不刷新整页

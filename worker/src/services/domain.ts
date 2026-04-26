@@ -3,10 +3,11 @@ import { createProviders } from '../providers/index'
 import { AppError } from '../lib/http'
 import { DEFAULT_WORKER_NAME } from '../lib/project-defaults'
 import type { DnsRecord, EmailRule } from '../providers/types'
-import type { AppBindings, DomainRecord } from '../types'
+import type { AppBindings, DomainRecord, DomainType, SubdomainType } from '../types'
 import { findNearestRootDomainName, getManagedSubdomainConstants, planSubdomainProvision } from './domain-reconciliation'
+import { getSubdomainRotationLimit } from './settings'
 
-const DEFAULT_MANAGED_SUBDOMAIN_LIMIT = 5
+const MANAGED_DNS_RECORDS_PER_SUBDOMAIN = getManagedSubdomainConstants().mxTargets.length + 1
 
 function requireEmailRoutingAuth(env: AppBindings) {
   const authEmail = env.CF_AUTH_EMAIL || env.CF_EMAIL
@@ -43,18 +44,41 @@ function normalizeManagedName(value: string) {
   return value.trim().toLowerCase().replace(/\.+$/, '')
 }
 
-function getManagedSubdomainLimit(env: AppBindings) {
-  const raw = env.ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT?.trim()
-  if (!raw) {
-    return DEFAULT_MANAGED_SUBDOMAIN_LIMIT
+function normalizeSubdomainType(value?: string | null): SubdomainType {
+  return value === 'temporary' ? 'temporary' : 'permanent'
+}
+
+function getDomainType(record: Pick<DomainRecord, 'is_root' | 'subdomain_type'>): DomainType {
+  if (record.is_root === 1) {
+    return 'root'
   }
 
-  const parsed = Number.parseInt(raw, 10)
-  if (!Number.isFinite(parsed)) {
-    return DEFAULT_MANAGED_SUBDOMAIN_LIMIT
+  return normalizeSubdomainType(record.subdomain_type)
+}
+
+function parseStoredMxRecordIds(value: string) {
+  try {
+    const parsed = JSON.parse(value)
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string' && item.length > 0)
+    }
+  } catch {
+    return []
   }
 
-  return parsed > 0 ? parsed : null
+  return []
+}
+
+function getManagedDnsCount(record: DomainRecord) {
+  if (record.is_root === 1) {
+    return 0
+  }
+
+  const mxCount = parseStoredMxRecordIds(record.mx_record_ids).length
+  const txtCount = record.txt_record_id ? 1 : 0
+  const storedCount = mxCount + txtCount
+
+  return storedCount > 0 ? storedCount : MANAGED_DNS_RECORDS_PER_SUBDOMAIN
 }
 
 function hasManagedRouteMatcher(rule: EmailRule, name: string) {
@@ -93,17 +117,13 @@ async function listManagedSubdomainResources(env: AppBindings, record: Pick<Doma
   }
 }
 
-async function enforceManagedSubdomainLimit(
+async function enforceTemporarySubdomainLimit(
   env: AppBindings,
   rootName: string,
   incomingName: string,
 ) {
-  const limit = getManagedSubdomainLimit(env)
-  if (limit === null) {
-    return
-  }
-
-  const existing = (await listDomains(env, { type: 'sub', root: rootName }))
+  const limit = await getSubdomainRotationLimit(env)
+  const existing = (await listDomains(env, { type: 'sub', root: rootName, subdomainType: 'temporary' }))
     .filter((record) => record.name !== incomingName)
 
   while (existing.length >= limit) {
@@ -116,9 +136,87 @@ async function enforceManagedSubdomainLimit(
   }
 }
 
+async function enrichRootDomainStats(env: AppBindings, rows: DomainRecord[]) {
+  const rootNames = Array.from(new Set(rows.filter((item) => item.is_root === 1).map((item) => item.name)))
+  if (rootNames.length === 0) {
+    return rows.map((row) => ({
+      ...row,
+      subdomain_type: getDomainType(row),
+      managed_dns_count: getManagedDnsCount(row),
+      dns_records_per_subdomain: MANAGED_DNS_RECORDS_PER_SUBDOMAIN,
+    }))
+  }
+
+  const placeholders = rootNames.map((_, index) => `?${index + 1}`).join(', ')
+  const subdomains = await many<DomainRecord>(
+    env.DB.prepare(
+      `SELECT * FROM domains WHERE is_root = 0 AND root_name IN (${placeholders}) ORDER BY created_at ASC`,
+    ).bind(...rootNames),
+  )
+  const rotationLimit = await getSubdomainRotationLimit(env)
+  const stats = new Map<string, {
+    managedDnsCount: number
+    permanentCount: number
+    temporaryCount: number
+  }>()
+
+  for (const rootName of rootNames) {
+    stats.set(rootName, {
+      managedDnsCount: 0,
+      permanentCount: 0,
+      temporaryCount: 0,
+    })
+  }
+
+  for (const subdomain of subdomains) {
+    const rootStats = stats.get(subdomain.root_name)
+    if (!rootStats) {
+      continue
+    }
+
+    rootStats.managedDnsCount += getManagedDnsCount(subdomain)
+    if (getDomainType(subdomain) === 'temporary') {
+      rootStats.temporaryCount += 1
+    } else {
+      rootStats.permanentCount += 1
+    }
+  }
+
+  return rows.map((row) => {
+    if (row.is_root !== 1) {
+      return {
+        ...row,
+        subdomain_type: getDomainType(row),
+        managed_dns_count: getManagedDnsCount(row),
+        dns_records_per_subdomain: MANAGED_DNS_RECORDS_PER_SUBDOMAIN,
+      }
+    }
+
+    const rootStats = stats.get(row.name) ?? {
+      managedDnsCount: 0,
+      permanentCount: 0,
+      temporaryCount: 0,
+    }
+    const remainingTemporarySlots = Math.max(0, rotationLimit - rootStats.temporaryCount)
+    const remainingDnsCount = remainingTemporarySlots * MANAGED_DNS_RECORDS_PER_SUBDOMAIN
+
+    return {
+      ...row,
+      subdomain_type: 'root' as const,
+      managed_dns_count: rootStats.managedDnsCount,
+      remaining_dns_count: remainingDnsCount,
+      manageable_dns_count: rootStats.managedDnsCount + remainingDnsCount,
+      dns_records_per_subdomain: MANAGED_DNS_RECORDS_PER_SUBDOMAIN,
+      permanent_subdomain_count: rootStats.permanentCount,
+      temporary_subdomain_count: rootStats.temporaryCount,
+      subdomain_rotation_limit: rotationLimit,
+    }
+  })
+}
+
 export async function listDomains(
   env: AppBindings,
-  filters?: { type?: 'root' | 'sub'; root?: string; limit?: number },
+  filters?: { type?: 'root' | 'sub'; root?: string; subdomainType?: SubdomainType; limit?: number },
 ) {
   const where: string[] = []
   const bindings: Array<string | number> = []
@@ -137,19 +235,27 @@ export async function listDomains(
     bindings.push(filters.root.toLowerCase())
   }
 
+  if (filters?.subdomainType) {
+    where.push(`subdomain_type = ?${paramIdx++}`)
+    bindings.push(filters.subdomainType)
+  }
+
   const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''
   const limitSql = filters?.limit ? ` LIMIT ?${paramIdx++}` : ''
   const limitBindings = filters?.limit ? [...bindings, filters.limit] : bindings
 
-  return many<DomainRecord>(
+  const rows = await many<DomainRecord>(
     env.DB.prepare(
       `SELECT * FROM domains ${whereSql} ORDER BY is_root DESC, created_at ASC${limitSql}`,
     ).bind(...limitBindings),
   )
+
+  return enrichRootDomainStats(env, rows)
 }
 
 export async function getDomainDetail(env: AppBindings, name: string) {
-  const domain = await findDomain(env, name)
+  const rawDomain = await findDomain(env, name)
+  const domain = rawDomain ? (await enrichRootDomainStats(env, [rawDomain]))[0] : null
   if (!domain) {
     return null
   }
@@ -194,18 +300,19 @@ export async function bootstrapRootDomain(
 
   await exec(
     env.DB.prepare(
-      `INSERT INTO domains (name, root_name, is_root, routing_enabled, cf_zone_id, mx_record_ids)
-       VALUES (?1, ?1, 1, 1, ?2, '[]')
+      `INSERT INTO domains (name, root_name, is_root, subdomain_type, routing_enabled, cf_zone_id, mx_record_ids)
+       VALUES (?1, ?1, 1, 'root', 1, ?2, '[]')
        ON CONFLICT(name) DO UPDATE SET
          routing_enabled = 1,
-         cf_zone_id = excluded.cf_zone_id`,
+         cf_zone_id = excluded.cf_zone_id,
+         subdomain_type = 'root'`,
     ).bind(rootDomain, zoneId),
   )
 
   return (await findDomain(env, rootDomain))!
 }
 
-export async function createSubdomain(env: AppBindings, payload: { name: string; rootName?: string }) {
+export async function createSubdomain(env: AppBindings, payload: { name: string; rootName?: string; subdomainType?: SubdomainType }) {
   requireEmailRoutingAuth(env)
   const name = payload.name.trim().toLowerCase()
   const existing = await findDomain(env, name)
@@ -219,9 +326,10 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
     throw new AppError(400, '请先初始化根域名，再创建子域名')
   }
   const rootName = rootRecord.name
+  const subdomainType = existing ? normalizeSubdomainType(existing.subdomain_type) : normalizeSubdomainType(payload.subdomainType)
 
-  if (!existing) {
-    await enforceManagedSubdomainLimit(env, rootName, name)
+  if (!existing && subdomainType === 'temporary') {
+    await enforceTemporarySubdomainLimit(env, rootName, name)
   }
 
   const providers = createProviders(env)
@@ -277,16 +385,17 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
 
     await exec(
       env.DB.prepare(
-        `INSERT INTO domains (name, root_name, is_root, routing_enabled, cf_zone_id, mx_record_ids, txt_record_id, route_rule_id)
-         VALUES (?1, ?2, 0, 1, ?3, ?4, ?5, ?6)
+        `INSERT INTO domains (name, root_name, is_root, subdomain_type, routing_enabled, cf_zone_id, mx_record_ids, txt_record_id, route_rule_id)
+         VALUES (?1, ?2, 0, ?3, 1, ?4, ?5, ?6, ?7)
          ON CONFLICT(name) DO UPDATE SET
            root_name = excluded.root_name,
+           subdomain_type = excluded.subdomain_type,
            routing_enabled = excluded.routing_enabled,
            cf_zone_id = excluded.cf_zone_id,
            mx_record_ids = excluded.mx_record_ids,
            txt_record_id = excluded.txt_record_id,
            route_rule_id = excluded.route_rule_id`,
-      ).bind(name, rootName, rootRecord.cf_zone_id, JSON.stringify(mxIds), txtRecordId, routeRuleId),
+      ).bind(name, rootName, subdomainType, rootRecord.cf_zone_id, JSON.stringify(mxIds), txtRecordId, routeRuleId),
     )
   } catch (error) {
     await rollbackDomainProvision(env, {
@@ -299,6 +408,10 @@ export async function createSubdomain(env: AppBindings, payload: { name: string;
   }
 
   return (await findDomain(env, name))!
+}
+
+export function getDomainDnsUnitSize() {
+  return MANAGED_DNS_RECORDS_PER_SUBDOMAIN
 }
 
 export async function deleteSubdomains(env: AppBindings, names: string[]) {

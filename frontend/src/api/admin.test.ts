@@ -14,11 +14,13 @@ import {
   checkVersionState,
   createSubdomain,
   dismissVersionUpdateOnce,
+  getDomainLifecycleSettings,
   getDomains,
   getVersionState,
   logout,
   removePagesDomain,
   setVersionNotifications,
+  updateDomainLifecycleSettings,
 } from './admin'
 
 describe('admin api helpers', () => {
@@ -45,16 +47,29 @@ describe('admin api helpers', () => {
     )
   })
 
-  it('createSubdomain 只发送完整域名', () => {
+  it('createSubdomain 默认创建长期子域名', () => {
     createSubdomain('token-3', 'mail.example.com')
 
     expect(apiRequest).toHaveBeenCalledWith(
       '/api/domains',
       {
         method: 'POST',
-        body: JSON.stringify({ name: 'mail.example.com' }),
+        body: JSON.stringify({ name: 'mail.example.com', subdomainType: 'permanent' }),
       },
       'token-3',
+    )
+  })
+
+  it('createSubdomain 支持创建临时子域名', () => {
+    createSubdomain('token-11', 'tmp.example.com', 'temporary')
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/domains',
+      {
+        method: 'POST',
+        body: JSON.stringify({ name: 'tmp.example.com', subdomainType: 'temporary' }),
+      },
+      'token-11',
     )
   })
 
@@ -123,6 +138,25 @@ describe('admin api helpers', () => {
         body: JSON.stringify({ disabled: true }),
       },
       'token-9',
+    )
+  })
+
+  it('getDomainLifecycleSettings 会请求域名生命周期设置', () => {
+    getDomainLifecycleSettings('token-12')
+
+    expect(apiRequest).toHaveBeenCalledWith('/api/settings/domain-lifecycle', {}, 'token-12')
+  })
+
+  it('updateDomainLifecycleSettings 会保存轮换总数', () => {
+    updateDomainLifecycleSettings('token-13', 8)
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/settings/domain-lifecycle',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ subdomainRotationLimit: 8 }),
+      },
+      'token-13',
     )
   })
 

@@ -84,8 +84,13 @@ class OnlyMailClient:
     def get_domain(self, name: str) -> dict[str, Any]:
         return self._request("GET", f"/call/domains/{name}")["data"]
 
-    def create_subdomain(self, name: str, root_name: str | None = None) -> dict[str, Any]:
-        payload: dict[str, Any] = {"name": name}
+    def create_subdomain(
+        self,
+        name: str,
+        root_name: str | None = None,
+        subdomain_type: str = "temporary",
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"name": name, "subdomainType": subdomain_type}
         if root_name:
             payload["rootName"] = root_name
         return self._request("POST", "/call/domains", json=payload)["data"]

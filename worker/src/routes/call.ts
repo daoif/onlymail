@@ -27,6 +27,7 @@ const createAddressSchema = z.object({
 const createDomainSchema = z.object({
   name: z.string().min(1),
   rootName: z.string().min(1).optional(),
+  subdomainType: z.enum(['permanent', 'temporary']).optional(),
 })
 
 export const callRoutes = new Hono<AppEnv>()
@@ -67,10 +68,14 @@ callRoutes.get('/mail/:id', async (c) => {
 callRoutes.get('/domains', async (c) => {
   const type = c.req.query('type') as 'root' | 'sub' | undefined
   const root = c.req.query('root') ?? undefined
+  const rawSubdomainType = c.req.query('subdomainType')
+  const subdomainType = rawSubdomainType === 'permanent' || rawSubdomainType === 'temporary'
+    ? rawSubdomainType
+    : undefined
   const limitStr = c.req.query('limit')
   const limit = limitStr ? Number.parseInt(limitStr, 10) : undefined
 
-  return jsonSuccess(c, await listDomains(c.env, { type, root, limit }))
+  return jsonSuccess(c, await listDomains(c.env, { type, root, subdomainType, limit }))
 })
 
 // GET /call/domains/:name — 单个域名详情
@@ -86,5 +91,8 @@ callRoutes.get('/domains/:name', async (c) => {
 // POST /call/domains — 创建子域名
 callRoutes.post('/domains', async (c) => {
   const payload = createDomainSchema.parse(await c.req.json())
-  return jsonSuccess(c, await createSubdomain(c.env, payload), 201)
+  return jsonSuccess(c, await createSubdomain(c.env, {
+    ...payload,
+    subdomainType: payload.subdomainType ?? 'temporary',
+  }), 201)
 })

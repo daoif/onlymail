@@ -10,8 +10,8 @@
 
 ## 目标
 
-1. 保留“手动添加 / 手动删除 managed subdomain”的能力。
-2. 新建子域前，按 root 维度控制 managed subdomain 数量上限，默认只保留最近 5 个。
+1. 保留“手动添加 / 手动删除长期 managed subdomain”的能力。
+2. 子域名分成长期和临时两类：长期不参与自动轮换，临时才按 root 维度回收最旧项。
 3. 删除流程按 Cloudflare 当前真实状态回收资源，不因旧 ID 缺失而留下脏状态。
 4. 如果 D1 已有旧子域，但 Cloudflare 资源不完整，再次创建时自动补齐缺失资源并回写新 ID。
 5. Cloudflare API 错误原样透传 code/message，便于现场排障。
@@ -34,14 +34,22 @@
   4. 补齐缺失资源。
   5. 把最新 `mx_record_ids` / `txt_record_id` / `route_rule_id` 回写到 D1。
 
-### 2. 数量上限
+### 2. 长期与临时子域名
 
-- 新增环境变量：`ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT`
-- 默认值：`5`
-- `<= 0` 时视为关闭自动回收
-- 仅对 `createSubdomain` 生效；达到上限时，先删除当前 root 下最旧的 managed subdomain，再创建新的。
+- `domains.subdomain_type` 取值：
+  - `root`：根域名。
+  - `permanent`：长期子域名，由用户主动创建，不会被临时轮换回收。
+  - `temporary`：临时子域名，沿用轮换生命周期。
+- 管理后台创建子域名默认是 `permanent`；SDK / `/call/domains` 默认创建 `temporary`，也允许显式传 `subdomainType`。
 
-### 3. 删除流程
+### 3. 数量上限与 DNS 统计
+
+- 轮换总数从 D1 `settings.subdomain_rotation_limit` 读取，默认 `5`；旧的 `ONLYMAIL_MANAGED_SUBDOMAIN_LIMIT` 只作为未写入 D1 时的兼容回退。
+- 轮换总数按 root 独立生效：每个根域名最多保留 N 个临时子域名。
+- 达到上限时，只删除当前 root 下最旧的 `temporary` 子域名，再创建新的临时子域名。
+- 每个 managed subdomain 约占 `3 MX + 1 TXT = 4` 条 DNS 记录；`GET /api/domains` 会在根域名行返回已管理 DNS、剩余可用 DNS、可管理 DNS 容量（已管理 + 按当前轮换总数还能新增的临时 DNS）、长期/临时子域数量。
+
+### 4. 删除流程
 
 - 删除不再盲信 D1 里保存的资源 ID。
 - 先按子域名精确查询 Cloudflare 当前 MX/TXT。
@@ -49,10 +57,10 @@
 - 只删除“当前仍存在且精确匹配该子域名”的资源。
 - Cloudflare 侧删除完成后，再删 D1 记录。
 
-### 4. 手动与自动的关系
+### 5. 手动与自动的关系
 
-- 手动 managed subdomain 仍然保留。
-- 自动回收只会处理 onlymail 自己管理并记录在 D1 `domains` 表中的子域。
+- 手动长期 managed subdomain 仍然保留。
+- 自动回收只会处理 onlymail 自己管理并记录在 D1 `domains` 表中的 `temporary` 子域。
 - 不碰业务 DNS、根域名 MX/TXT、DKIM、A/CNAME 等非 managed 资源。
 
 ## 验证

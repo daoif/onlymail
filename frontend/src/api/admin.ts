@@ -2,6 +2,7 @@ import type {
   AddressRecord,
   ApiEnvelope,
   DashboardStats,
+  DomainLifecycleSettings,
   DomainRecord,
   MailDetail,
   MailSummary,
@@ -23,6 +24,7 @@ export type AddressCreateResult = {
 }
 
 type QueryValue = string | number | boolean | undefined
+export type SubdomainType = 'permanent' | 'temporary'
 
 function toSearchString(params?: URLSearchParams | Record<string, QueryValue>) {
   if (!params) return ''
@@ -116,12 +118,12 @@ export function bootstrapDomain(token: string, rootDomain: string) {
   )
 }
 
-export function createSubdomain(token: string, name: string) {
+export function createSubdomain(token: string, name: string, subdomainType: SubdomainType = 'permanent') {
   return apiRequest<ApiEnvelope<DomainRecord>>(
     '/api/domains',
     {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, subdomainType }),
     },
     token,
   )
@@ -175,6 +177,21 @@ export function setVersionNotifications(token: string, disabled: boolean) {
     {
       method: 'POST',
       body: JSON.stringify({ disabled }),
+    },
+    token,
+  )
+}
+
+export function getDomainLifecycleSettings(token: string) {
+  return apiRequest<ApiEnvelope<DomainLifecycleSettings>>('/api/settings/domain-lifecycle', {}, token)
+}
+
+export function updateDomainLifecycleSettings(token: string, subdomainRotationLimit: number) {
+  return apiRequest<ApiEnvelope<DomainLifecycleSettings>>(
+    '/api/settings/domain-lifecycle',
+    {
+      method: 'PUT',
+      body: JSON.stringify({ subdomainRotationLimit }),
     },
     token,
   )

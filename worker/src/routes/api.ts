@@ -15,17 +15,19 @@ import { getPageParams, toPagination } from '../lib/pagination'
 
 import { createOrInspectAddress, deleteAddress, listAddresses } from '../services/address'
 import { createAdminSession, revokeAdminSession } from '../services/admin-session'
-import { bootstrapRootDomain, createSubdomain, deleteSubdomain, deleteSubdomains, getDomainDetail, listDomains } from '../services/domain'
+import { bootstrapRootDomain, createSubdomain, deleteSubdomain, deleteSubdomains, getDomainDetail, getDomainDnsUnitSize, listDomains } from '../services/domain'
 import { deleteMail, getMailById, listMails } from '../services/mail'
 import {
   addAllowedOriginPattern,
   changeAdminPassword,
+  getDomainLifecycleSettings,
   getAdminUsername,
   getApiKeyConfig,
   initAdmin,
   isAdminInitialized,
   removeAllowedOriginPattern,
   rotateApiKey,
+  updateDomainLifecycleSettings,
   verifyAdmin,
 } from '../services/settings'
 import { getDashboardStats } from '../services/stats'
@@ -57,6 +59,7 @@ const bootstrapSchema = z.object({
 const createDomainSchema = z.object({
   name: z.string().min(1),
   rootName: z.string().min(1).optional(),
+  subdomainType: z.enum(['permanent', 'temporary']).optional(),
 })
 
 const batchDeleteDomainsSchema = z.object({
@@ -74,6 +77,10 @@ const dismissUpdateSchema = z.object({
 
 const updateNotificationPreferenceSchema = z.object({
   disabled: z.boolean(),
+})
+
+const domainLifecycleSettingsSchema = z.object({
+  subdomainRotationLimit: z.number().int().min(1).max(500),
 })
 
 export const apiRoutes = new Hono<AppEnv>()
@@ -194,10 +201,14 @@ apiRoutes.post('/domains/bootstrap', async (c) => {
 apiRoutes.get('/domains', async (c) => {
   const type = c.req.query('type') as 'root' | 'sub' | undefined
   const root = c.req.query('root') ?? undefined
+  const rawSubdomainType = c.req.query('subdomainType')
+  const subdomainType = rawSubdomainType === 'permanent' || rawSubdomainType === 'temporary'
+    ? rawSubdomainType
+    : undefined
   const limitStr = c.req.query('limit')
   const limit = limitStr ? Number.parseInt(limitStr, 10) : undefined
 
-  return jsonSuccess(c, await listDomains(c.env, { type, root, limit }))
+  return jsonSuccess(c, await listDomains(c.env, { type, root, subdomainType, limit }))
 })
 
 apiRoutes.get('/domains/:name', async (c) => {
@@ -260,6 +271,23 @@ apiRoutes.post('/settings/version/dismiss-once', async (c) => {
 apiRoutes.post('/settings/version/notifications', async (c) => {
   const payload = updateNotificationPreferenceSchema.parse(await c.req.json())
   return jsonSuccess(c, await setUpdateNotificationsDisabled(c.env, payload.disabled))
+})
+
+apiRoutes.get('/settings/domain-lifecycle', async (c) => {
+  const settings = await getDomainLifecycleSettings(c.env)
+  return jsonSuccess(c, {
+    ...settings,
+    dnsRecordsPerSubdomain: getDomainDnsUnitSize(),
+  })
+})
+
+apiRoutes.put('/settings/domain-lifecycle', async (c) => {
+  const payload = domainLifecycleSettingsSchema.parse(await c.req.json())
+  const settings = await updateDomainLifecycleSettings(c.env, payload)
+  return jsonSuccess(c, {
+    ...settings,
+    dnsRecordsPerSubdomain: getDomainDnsUnitSize(),
+  })
 })
 
 // ── 自定义域名绑定 ────────────────────────────────────────────

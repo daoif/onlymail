@@ -33,7 +33,7 @@
 - 地址页 -> `POST /api/address`、`GET /api/addresses`、`DELETE /api/address/:name`
 - 邮件页 -> `GET /api/mails`、`GET /api/mail/:id`、`DELETE /api/mail/:id`
 - 域名页 -> `GET /api/domains`、`POST /api/domains/bootstrap`、`POST /api/domains`、`DELETE /api/domains/:name`
-- 设置页 -> `GET /api/settings/api-key`、`POST /api/settings/change-password`、`POST /api/settings/api-key/rotate`、`GET/POST/DELETE /api/settings/custom-domains`、`GET/POST/DELETE /api/settings/pages-domains`
+- 设置页 -> `GET /api/settings/api-key`、`POST /api/settings/change-password`、`POST /api/settings/api-key/rotate`、`GET/PUT /api/settings/domain-lifecycle`、`GET/POST/DELETE /api/settings/custom-domains`、`GET/POST/DELETE /api/settings/pages-domains`
 
 ## 关键交互约定
 - 首次访问登录页时，先查管理员是否已初始化；未初始化就直接显示创建管理员表单。
@@ -41,9 +41,11 @@
 - 管理员会话失效后统一跳回登录页。
 - 地址页支持直接生成临时邮箱，生成后展示结果并支持复制或跳到邮件页查看。
 - 地址页按域名和项目筛选。
-- 邮件页左侧列表、右侧详情。
+- 邮件页左侧列表、右侧详情，标题区右侧提供刷新按钮，不刷新整页即可重新拉取邮件列表。
 - 邮件详情优先渲染已清洗 HTML，没有 HTML 时渲染纯文本。
-- 域名页要把“根域名是否已初始化”直接显示出来。
+- 域名页要把“根域名是否已初始化”、长期/临时子域数量、剩余可用 DNS / 可管理 DNS 容量直接显示出来。
+- 域名页新增子域名时默认创建长期子域名，用户可切换为临时子域名。
+- 设置页提供“轮换总数”，控制每个根域名下最多保留多少个临时子域名。
 - 设置页显示管理员账号和 API Key 预览值，不显示旧 key 明文，并提供改密码入口。
 
 ## SDK 目标
@@ -66,7 +68,7 @@
   - `waitForMail(address, timeoutMs?, intervalMs?)`
   - `listDomains(type?, root?, limit?)`
   - `getDomain(name)`
-  - `createSubdomain(name, rootName?)`
+  - `createSubdomain(name, rootName?, subdomainType?)`
 
 ## Python SDK
 - 目录：`sdk/python/`
@@ -79,7 +81,7 @@
   - `wait_for_mail(address, timeout_ms=None, interval_ms=None)`
   - `list_domains(type=None, root=None, limit=None)`
   - `get_domain(name)`
-  - `create_subdomain(name, root_name=None)`
+  - `create_subdomain(name, root_name=None, subdomain_type="temporary")`
 
 ## 前端与 SDK 的验收
 - 前端登录后能走完仪表盘、地址、邮件、域名、设置全链路。
