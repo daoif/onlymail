@@ -29,7 +29,7 @@
 
 ## 页面和接口对应
 - 登录页 -> `GET /api/init-status`、首次 `POST /api/init`、日常 `POST /api/login`
-- 仪表盘页 -> `GET /api/dashboard`
+- 仪表盘页 -> `GET /api/dashboard`、`POST /api/dashboard/cleanup`
 - 地址页 -> `POST /api/address`、`GET /api/addresses`、`DELETE /api/address/:name`
 - 邮件页 -> `GET /api/mails`、`GET /api/mail/:id`、`DELETE /api/mail/:id`
 - 域名页 -> `GET /api/domains`、`POST /api/domains/bootstrap`、`POST /api/domains`、`DELETE /api/domains/:name`
@@ -43,6 +43,7 @@
 - 地址页按域名和项目筛选。
 - 邮件页左侧列表、右侧详情，标题区右侧提供刷新按钮，不刷新整页即可重新拉取邮件列表。
 - 邮件详情优先渲染已清洗 HTML，没有 HTML 时渲染纯文本。
+- 仪表盘页新增 D1 容量和清理操作一行：展示当前占用、剩余和占用率，并提供临时 / 永久、邮件 / 邮箱四个清理动作。
 - 域名页要把“根域名是否已初始化”、长期/临时子域数量、Cloudflare DNS 当前已用数 / 剩余额度 / Zone 上限、OnlyMail 已管理 DNS 数量直接显示出来；剩余额度必须来自 Cloudflare 实时 DNS 统计，不能用轮换空位估算。
 - 域名页新增子域名时默认创建长期子域名，用户可切换为临时子域名。
 - 设置页提供“轮换总数”，控制每个根域名下最多保留多少个临时子域名。

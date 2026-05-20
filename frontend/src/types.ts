@@ -63,6 +63,26 @@ export interface DashboardStats {
   totalMails: number
   totalDomains: number
   todayMailCount: number
+  d1Capacity: D1CapacityStats
+}
+
+export interface D1CapacityStats {
+  sizeBytes: number
+  sizeLabel: string
+  limitBytes: number
+  limitLabel: string
+  remainingBytes: number
+  remainingLabel: string
+  usagePercent: number
+  status: 'normal' | 'warning' | 'danger'
+}
+
+export interface D1CleanupResult {
+  scope: 'mails' | 'addresses'
+  target: 'temporary' | 'permanent'
+  deletedMails: number
+  deletedAddresses: number
+  capacity: D1CapacityStats
 }
 
 export interface SettingsApiKeyState {

@@ -14,6 +14,7 @@ import { DEFAULT_PAGES_PROJECT, DEFAULT_WORKER_NAME } from '../lib/project-defau
 import { getPageParams, toPagination } from '../lib/pagination'
 
 import { createOrInspectAddress, deleteAddress, listAddresses } from '../services/address'
+import { cleanupD1Data } from '../services/d1-admin'
 import { createAdminSession, revokeAdminSession } from '../services/admin-session'
 import { bootstrapRootDomain, createSubdomain, deleteSubdomain, deleteSubdomains, getDomainDetail, getDomainDnsUnitSize, listDomains } from '../services/domain'
 import { deleteMail, getMailById, listMails } from '../services/mail'
@@ -84,6 +85,11 @@ const domainLifecycleSettingsSchema = z.object({
   subdomainDnsMode: z.enum(['compatible', 'minimal']),
 })
 
+const dashboardCleanupSchema = z.object({
+  scope: z.enum(['mails', 'addresses']),
+  target: z.enum(['temporary', 'permanent']),
+})
+
 export const apiRoutes = new Hono<AppEnv>()
 
 // ── 认证（无需会话） ───────────────────────────────────────
@@ -126,6 +132,11 @@ apiRoutes.post('/logout', async (c) => {
 // ── Dashboard ─────────────────────────────────────────────────
 
 apiRoutes.get('/dashboard', async (c) => jsonSuccess(c, await getDashboardStats(c.env)))
+
+apiRoutes.post('/dashboard/cleanup', async (c) => {
+  const payload = dashboardCleanupSchema.parse(await c.req.json())
+  return jsonSuccess(c, await cleanupD1Data(c.env, payload.scope, payload.target))
+})
 
 // ── 地址管理 ──────────────────────────────────────────────────
 

@@ -9,12 +9,14 @@ vi.mock('./client', () => ({
 }))
 
 import {
+  cleanupDashboardD1,
   batchDeleteDomains,
   bootstrapDomain,
   checkVersionState,
   createSubdomain,
   dismissVersionUpdateOnce,
   getDomainLifecycleSettings,
+  getDashboard,
   getDomains,
   getVersionState,
   logout,
@@ -32,6 +34,25 @@ describe('admin api helpers', () => {
     getDomains('token-1', { type: 'root', limit: 20 })
 
     expect(apiRequest).toHaveBeenCalledWith('/api/domains?type=root&limit=20', {}, 'token-1')
+  })
+
+  it('getDashboard 会请求仪表盘统计', () => {
+    getDashboard('token-14')
+
+    expect(apiRequest).toHaveBeenCalledWith('/api/dashboard', {}, 'token-14')
+  })
+
+  it('cleanupDashboardD1 会发送清理范围和目标', () => {
+    cleanupDashboardD1('token-15', 'addresses', 'temporary')
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/dashboard/cleanup',
+      {
+        method: 'POST',
+        body: JSON.stringify({ scope: 'addresses', target: 'temporary' }),
+      },
+      'token-15',
+    )
   })
 
   it('bootstrapDomain 会发送 rootDomain body', () => {

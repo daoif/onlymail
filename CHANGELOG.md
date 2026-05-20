@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.3.2] - 2026-05-20
+
+### Added
+- 仪表盘新增 D1 容量展示，并把数据库管理收进新的一行。
+- 仪表盘新增四类清理动作：清理临时邮件、清理永久邮件、清理临时邮箱、清理永久邮箱。
+
 ## [v0.3.1] - 2026-04-27
 
 ### Fixed

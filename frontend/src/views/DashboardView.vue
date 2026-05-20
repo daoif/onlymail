@@ -7,41 +7,251 @@
       </div>
 
       <SkeletonLoader v-if="isLoading" variant="cards" :count="4" />
+      <SkeletonLoader v-if="isLoading" variant="cards" :count="2" grid-class="xl:grid-cols-[minmax(0,1fr)_360px]" />
 
-      <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="总地址数" :value="stats.totalAddresses" />
-        <StatCard label="总邮件数" :value="stats.totalMails" />
-        <StatCard label="已配置域名数" :value="stats.totalDomains" />
-        <StatCard label="今日新邮件数" :value="stats.todayMailCount" />
-      </div>
+      <template v-else>
+        <p v-if="error" class="text-sm text-rose-600">{{ error }}</p>
 
-      <p v-if="error" class="text-sm text-rose-600">{{ error }}</p>
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="总地址数" :value="stats.totalAddresses" />
+          <StatCard label="总邮件数" :value="stats.totalMails" />
+          <StatCard label="已配置域名数" :value="stats.totalDomains" />
+          <StatCard label="今日新邮件数" :value="stats.todayMailCount" />
+        </div>
+
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div class="space-y-1">
+                <h2 class="text-lg font-semibold text-slate-900">D1 容量</h2>
+                <p class="text-sm text-slate-500">
+                  当前数据库占用 {{ stats.d1Capacity.sizeLabel }} / {{ stats.d1Capacity.limitLabel }}，剩余 {{ stats.d1Capacity.remainingLabel }}。
+                </p>
+              </div>
+              <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1" :class="capacityStatusClass">
+                {{ capacityStatusLabel }}
+              </span>
+            </div>
+
+            <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                class="h-full rounded-full transition-all duration-150"
+                :class="capacityBarClass"
+                :style="{ width: `${Math.min(stats.d1Capacity.usagePercent, 100)}%` }"
+              />
+            </div>
+
+            <div class="grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-3">
+              <div class="space-y-1">
+                <p class="text-sm text-slate-500">当前占用</p>
+                <p class="text-base font-medium text-slate-900">{{ stats.d1Capacity.sizeLabel }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-sm text-slate-500">剩余空间</p>
+                <p class="text-base font-medium text-slate-900">{{ stats.d1Capacity.remainingLabel }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-sm text-slate-500">占用率</p>
+                <p class="text-base font-medium text-slate-900">{{ formatPercent(stats.d1Capacity.usagePercent) }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
+            <div class="space-y-1">
+              <h2 class="text-lg font-semibold text-slate-900">清理操作</h2>
+              <p class="text-sm text-slate-500">清理邮件只删收件记录；清理邮箱会连同地址一起删除。按临时 / 永久分开。</p>
+            </div>
+
+            <div class="grid gap-2 sm:grid-cols-2">
+              <button
+                v-for="action in cleanupActions"
+                :key="action.key"
+                class="button-danger h-10 w-full"
+                type="button"
+                :disabled="cleanupSubmittingKey === action.key"
+                @click="openCleanupConfirm(action)"
+              >
+                {{ cleanupSubmittingKey === action.key ? '执行中…' : action.label }}
+              </button>
+            </div>
+
+            <p class="text-xs text-slate-500">
+              先清理邮件，再清理邮箱。清理邮箱会删地址和对应邮件，操作前会再次确认。
+            </p>
+            <p v-if="cleanupMessage" class="text-sm text-slate-500">{{ cleanupMessage }}</p>
+            <p v-if="cleanupError" class="text-sm text-rose-600">{{ cleanupError }}</p>
+          </section>
+        </div>
+      </template>
     </section>
+
+    <ConfirmModal
+      :open="Boolean(pendingCleanup)"
+      :title="pendingCleanup?.title || '确认清理'"
+      :message="pendingCleanup?.message || ''"
+      confirm-label="确认清理"
+      destructive
+      @cancel="cancelCleanup"
+      @confirm="confirmCleanup"
+    />
   </AppShell>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
-import { getDashboard } from '../api/admin'
+import { cleanupDashboardD1, getDashboard } from '../api/admin'
 import AppShell from '../components/AppShell.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 import StatCard from '../components/StatCard.vue'
 import { useSWR } from '../composables/useSWR'
 import { useAuthStore } from '../stores/auth'
-import type { ApiEnvelope, DashboardStats } from '../types'
+import type { ApiEnvelope, DashboardStats, D1CleanupResult } from '../types'
 
 const authStore = useAuthStore()
 
-const { data, error, isLoading } = useSWR<ApiEnvelope<DashboardStats>>({
-  key: 'dashboard',
-  fetcher: () => getDashboard(authStore.token),
-})
-
-const stats = computed(() => data.value?.data ?? {
+const defaultDashboardStats: DashboardStats = {
   totalAddresses: 0,
   totalMails: 0,
   totalDomains: 0,
   todayMailCount: 0,
+  d1Capacity: {
+    sizeBytes: 0,
+    sizeLabel: '0 MB',
+    limitBytes: 500_000_000,
+    limitLabel: '500 MB',
+    remainingBytes: 500_000_000,
+    remainingLabel: '500 MB',
+    usagePercent: 0,
+    status: 'normal',
+  },
+}
+
+const { data, error, isLoading, mutate } = useSWR<ApiEnvelope<DashboardStats>>({
+  key: 'dashboard',
+  fetcher: () => getDashboard(authStore.token),
 })
+
+const stats = computed(() => data.value?.data ?? defaultDashboardStats)
+const capacityStatusLabel = computed(() => {
+  switch (stats.value.d1Capacity.status) {
+    case 'danger':
+      return '已超限'
+    case 'warning':
+      return '接近上限'
+    default:
+      return '正常'
+  }
+})
+const capacityStatusClass = computed(() => {
+  switch (stats.value.d1Capacity.status) {
+    case 'danger':
+      return 'bg-rose-50 text-rose-700 ring-rose-200'
+    case 'warning':
+      return 'bg-amber-50 text-amber-700 ring-amber-200'
+    default:
+      return 'bg-slate-50 text-slate-700 ring-slate-200'
+  }
+})
+const capacityBarClass = computed(() => {
+  switch (stats.value.d1Capacity.status) {
+    case 'danger':
+      return 'bg-rose-500'
+    case 'warning':
+      return 'bg-amber-500'
+    default:
+      return 'bg-slate-900'
+  }
+})
+
+type CleanupAction = {
+  key: string
+  label: string
+  title: string
+  message: string
+  scope: D1CleanupResult['scope']
+  target: D1CleanupResult['target']
+}
+
+const cleanupActions: CleanupAction[] = [
+  {
+    key: 'temporary-mails',
+    label: '清理临时邮件',
+    title: '清理临时邮件',
+    message: '将删除所有 ttl_hours > 0 的邮件记录，邮箱地址保留不动。',
+    scope: 'mails',
+    target: 'temporary',
+  },
+  {
+    key: 'permanent-mails',
+    label: '清理永久邮件',
+    title: '清理永久邮件',
+    message: '将删除所有 ttl_hours = 0 的邮件记录，邮箱地址保留不动。',
+    scope: 'mails',
+    target: 'permanent',
+  },
+  {
+    key: 'temporary-addresses',
+    label: '清理临时邮箱',
+    title: '清理临时邮箱',
+    message: '将删除所有 ttl_hours > 0 的邮箱地址，并一并删除这些地址下的邮件。',
+    scope: 'addresses',
+    target: 'temporary',
+  },
+  {
+    key: 'permanent-addresses',
+    label: '清理永久邮箱',
+    title: '清理永久邮箱',
+    message: '将删除所有 ttl_hours = 0 的邮箱地址，并一并删除这些地址下的邮件。',
+    scope: 'addresses',
+    target: 'permanent',
+  },
+]
+
+const pendingCleanup = ref<CleanupAction | null>(null)
+const cleanupSubmittingKey = ref('')
+const cleanupMessage = ref('')
+const cleanupError = ref('')
+
+function formatPercent(value: number) {
+  return `${value.toFixed(1)}%`
+}
+
+function openCleanupConfirm(action: CleanupAction) {
+  cleanupMessage.value = ''
+  cleanupError.value = ''
+  pendingCleanup.value = action
+}
+
+function cancelCleanup() {
+  pendingCleanup.value = null
+}
+
+async function confirmCleanup() {
+  if (!pendingCleanup.value) {
+    return
+  }
+
+  cleanupSubmittingKey.value = pendingCleanup.value.key
+  cleanupMessage.value = ''
+  cleanupError.value = ''
+
+  try {
+    const response = await cleanupDashboardD1(authStore.token, pendingCleanup.value.scope, pendingCleanup.value.target)
+    const result = response.data
+    const targetText = pendingCleanup.value.target === 'temporary' ? '临时' : '永久'
+    const scopeText = pendingCleanup.value.scope === 'mails' ? '邮件' : '邮箱'
+    const addressText = result.deletedAddresses > 0 ? `，删除 ${result.deletedAddresses.toLocaleString('zh-CN')} 个邮箱` : ''
+
+    cleanupMessage.value = `已清理${targetText}${scopeText}：删除 ${result.deletedMails.toLocaleString('zh-CN')} 封邮件${addressText}。当前 D1 占用 ${result.capacity.sizeLabel} / ${result.capacity.limitLabel}。`
+    await mutate()
+  } catch (error) {
+    cleanupError.value = error instanceof Error ? error.message : '清理失败'
+  } finally {
+    cleanupSubmittingKey.value = ''
+    pendingCleanup.value = null
+  }
+}
 </script>

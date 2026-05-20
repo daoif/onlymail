@@ -11,6 +11,8 @@ export interface AppBindings {
 export type SubdomainType = 'permanent' | 'temporary'
 export type DomainType = 'root' | SubdomainType
 export type SubdomainDnsMode = 'compatible' | 'minimal'
+export type D1CleanupScope = 'mails' | 'addresses'
+export type D1CleanupTarget = 'temporary' | 'permanent'
 
 export type AppEnv = {
   Bindings: AppBindings
@@ -77,6 +79,26 @@ export interface DashboardStats {
   totalMails: number
   totalDomains: number
   todayMailCount: number
+  d1Capacity: D1CapacityStats
+}
+
+export interface D1CapacityStats {
+  sizeBytes: number
+  sizeLabel: string
+  limitBytes: number
+  limitLabel: string
+  remainingBytes: number
+  remainingLabel: string
+  usagePercent: number
+  status: 'normal' | 'warning' | 'danger'
+}
+
+export interface D1CleanupResult {
+  scope: D1CleanupScope
+  target: D1CleanupTarget
+  deletedMails: number
+  deletedAddresses: number
+  capacity: D1CapacityStats
 }
 
 export interface VersionUpdateState {

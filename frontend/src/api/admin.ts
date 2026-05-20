@@ -1,6 +1,7 @@
 import type {
   AddressRecord,
   ApiEnvelope,
+  D1CleanupResult,
   DashboardStats,
   DomainLifecycleSettings,
   DomainRecord,
@@ -71,6 +72,17 @@ export function logout(token: string) {
 
 export function getDashboard(token: string) {
   return apiRequest<ApiEnvelope<DashboardStats>>('/api/dashboard', {}, token)
+}
+
+export function cleanupDashboardD1(token: string, scope: 'mails' | 'addresses', target: 'temporary' | 'permanent') {
+  return apiRequest<ApiEnvelope<D1CleanupResult>>(
+    '/api/dashboard/cleanup',
+    {
+      method: 'POST',
+      body: JSON.stringify({ scope, target }),
+    },
+    token,
+  )
 }
 
 export function getAddresses(token: string, params: URLSearchParams) {

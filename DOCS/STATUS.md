@@ -62,6 +62,7 @@
 - `Deploy Worker` / `Deploy Frontend` 现在按默认分支和真实依赖触发；改到共享部署脚本、migration、模板或根依赖时也会自动跑
 - `Upstream Sync` 在 fast-forward 后会显式补触发 `CI` 和相关 deploy workflow，不再停在“代码同步了但后续检查和部署没跑”
 - 新增前端、Worker、脚本层测试入口，根目录 `pnpm test` 现在会统一跑完
+- 仪表盘新增 D1 容量展示和四类清理动作，可按邮件 / 邮箱、临时 / 永久分类清理
 - SDK 改用 GitHub Release 附件分发：Node.js `.tgz`、Python `.whl` 和 `.tar.gz`；仍不发 npm / PyPI
 - CI 新增 SDK 产物构建和安装冒烟测试
 - `Release SDK Assets` workflow 已接通：发布 Release 后自动上传 SDK 附件

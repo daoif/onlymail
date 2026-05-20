@@ -124,7 +124,10 @@ worker/
   - 首次设置管理员账号和密码。
 - `POST /api/login`
 - `GET /api/dashboard`
-  - 返回总地址数、总邮件数、域名数、今日新邮件数。
+  - 返回总地址数、总邮件数、域名数、今日新邮件数，以及 D1 当前容量（占用、上限、剩余和占用率）。
+- `POST /api/dashboard/cleanup`
+  - 请求体：`{ scope: mails|addresses, target: temporary|permanent }`
+  - 分别清理临时 / 永久邮件或邮箱；清理邮箱时会连同对应邮件一起删除。
 - `GET /api/addresses`
 - `DELETE /api/address/:name`
 - `GET /api/mails`
