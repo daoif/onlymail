@@ -13,6 +13,7 @@ export type DomainType = 'root' | SubdomainType
 export type SubdomainDnsMode = 'compatible' | 'minimal'
 export type D1CleanupScope = 'mails' | 'addresses'
 export type D1CleanupTarget = 'temporary' | 'permanent'
+export type D1AutoCleanupSkipReason = 'disabled' | 'below_threshold'
 
 export type AppEnv = {
   Bindings: AppBindings
@@ -99,6 +100,22 @@ export interface D1CleanupResult {
   deletedMails: number
   deletedAddresses: number
   capacity: D1CapacityStats
+}
+
+export interface D1AutoCleanupSettings {
+  enabled: boolean
+  triggerUsagePercent: number
+  keepTemporaryAddresses: number
+}
+
+export interface D1AutoCleanupRunResult {
+  settings: D1AutoCleanupSettings
+  triggered: boolean
+  reason: D1AutoCleanupSkipReason | 'completed'
+  deletedMails: number
+  deletedAddresses: number
+  capacityBefore: D1CapacityStats | null
+  capacityAfter: D1CapacityStats | null
 }
 
 export interface VersionUpdateState {

@@ -85,6 +85,12 @@ export interface D1CleanupResult {
   capacity: D1CapacityStats
 }
 
+export interface D1AutoCleanupSettings {
+  enabled: boolean
+  triggerUsagePercent: number
+  keepTemporaryAddresses: number
+}
+
 export interface SettingsApiKeyState {
   configured: boolean
   preview: string | null

@@ -1,9 +1,19 @@
 import type { AppBindings } from '../types'
 
-import { APP_RELEASES_API_URL, APP_RELEASES_URL, APP_REPOSITORY_URL, APP_UPDATE_GUIDE_URL, APP_VERSION } from '../../../shared/app-release'
-import { compareVersions, normalizeVersion } from '../../../shared/version'
+import * as appReleaseModule from '../../../shared/app-release'
+import * as versionUtilsModule from '../../../shared/version'
 import { getSettingValue, setSettingValue } from './settings'
 
+function unwrapTsxDefault<T extends object>(moduleValue: T): T {
+  return ('default' in moduleValue && moduleValue.default && typeof moduleValue.default === 'object'
+    ? moduleValue.default
+    : moduleValue) as T
+}
+
+const appRelease = unwrapTsxDefault(appReleaseModule)
+const versionUtils = unwrapTsxDefault(versionUtilsModule)
+const { APP_RELEASES_API_URL, APP_RELEASES_URL, APP_REPOSITORY_URL, APP_UPDATE_GUIDE_URL, APP_VERSION } = appRelease
+const { compareVersions, normalizeVersion } = versionUtils
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 type GithubReleasePayload = {

@@ -1,4 +1,4 @@
-import type { AppBindings, SubdomainDnsMode } from '../types'
+import type { AppBindings, D1AutoCleanupSettings, SubdomainDnsMode } from '../types'
 
 import { revokeAllAdminSessions } from './admin-session'
 import { AppError } from '../lib/http'
@@ -23,6 +23,7 @@ export type SettingKey =
   | 'update_notifications_disabled'
   | 'subdomain_rotation_limit'
   | 'subdomain_dns_mode'
+  | 'd1_auto_cleanup_temporary_enabled'
 
 type SettingRow = {
   key: SettingKey
@@ -39,6 +40,8 @@ const DEFAULT_SUBDOMAIN_ROTATION_LIMIT = 5
 const DEFAULT_SUBDOMAIN_DNS_MODE: SubdomainDnsMode = 'compatible'
 const MIN_SUBDOMAIN_ROTATION_LIMIT = 1
 const MAX_SUBDOMAIN_ROTATION_LIMIT = 500
+export const D1_AUTO_CLEANUP_TRIGGER_USAGE_PERCENT = 95
+export const D1_AUTO_CLEANUP_KEEP_TEMPORARY_ADDRESSES = 100
 let allowedOriginsCache: AllowedOriginsCache | null = null
 
 export async function getSettingValue(env: AppBindings, key: SettingKey) {
@@ -86,6 +89,10 @@ function normalizeSubdomainDnsMode(value?: string | null): SubdomainDnsMode {
   return value === 'minimal' ? 'minimal' : DEFAULT_SUBDOMAIN_DNS_MODE
 }
 
+function toBoolean(value: string | null | undefined) {
+  return value === 'true'
+}
+
 export async function getSubdomainRotationLimit(env: AppBindings) {
   const row = await getSettingValue(env, 'subdomain_rotation_limit')
   const stored = row?.value ? Number.parseInt(row.value, 10) : Number.NaN
@@ -123,6 +130,24 @@ export async function updateDomainLifecycleSettings(
   return {
     subdomainRotationLimit,
     subdomainDnsMode,
+  }
+}
+
+export async function getD1AutoCleanupSettings(env: AppBindings): Promise<D1AutoCleanupSettings> {
+  const row = await getSettingValue(env, 'd1_auto_cleanup_temporary_enabled')
+  return {
+    enabled: toBoolean(row?.value),
+    triggerUsagePercent: D1_AUTO_CLEANUP_TRIGGER_USAGE_PERCENT,
+    keepTemporaryAddresses: D1_AUTO_CLEANUP_KEEP_TEMPORARY_ADDRESSES,
+  }
+}
+
+export async function updateD1AutoCleanupSettings(env: AppBindings, payload: { enabled: boolean }): Promise<D1AutoCleanupSettings> {
+  await setSettingValue(env, 'd1_auto_cleanup_temporary_enabled', payload.enabled ? 'true' : 'false')
+  return {
+    enabled: payload.enabled,
+    triggerUsagePercent: D1_AUTO_CLEANUP_TRIGGER_USAGE_PERCENT,
+    keepTemporaryAddresses: D1_AUTO_CLEANUP_KEEP_TEMPORARY_ADDRESSES,
   }
 }
 

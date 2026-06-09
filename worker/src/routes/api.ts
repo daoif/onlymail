@@ -21,6 +21,7 @@ import { deleteMail, getMailById, listMails } from '../services/mail'
 import {
   addAllowedOriginPattern,
   changeAdminPassword,
+  getD1AutoCleanupSettings,
   getDomainLifecycleSettings,
   getAdminUsername,
   getApiKeyConfig,
@@ -28,6 +29,7 @@ import {
   isAdminInitialized,
   removeAllowedOriginPattern,
   rotateApiKey,
+  updateD1AutoCleanupSettings,
   updateDomainLifecycleSettings,
   verifyAdmin,
 } from '../services/settings'
@@ -78,6 +80,10 @@ const dismissUpdateSchema = z.object({
 
 const updateNotificationPreferenceSchema = z.object({
   disabled: z.boolean(),
+})
+
+const d1AutoCleanupSettingsSchema = z.object({
+  enabled: z.boolean(),
 })
 
 const domainLifecycleSettingsSchema = z.object({
@@ -283,6 +289,13 @@ apiRoutes.post('/settings/version/dismiss-once', async (c) => {
 apiRoutes.post('/settings/version/notifications', async (c) => {
   const payload = updateNotificationPreferenceSchema.parse(await c.req.json())
   return jsonSuccess(c, await setUpdateNotificationsDisabled(c.env, payload.disabled))
+})
+
+apiRoutes.get('/settings/d1-auto-cleanup', async (c) => jsonSuccess(c, await getD1AutoCleanupSettings(c.env)))
+
+apiRoutes.put('/settings/d1-auto-cleanup', async (c) => {
+  const payload = d1AutoCleanupSettingsSchema.parse(await c.req.json())
+  return jsonSuccess(c, await updateD1AutoCleanupSettings(c.env, payload))
 })
 
 apiRoutes.get('/settings/domain-lifecycle', async (c) => {

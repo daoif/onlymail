@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { compareVersions, normalizeVersion } from '../../shared/version'
+import * as versionUtilsModule from '../../shared/version'
 import { shouldShowUpdateBanner } from '../src/services/version-update'
+
+const versionUtils = ('default' in versionUtilsModule && versionUtilsModule.default && typeof versionUtilsModule.default === 'object'
+  ? versionUtilsModule.default
+  : versionUtilsModule) as typeof versionUtilsModule
+const { compareVersions, normalizeVersion } = versionUtils
 
 test('normalizeVersion 会处理 v 前缀和非法版本', () => {
   assert.equal(normalizeVersion('v0.2.0'), '0.2.0')

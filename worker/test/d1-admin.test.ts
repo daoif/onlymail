@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import type { AppBindings } from '../src/types'
 
-import { cleanupD1Data } from '../src/services/d1-admin'
+import { autoCleanupD1TemporaryData, cleanupD1Data } from '../src/services/d1-admin'
 import { getDashboardStats } from '../src/services/stats'
 
 type AddressRow = {
@@ -32,9 +32,16 @@ function createFakeEnv() {
       { address: 'temp-2@example.com', created_at: '2026-05-20T03:00:00.000Z' },
     ] as MailRow[],
     domains: 2,
+    settings: new Map<string, string>(),
+    fixedSize: null as number | null,
+    capacityQueryCount: 0,
   }
 
   function calcSize() {
+    if (state.fixedSize !== null) {
+      return state.fixedSize
+    }
+
     return 110_592 + state.addresses.length * 3_000 + state.mails.length * 1_500
   }
 
@@ -42,15 +49,39 @@ function createFakeEnv() {
     return state.mails.filter(predicate).length
   }
 
+  function selectOldTemporaryAddressNames(keepCount: number, batchSize: number) {
+    const kept = new Set(
+      state.addresses
+        .filter((row) => row.ttl_hours > 0)
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || b.name.localeCompare(a.name))
+        .slice(0, keepCount)
+        .map((row) => row.name),
+    )
+
+    return state.addresses
+      .filter((row) => row.ttl_hours > 0 && !kept.has(row.name))
+      .sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.name.localeCompare(b.name))
+      .slice(0, batchSize)
+      .map((row) => row.name)
+  }
+
   const db = {
     prepare(sql: string) {
       const normalized = sql.replace(/\s+/g, ' ').trim()
+      let boundValues: unknown[] = []
 
       const statement = {
-        bind() {
+        bind(...values: unknown[]) {
+          boundValues = values
           return statement
         },
         async first<T>() {
+          if (normalized === 'SELECT key, value FROM settings WHERE key = ?1') {
+            const key = String(boundValues[0])
+            const value = state.settings.get(key)
+            return value === undefined ? null as T | null : { key, value } as T
+          }
+
           if (normalized === 'SELECT COUNT(*) AS total FROM address') {
             return { total: state.addresses.length } as T
           }
@@ -71,6 +102,7 @@ function createFakeEnv() {
         },
         async all<T>() {
           if (normalized === 'SELECT 1 AS ok') {
+            state.capacityQueryCount += 1
             return {
               results: [{ ok: 1 }] as T[],
               meta: {
@@ -99,6 +131,21 @@ function createFakeEnv() {
           }
         },
         async run() {
+          if (normalized.startsWith('INSERT INTO settings')) {
+            state.settings.set(String(boundValues[0]), String(boundValues[1]))
+            return {
+              meta: {
+                size_after: calcSize(),
+                changes: 1,
+                rows_read: 0,
+                rows_written: 1,
+                duration: 0,
+                last_row_id: 0,
+                changed_db: true,
+              },
+            }
+          }
+
           if (normalized.includes('DELETE FROM raw_mails WHERE address IN ( SELECT name FROM address WHERE ttl_hours > 0 )')) {
             const affectedNames = new Set(state.addresses.filter((row) => row.ttl_hours > 0).map((row) => row.name))
             const before = state.mails.length
@@ -124,6 +171,40 @@ function createFakeEnv() {
               meta: {
                 size_after: calcSize(),
                 changes: before - state.mails.length,
+                rows_read: before,
+                rows_written: 0,
+                duration: 0,
+                last_row_id: 0,
+                changed_db: true,
+              },
+            }
+          }
+
+          if (normalized.startsWith('DELETE FROM raw_mails WHERE address IN (SELECT name FROM address WHERE ttl_hours > 0 AND name NOT IN')) {
+            const affectedNames = new Set(selectOldTemporaryAddressNames(Number(boundValues[0]), Number(boundValues[1])))
+            const before = state.mails.length
+            state.mails = state.mails.filter((row) => !affectedNames.has(row.address))
+            return {
+              meta: {
+                size_after: calcSize(),
+                changes: before - state.mails.length,
+                rows_read: before,
+                rows_written: 0,
+                duration: 0,
+                last_row_id: 0,
+                changed_db: true,
+              },
+            }
+          }
+
+          if (normalized.startsWith('DELETE FROM address WHERE name IN (SELECT name FROM address WHERE ttl_hours > 0 AND name NOT IN')) {
+            const affectedNames = new Set(selectOldTemporaryAddressNames(Number(boundValues[0]), Number(boundValues[1])))
+            const before = state.addresses.length
+            state.addresses = state.addresses.filter((row) => !affectedNames.has(row.name))
+            return {
+              meta: {
+                size_after: calcSize(),
+                changes: before - state.addresses.length,
                 rows_read: before,
                 rows_written: 0,
                 duration: 0,
@@ -224,4 +305,61 @@ test('cleanupD1Data 清理永久邮箱时会连同邮件一起删除', async () 
   assert.equal(result.deletedMails, 1)
   assert.equal(state.addresses.some((row) => row.ttl_hours === 0), false)
   assert.equal(state.mails.some((row) => row.address === 'perm-1@example.com'), false)
+})
+
+test('autoCleanupD1TemporaryData 未开启时不检查容量', async () => {
+  const { env, state } = createFakeEnv()
+  const result = await autoCleanupD1TemporaryData(env)
+
+  assert.equal(result.triggered, false)
+  assert.equal(result.reason, 'disabled')
+  assert.equal(result.deletedAddresses, 0)
+  assert.equal(state.capacityQueryCount, 0)
+})
+
+test('autoCleanupD1TemporaryData 低于 95% 时不清理', async () => {
+  const { env, state } = createFakeEnv()
+  state.settings.set('d1_auto_cleanup_temporary_enabled', 'true')
+  state.fixedSize = 400_000_000
+
+  const result = await autoCleanupD1TemporaryData(env)
+
+  assert.equal(result.triggered, false)
+  assert.equal(result.reason, 'below_threshold')
+  assert.equal(result.deletedAddresses, 0)
+  assert.equal(state.addresses.length, 3)
+  assert.equal(state.capacityQueryCount, 1)
+})
+
+test('autoCleanupD1TemporaryData 达到 95% 后只保留最近活跃的 100 个临时邮箱', async () => {
+  const { env, state } = createFakeEnv()
+  state.settings.set('d1_auto_cleanup_temporary_enabled', 'true')
+  state.fixedSize = 480_000_000
+  state.addresses = [
+    { name: 'perm@example.com', ttl_hours: 0, updated_at: '2026-05-01T00:00:00.000Z', created_at: '2026-05-01T00:00:00.000Z' },
+    ...Array.from({ length: 105 }, (_, index) => {
+      const id = String(index + 1).padStart(3, '0')
+      const timestamp = new Date(Date.UTC(2026, 4, 1, 0, index)).toISOString()
+      return {
+        name: `temp-${id}@example.com`,
+        ttl_hours: 24,
+        updated_at: timestamp,
+        created_at: timestamp,
+      }
+    }),
+  ]
+  state.mails = state.addresses.map((row) => ({ address: row.name, created_at: row.updated_at }))
+
+  const result = await autoCleanupD1TemporaryData(env)
+
+  assert.equal(result.triggered, true)
+  assert.equal(result.reason, 'completed')
+  assert.equal(result.deletedAddresses, 5)
+  assert.equal(result.deletedMails, 5)
+  assert.equal(state.addresses.filter((row) => row.ttl_hours > 0).length, 100)
+  assert.equal(state.addresses.some((row) => row.name === 'perm@example.com'), true)
+  assert.equal(state.addresses.some((row) => row.name === 'temp-001@example.com'), false)
+  assert.equal(state.addresses.some((row) => row.name === 'temp-105@example.com'), true)
+  assert.equal(state.mails.some((row) => row.address === 'temp-001@example.com'), false)
+  assert.equal(state.mails.some((row) => row.address === 'temp-105@example.com'), true)
 })

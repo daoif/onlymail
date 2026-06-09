@@ -1,6 +1,7 @@
 import type {
   AddressRecord,
   ApiEnvelope,
+  D1AutoCleanupSettings,
   D1CleanupResult,
   DashboardStats,
   DomainLifecycleSettings,
@@ -80,6 +81,21 @@ export function cleanupDashboardD1(token: string, scope: 'mails' | 'addresses', 
     {
       method: 'POST',
       body: JSON.stringify({ scope, target }),
+    },
+    token,
+  )
+}
+
+export function getD1AutoCleanupSettings(token: string) {
+  return apiRequest<ApiEnvelope<D1AutoCleanupSettings>>('/api/settings/d1-auto-cleanup', {}, token)
+}
+
+export function updateD1AutoCleanupSettings(token: string, enabled: boolean) {
+  return apiRequest<ApiEnvelope<D1AutoCleanupSettings>>(
+    '/api/settings/d1-auto-cleanup',
+    {
+      method: 'PUT',
+      body: JSON.stringify({ enabled }),
     },
     token,
   )

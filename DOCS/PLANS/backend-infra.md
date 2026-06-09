@@ -88,7 +88,7 @@ worker/
 | `updated_at` | 更新时间 |
 
 ## 关键实现调整
-- `settings` 表保留并启用，至少存 `admin_user`、`admin_pass_hash`、`api_key_hash`、`api_key_preview`、`api_key_rotated_at`、`subdomain_rotation_limit`、`subdomain_dns_mode`。
+- `settings` 表保留并启用，至少存 `admin_user`、`admin_pass_hash`、`api_key_hash`、`api_key_preview`、`api_key_rotated_at`、`subdomain_rotation_limit`、`subdomain_dns_mode`、`d1_auto_cleanup_temporary_enabled`。
 - 管理员密码只存 SHA-256 哈希，首次初始化后不再依赖环境变量里的管理员账号密码。
 - API Key 生成后只返回明文一次，数据库只存哈希和预览值。
 - 邮件入库时就解析出 `subject`、`source`、`text`、`html`，前端详情页不在浏览器里二次解析原始 MIME。
@@ -128,6 +128,11 @@ worker/
 - `POST /api/dashboard/cleanup`
   - 请求体：`{ scope: mails|addresses, target: temporary|permanent }`
   - 分别清理临时 / 永久邮件或邮箱；清理邮箱时会连同对应邮件一起删除。
+- `GET /api/settings/d1-auto-cleanup`
+  - 返回自动滚动清理开关、触发容量占比和保留临时邮箱数量。
+- `PUT /api/settings/d1-auto-cleanup`
+  - 请求体：`{ enabled }`
+  - 开关开启后，D1 占用达到 95% 时自动删除旧临时邮箱及其邮件，只保留最近活跃的 100 个临时邮箱。
 - `GET /api/addresses`
 - `DELETE /api/address/:name`
 - `GET /api/mails`
@@ -183,8 +188,9 @@ worker/
 
 ## 定时清理
 - Cron 每小时执行一次。
-- 清理条件：`ttl_hours > 0` 且 `updated_at` 超过 TTL。
-- 先删 `raw_mails`，再删 `address`。
+- TTL 清理条件：`ttl_hours > 0` 且 `updated_at` 超过 TTL。
+- 自动滚动清理条件：`d1_auto_cleanup_temporary_enabled=true` 且 D1 占用达到 95%；触发后按 `updated_at DESC, id DESC` 保留最近活跃的 100 个临时邮箱，其余临时邮箱和对应邮件分批删除。
+- 两类清理都先删 `raw_mails`，再删 `address`。
 - 每次输出清理日志，至少包含删了多少地址、多少邮件。
 
 ## 后端验收

@@ -17,6 +17,7 @@
 | 后台提示有新版本 | Worker 定时或设置页手动检查 GitHub Release | 管理面板显示更新横幅或版本信息 |
 
 > 重点：**push 会部署，但不会自动创建 GitHub Release；`Release SDK Assets` 会给已发布的 Release 挂附件，但不会替你创建 Release。**
+> 对当前维护仓库来说，默认分支 push 后线上 Worker / Pages 会由部署 workflow 自动更新；其他未接自动同步的实例只有在正式 GitHub Release 发布后才会看到更新提醒。
 
 ---
 

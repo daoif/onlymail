@@ -81,6 +81,32 @@
             </p>
             <p v-if="cleanupMessage" class="text-sm text-slate-500">{{ cleanupMessage }}</p>
             <p v-if="cleanupError" class="text-sm text-rose-600">{{ cleanupError }}</p>
+
+            <div class="space-y-3 border-t border-slate-200 pt-4">
+              <SkeletonLoader v-if="autoCleanupLoading" variant="text" :rows="2" />
+              <template v-else>
+                <label class="flex items-start gap-3 text-sm text-slate-600">
+                  <input
+                    v-model="autoCleanupEnabledInput"
+                    class="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                    type="checkbox"
+                  />
+                  <span>
+                    <span class="block font-medium text-slate-900">容量达到 {{ autoCleanupSettings.triggerUsagePercent }}% 后自动滚动删除临时邮箱与临时邮件</span>
+                    <span class="mt-1 block text-xs text-slate-500">
+                      触发后只保留最近活跃的 {{ autoCleanupSettings.keepTemporaryAddresses }} 个临时邮箱及其邮件，永久邮箱和永久邮件不受影响。
+                    </span>
+                  </span>
+                </label>
+                <button class="button-primary h-9 w-full" type="button" :disabled="autoCleanupSubmitting" @click="submitAutoCleanupSettings">
+                  {{ autoCleanupSubmitting ? '保存中…' : '保存设置' }}
+                </button>
+              </template>
+              <p v-if="autoCleanupMessage" class="text-sm text-slate-500">{{ autoCleanupMessage }}</p>
+              <p v-if="autoCleanupError || autoCleanupLoadError" class="text-sm text-rose-600">
+                {{ autoCleanupError || autoCleanupLoadError }}
+              </p>
+            </div>
           </section>
         </div>
       </template>
@@ -99,16 +125,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-import { cleanupDashboardD1, getDashboard } from '../api/admin'
+import { cleanupDashboardD1, getD1AutoCleanupSettings, getDashboard, updateD1AutoCleanupSettings } from '../api/admin'
 import AppShell from '../components/AppShell.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 import StatCard from '../components/StatCard.vue'
 import { useSWR } from '../composables/useSWR'
 import { useAuthStore } from '../stores/auth'
-import type { ApiEnvelope, DashboardStats, D1CleanupResult } from '../types'
+import type { ApiEnvelope, D1AutoCleanupSettings, DashboardStats, D1CleanupResult } from '../types'
 
 const authStore = useAuthStore()
 
@@ -134,7 +160,22 @@ const { data, error, isLoading, mutate } = useSWR<ApiEnvelope<DashboardStats>>({
   fetcher: () => getDashboard(authStore.token),
 })
 
+const {
+  data: autoCleanupData,
+  error: autoCleanupLoadError,
+  isLoading: autoCleanupLoading,
+  mutate: mutateAutoCleanup,
+} = useSWR<ApiEnvelope<D1AutoCleanupSettings>>({
+  key: 'dashboard-d1-auto-cleanup',
+  fetcher: () => getD1AutoCleanupSettings(authStore.token),
+})
+
 const stats = computed(() => data.value?.data ?? defaultDashboardStats)
+const autoCleanupSettings = computed(() => autoCleanupData.value?.data ?? {
+  enabled: false,
+  triggerUsagePercent: 95,
+  keepTemporaryAddresses: 100,
+})
 const capacityStatusLabel = computed(() => {
   switch (stats.value.d1Capacity.status) {
     case 'danger':
@@ -214,6 +255,14 @@ const pendingCleanup = ref<CleanupAction | null>(null)
 const cleanupSubmittingKey = ref('')
 const cleanupMessage = ref('')
 const cleanupError = ref('')
+const autoCleanupEnabledInput = ref(false)
+const autoCleanupSubmitting = ref(false)
+const autoCleanupMessage = ref('')
+const autoCleanupError = ref('')
+
+watch(autoCleanupSettings, (value) => {
+  autoCleanupEnabledInput.value = value.enabled
+}, { immediate: true })
 
 function formatPercent(value: number) {
   return `${value.toFixed(1)}%`
@@ -252,6 +301,24 @@ async function confirmCleanup() {
   } finally {
     cleanupSubmittingKey.value = ''
     pendingCleanup.value = null
+  }
+}
+
+async function submitAutoCleanupSettings() {
+  autoCleanupSubmitting.value = true
+  autoCleanupMessage.value = ''
+  autoCleanupError.value = ''
+
+  try {
+    const response = await updateD1AutoCleanupSettings(authStore.token, autoCleanupEnabledInput.value)
+    autoCleanupMessage.value = response.data.enabled
+      ? `已开启自动滚动清理：达到 ${response.data.triggerUsagePercent}% 后仅保留最近活跃的 ${response.data.keepTemporaryAddresses} 个临时邮箱。`
+      : '已关闭自动滚动清理。'
+    await mutateAutoCleanup()
+  } catch (error) {
+    autoCleanupError.value = error instanceof Error ? error.message : '保存自动清理设置失败'
+  } finally {
+    autoCleanupSubmitting.value = false
   }
 }
 </script>

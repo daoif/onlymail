@@ -15,6 +15,7 @@ import {
   checkVersionState,
   createSubdomain,
   dismissVersionUpdateOnce,
+  getD1AutoCleanupSettings,
   getDomainLifecycleSettings,
   getDashboard,
   getDomains,
@@ -22,6 +23,7 @@ import {
   logout,
   removePagesDomain,
   setVersionNotifications,
+  updateD1AutoCleanupSettings,
   updateDomainLifecycleSettings,
 } from './admin'
 
@@ -52,6 +54,25 @@ describe('admin api helpers', () => {
         body: JSON.stringify({ scope: 'addresses', target: 'temporary' }),
       },
       'token-15',
+    )
+  })
+
+  it('getD1AutoCleanupSettings 会请求自动清理设置', () => {
+    getD1AutoCleanupSettings('token-16')
+
+    expect(apiRequest).toHaveBeenCalledWith('/api/settings/d1-auto-cleanup', {}, 'token-16')
+  })
+
+  it('updateD1AutoCleanupSettings 会保存自动清理开关', () => {
+    updateD1AutoCleanupSettings('token-17', true)
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/settings/d1-auto-cleanup',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ enabled: true }),
+      },
+      'token-17',
     )
   })
 

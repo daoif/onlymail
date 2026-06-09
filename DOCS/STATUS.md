@@ -63,6 +63,7 @@
 - `Upstream Sync` 在 fast-forward 后会显式补触发 `CI` 和相关 deploy workflow，不再停在“代码同步了但后续检查和部署没跑”
 - 新增前端、Worker、脚本层测试入口，根目录 `pnpm test` 现在会统一跑完
 - 仪表盘新增 D1 容量展示和四类清理动作，可按邮件 / 邮箱、临时 / 永久分类清理
+- 仪表盘清理操作下新增 D1 自动滚动清理开关：开启后 D1 占用达到 95% 时，定时任务会删除旧临时邮箱及其邮件，只保留最近活跃的 100 个临时邮箱
 - SDK 改用 GitHub Release 附件分发：Node.js `.tgz`、Python `.whl` 和 `.tar.gz`；仍不发 npm / PyPI
 - CI 新增 SDK 产物构建和安装冒烟测试
 - `Release SDK Assets` workflow 已接通：发布 Release 后自动上传 SDK 附件
