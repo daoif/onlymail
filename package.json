@@ -3,6 +3,9 @@
   "version": "0.4.0",
   "private": true,
   "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "init": "npx tsx scripts/init.ts",
     "rebuild": "npx tsx scripts/rebuild.ts",

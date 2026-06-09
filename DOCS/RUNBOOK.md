@@ -22,7 +22,7 @@
 确认以下前置条件已就绪：
 
 - 一个已托管在 Cloudflare 的域名
-- Node.js 20+、pnpm 10+
+- Node.js 24+、pnpm 10+
 - 已执行 `npx wrangler login` 完成浏览器授权
 
 然后复制 `.env.local.example` 为 `.env.local`，只填这 4 个值：

@@ -7,7 +7,7 @@
 | 条件 | 操作方式 | 说明 |
 |------|---------|------|
 | Cloudflare 账户 | 🧑 手动 | 需要有至少一个域名托管在 CF |
-| Node.js >= 20 | 🧑 手动 | 本地开发和 init 脚本需要 |
+| Node.js >= 24 | 🧑 手动 | 本地开发和 init 脚本需要 |
 | pnpm >= 10 | 🧑 手动 | `npm i -g pnpm` |
 | Cloudflare API Token | 🧑 手动 | 见下方「创建 API Token」 |
 
@@ -185,7 +185,7 @@
 **开始前请准备好：**
 
 - Cloudflare 账号，且至少有一个域名已托管
-- Node.js >= 20、pnpm >= 10
+- Node.js >= 24、pnpm >= 10
 - Cloudflare API Token 和 Account ID（获取位置：CF 控制台 → 任意已托管域名 → 右下角 API 区域）
 - `CF_EMAIL` 和 `CF_GLOBAL_API_KEY`（根域名初始化、子域名管理、catch-all、Email Routing 等核心自动化均依赖这组值）
 - 以上值已填入 `.env.local`

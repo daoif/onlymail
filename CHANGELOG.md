@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- 项目本地与 GitHub Actions 的 Node.js 基线升级到 24，并同步更新 Actions 主版本以使用 Node 24 runtime。
+
 ## [v0.4.0] - 2026-06-09
 
 ### Added

@@ -21,11 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Build & Deploy Frontend to Cloudflare Pages
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           package-manager-cache: false
 
       - name: Enable pnpm via Corepack
