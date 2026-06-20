@@ -31,6 +31,23 @@ test('parseWranglerD1RowsForTest 能解析 wrangler --json 结果', () => {
   assert.deepEqual(rows, [{ name: '0001_initial.sql' }, { name: '0002_add_index.sql' }])
 })
 
+test('parseWranglerD1RowsForTest 会忽略 wrangler JSON 前后的提示文本', () => {
+  const output = [
+    "Proxy environment variables detected. We'll use your proxy for fetch requests.",
+    '',
+    JSON.stringify([
+      {
+        success: true,
+        results: [{ name: '0003_domain_lifecycle.sql' }],
+      },
+    ]),
+    'Done.',
+  ].join('\n')
+
+  const rows = parseWranglerD1RowsForTest(output)
+  assert.deepEqual(rows, [{ name: '0003_domain_lifecycle.sql' }])
+})
+
 test('buildMigrationWrapperSqlForTest 会追加 migration 记录且不显式包事务', () => {
   const sql = buildMigrationWrapperSqlForTest('0001_initial.sql', 'CREATE TABLE example (id INTEGER);')
   assert.match(sql, /CREATE TABLE example/)

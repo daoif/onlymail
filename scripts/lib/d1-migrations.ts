@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import { ROOT_DIR, WORKER_DIR } from './local-config'
+import { parseWranglerJsonRows } from './wrangler-json'
 
 const NPX_BIN = process.platform === 'win32' ? 'npx.cmd' : 'npx'
 const MIGRATIONS_DIR = resolve(ROOT_DIR, 'worker/db/migrations')
@@ -22,8 +23,6 @@ type ApplyD1MigrationsOptions = {
   cwd?: string
 }
 
-type WranglerResultRow = Record<string, unknown>
-
 function quoteSqlString(value: string) {
   return `'${value.replace(/'/g, "''")}'`
 }
@@ -34,11 +33,6 @@ function buildMigrationWrapperSql(name: string, sql: string) {
     `INSERT INTO ${MIGRATION_TABLE} (name, applied_at) VALUES (${quoteSqlString(name)}, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));`,
     '',
   ].join('\n')
-}
-
-function parseWranglerJsonRows(output: string) {
-  const payload = JSON.parse(output) as Array<{ results?: WranglerResultRow[] }>
-  return payload.flatMap((entry) => (Array.isArray(entry.results) ? entry.results : []))
 }
 
 function runWranglerD1Json(options: ApplyD1MigrationsOptions, extraArgs: string[]) {

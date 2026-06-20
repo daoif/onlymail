@@ -2,20 +2,14 @@ import { execFileSync } from 'node:child_process'
 
 import { WORKER_DIR } from './local-config'
 import { buildPagesDefaultOrigins } from './project-defaults'
+import { parseWranglerJsonRows } from './wrangler-json'
 
 const NPX_BIN = process.platform === 'win32' ? 'npx.cmd' : 'npx'
 
 type D1Mode = 'local' | 'remote'
 
-type WranglerResultRow = Record<string, unknown>
-
 function quoteSqlString(value: string) {
   return `'${value.replace(/'/g, "''")}'`
-}
-
-function parseWranglerJsonRows(output: string) {
-  const payload = JSON.parse(output) as Array<{ results?: WranglerResultRow[] }>
-  return payload.flatMap((entry) => (Array.isArray(entry.results) ? entry.results : []))
 }
 
 function runWranglerD1(databaseName: string, mode: D1Mode, args: string[]) {
