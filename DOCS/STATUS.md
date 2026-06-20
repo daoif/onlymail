@@ -36,6 +36,10 @@
 
 ## 最近变更
 
+- `/call/domains` 已拆出 D1-only 轻量列表，机器客户端 discovery 不再触发 Cloudflare DNS inventory；管理后台 `/api/domains` 仍保留实时 DNS 配额展示。
+- `POST /call/domains` 对已存在且 ready 的 managed subdomain 增加 D1 fast path；资源 ID 不完整或 root 未 ready 时仍进入原 provisioning / 明确失败路径。
+- `POST /call/address` 创建前会用 D1 校验域名 ready，未 ready 返回 `domain_not_ready`，避免创建实际不可收信的地址。
+- `/call/address`、`/call/domains` 增加结构化耗时日志，记录 endpoint、domain/address、project、duration_ms、status/error_code，不记录 API Key。
 - 所有 Cloudflare API 调用通过 Provider 接口解耦
 - API 路由固定为 `/api/*`（管理员会话）+ `/call/*`（API Key）
 - `wrangler.toml` 不再提交 Git，本地和 CI/CD 都按模板现场生成

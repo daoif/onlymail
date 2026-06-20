@@ -1,6 +1,8 @@
 import type { AppBindings, AddressRecord, PageParams } from '../types'
 
 import { exec, many, one } from '../lib/db'
+import { AppError } from '../lib/http'
+import { getDomainReadyStatus } from './domain'
 
 export type AddressStatus = 'created' | 'occupied' | 'available'
 
@@ -18,6 +20,15 @@ export async function findAddressByName(env: AppBindings, address: string) {
 
 export async function createOrInspectAddress(env: AppBindings, payload: { address: string; project: string; ttlHours: number }) {
   const normalized = normalizeAddress(payload.address)
+  const domain = getDomainFromAddress(normalized)
+  const domainReady = await getDomainReadyStatus(env, domain)
+  if (!domainReady.ready) {
+    throw new AppError(400, 'domain_not_ready', {
+      domain,
+      reason: domainReady.reason,
+    })
+  }
+
   const existing = await findAddressByName(env, normalized)
 
   if (existing) {
@@ -27,7 +38,6 @@ export async function createOrInspectAddress(env: AppBindings, payload: { addres
     } as { status: AddressStatus; address: AddressRecord }
   }
 
-  const domain = getDomainFromAddress(normalized)
   await exec(
     env.DB.prepare(
       `INSERT INTO address (name, domain, project, ttl_hours)

@@ -103,19 +103,21 @@ worker/
 - 可轮换的 API Key、管理员账号和后台会话都放 D1；环境变量里只保留 Cloudflare 相关配置。
 
 ## 自动化 API
-- `POST /api/address`
+- `POST /call/address`
   - 请求体：`{ address, project, ttl_hours? }`
   - 返回 `created | occupied | available`。
-- `GET /api/addresses`
-  - 支持 `page`、`size`、`domain`、`project`。
-- `DELETE /api/address/:name`
-  - 删除地址和全部邮件。
-- `GET /api/mails/:address`
+- 创建前只查 D1 校验目标域名 ready；域名不存在、`routing_enabled != 1` 或资源 ID 不完整时返回 `domain_not_ready`，不创建不可收信地址。
+- `GET /call/mails/:address`
   - 返回邮件摘要列表。
-- `GET /api/mail/:id`
+- `GET /call/mail/:id`
   - 返回 `raw`、`text`、`html`、`source`、`subject`、`created_at`。
-- `DELETE /api/mail/:id`
-  - 删除单封邮件。
+- `GET /call/domains`
+  - 返回 D1-only 轻量域名列表，用于机器客户端 discovery；不读取 Cloudflare DNS inventory 或 Email Routing 规则。
+- `GET /call/domains/:name`
+  - 返回单个域名详情。
+- `POST /call/domains`
+  - 创建或修复 managed subdomain；若 D1 已存在且 ready，直接返回 D1 记录，不调用 Cloudflare。
+- `/call/address`、`/call/domains` 会输出结构化耗时日志，包含 endpoint、domain/address、project、duration_ms、status/error_code，不记录 API Key。
 
 ## 管理 API
 - `GET /api/init-status`

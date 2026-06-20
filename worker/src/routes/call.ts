@@ -13,7 +13,7 @@ import { AppError, jsonSuccess } from '../lib/http'
 import { getPageParams, toPagination } from '../lib/pagination'
 
 import { createOrInspectAddress } from '../services/address'
-import { createSubdomain, getDomainDetail, listDomains } from '../services/domain'
+import { createSubdomain, getDomainDetail, listDomainsLightweight } from '../services/domain'
 import { getMailById, listMailsForAddress } from '../services/mail'
 
 // ── Schemas ───────────────────────────────────────────────────
@@ -32,13 +32,65 @@ const createDomainSchema = z.object({
 
 export const callRoutes = new Hono<AppEnv>()
 
+type CallLogFields = {
+  endpoint: string
+  address?: string
+  domain?: string
+  project?: string
+}
+
+function getErrorCode(error: unknown) {
+  if (error instanceof AppError) {
+    return error.message
+  }
+
+  if (error instanceof Error) {
+    return error.name || 'error'
+  }
+
+  return 'unknown_error'
+}
+
+async function withCallTiming<T>(fields: CallLogFields, action: () => Promise<T>) {
+  const startedAt = Date.now()
+  try {
+    const result = await action()
+    console.info(JSON.stringify({
+      event: 'onlymail.call',
+      ...fields,
+      duration_ms: Date.now() - startedAt,
+      status: 'ok',
+    }))
+    return result
+  } catch (error) {
+    console.warn(JSON.stringify({
+      event: 'onlymail.call',
+      ...fields,
+      duration_ms: Date.now() - startedAt,
+      status: 'error',
+      error_code: getErrorCode(error),
+    }))
+    throw error
+  }
+}
+
 // POST /call/address — 创建邮箱地址
 callRoutes.post('/address', async (c) => {
-  const payload = createAddressSchema.parse(await c.req.json())
-  const result = await createOrInspectAddress(c.env, {
-    address: payload.address,
-    project: payload.project,
-    ttlHours: payload.ttl_hours ?? 24,
+  const logFields: CallLogFields = {
+    endpoint: 'POST /call/address',
+  }
+  const result = await withCallTiming(logFields, async () => {
+    const payload = createAddressSchema.parse(await c.req.json())
+    const domain = payload.address.split('@')[1]?.toLowerCase() ?? ''
+    logFields.address = payload.address.toLowerCase()
+    logFields.domain = domain
+    logFields.project = payload.project
+
+    return createOrInspectAddress(c.env, {
+      address: payload.address,
+      project: payload.project,
+      ttlHours: payload.ttl_hours ?? 24,
+    })
   })
 
   return jsonSuccess(c, result, result.status === 'created' ? 201 : 200)
@@ -75,7 +127,10 @@ callRoutes.get('/domains', async (c) => {
   const limitStr = c.req.query('limit')
   const limit = limitStr ? Number.parseInt(limitStr, 10) : undefined
 
-  return jsonSuccess(c, await listDomains(c.env, { type, root, subdomainType, limit }))
+  return jsonSuccess(c, await withCallTiming({
+    endpoint: 'GET /call/domains',
+    domain: root,
+  }, () => listDomainsLightweight(c.env, { type, root, subdomainType, limit })))
 })
 
 // GET /call/domains/:name — 单个域名详情
@@ -90,9 +145,18 @@ callRoutes.get('/domains/:name', async (c) => {
 
 // POST /call/domains — 创建子域名
 callRoutes.post('/domains', async (c) => {
-  const payload = createDomainSchema.parse(await c.req.json())
-  return jsonSuccess(c, await createSubdomain(c.env, {
-    ...payload,
-    subdomainType: payload.subdomainType ?? 'temporary',
-  }), 201)
+  const logFields: CallLogFields = {
+    endpoint: 'POST /call/domains',
+  }
+  const result = await withCallTiming(logFields, async () => {
+    const payload = createDomainSchema.parse(await c.req.json())
+    logFields.domain = payload.name.trim().toLowerCase()
+
+    return createSubdomain(c.env, {
+      ...payload,
+      subdomainType: payload.subdomainType ?? 'temporary',
+    })
+  })
+
+  return jsonSuccess(c, result, 201)
 })

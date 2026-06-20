@@ -56,6 +56,8 @@
 - Node.js 和 Python 两套接口尽量同名。
 - `waitForMail` 是重点能力，负责轮询、超时和首封匹配。
 - SDK 只面向用户自己部署的实例，不提供公共服务地址。
+- `listDomains` 只走 `/call/domains` D1-only 轻量列表，用于机器客户端 discovery，不触发 Cloudflare 实时统计。
+- `createAddress` 创建前要求目标域名在 D1 中处于 ready 状态；未初始化或资源 ID 不完整时会收到 `domain_not_ready`。
 - 第一阶段不发 npm / PyPI。
 - 正式版通过 GitHub Release 附件分发。
 - 仓库子目录安装只留给开发用。

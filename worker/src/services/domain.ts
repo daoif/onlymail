@@ -67,6 +67,97 @@ function parseStoredMxRecordIds(value: string) {
   return []
 }
 
+function hasTextValue(value: string | null | undefined) {
+  return Boolean(value?.trim())
+}
+
+function getRequiredMxRecordCount(dnsMode: SubdomainDnsMode) {
+  return getManagedSubdomainConstants(dnsMode).mxTargets.length
+}
+
+function getSubdomainReadyFailureReason(record: DomainRecord, dnsMode: SubdomainDnsMode) {
+  if (record.is_root === 1) {
+    return null
+  }
+
+  if (!record.root_name || normalizeManagedName(record.name) === normalizeManagedName(record.root_name)) {
+    return 'invalid_root_name'
+  }
+
+  if (!normalizeManagedName(record.name).endsWith(`.${normalizeManagedName(record.root_name)}`)) {
+    return 'root_name_mismatch'
+  }
+
+  if (!hasTextValue(record.route_rule_id)) {
+    return 'missing_route_rule_id'
+  }
+
+  const mxRecordIds = parseStoredMxRecordIds(record.mx_record_ids)
+  if (mxRecordIds.length < getRequiredMxRecordCount(dnsMode)) {
+    return 'insufficient_mx_record_ids'
+  }
+
+  if (dnsMode === 'compatible' && !hasTextValue(record.txt_record_id)) {
+    return 'missing_txt_record_id'
+  }
+
+  return null
+}
+
+function getDomainRecordReadyFailureReason(record: DomainRecord, dnsMode: SubdomainDnsMode) {
+  if (record.routing_enabled !== 1) {
+    return 'routing_disabled'
+  }
+
+  if (!hasTextValue(record.cf_zone_id)) {
+    return 'missing_cf_zone_id'
+  }
+
+  if (record.is_root === 1) {
+    return null
+  }
+
+  return getSubdomainReadyFailureReason(record, dnsMode)
+}
+
+async function getReadyDomainStatusForRecord(env: AppBindings, record: DomainRecord) {
+  const dnsMode = record.is_root === 1 ? 'compatible' : await getSubdomainDnsMode(env)
+  const reason = getDomainRecordReadyFailureReason(record, dnsMode)
+  if (reason) {
+    return { ready: false as const, reason, domain: record }
+  }
+
+  if (record.is_root !== 1) {
+    const root = await findDomain(env, record.root_name)
+    if (!root || root.is_root !== 1) {
+      return { ready: false as const, reason: 'root_domain_missing', domain: record }
+    }
+
+    if (root.routing_enabled !== 1) {
+      return { ready: false as const, reason: 'root_routing_disabled', domain: record }
+    }
+
+    if (!hasTextValue(root.cf_zone_id)) {
+      return { ready: false as const, reason: 'root_missing_cf_zone_id', domain: record }
+    }
+
+    if (root.cf_zone_id !== record.cf_zone_id) {
+      return { ready: false as const, reason: 'root_zone_mismatch', domain: record }
+    }
+  }
+
+  return { ready: true as const, reason: null, domain: record }
+}
+
+export async function getDomainReadyStatus(env: AppBindings, name: string) {
+  const domain = await findDomain(env, normalizeManagedName(name))
+  if (!domain) {
+    return { ready: false as const, reason: 'domain_not_found', domain: null }
+  }
+
+  return getReadyDomainStatusForRecord(env, domain)
+}
+
 function getManagedDnsCount(record: DomainRecord, dnsUnitSize: number) {
   if (record.is_root === 1) {
     return 0
@@ -284,6 +375,48 @@ export async function listDomains(
   return enrichRootDomainStats(env, rows)
 }
 
+export async function listDomainsLightweight(
+  env: AppBindings,
+  filters?: { type?: 'root' | 'sub'; root?: string; subdomainType?: SubdomainType; limit?: number },
+) {
+  const where: string[] = []
+  const bindings: Array<string | number> = []
+  let paramIdx = 1
+
+  if (filters?.type === 'root') {
+    where.push(`is_root = ?${paramIdx++}`)
+    bindings.push(1)
+  } else if (filters?.type === 'sub') {
+    where.push(`is_root = ?${paramIdx++}`)
+    bindings.push(0)
+  }
+
+  if (filters?.root) {
+    where.push(`root_name = ?${paramIdx++}`)
+    bindings.push(filters.root.toLowerCase())
+  }
+
+  if (filters?.subdomainType) {
+    where.push(`subdomain_type = ?${paramIdx++}`)
+    bindings.push(filters.subdomainType)
+  }
+
+  const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''
+  const limitSql = filters?.limit ? ` LIMIT ?${paramIdx++}` : ''
+  const limitBindings = filters?.limit ? [...bindings, filters.limit] : bindings
+
+  const rows = await many<DomainRecord>(
+    env.DB.prepare(
+      `SELECT * FROM domains ${whereSql} ORDER BY is_root DESC, created_at ASC${limitSql}`,
+    ).bind(...limitBindings),
+  )
+
+  return rows.map((row) => ({
+    ...row,
+    subdomain_type: getDomainType(row),
+  }))
+}
+
 export async function getDomainDetail(env: AppBindings, name: string) {
   const rawDomain = await findDomain(env, name)
   const domain = rawDomain ? (await enrichRootDomainStats(env, [rawDomain]))[0] : null
@@ -344,17 +477,40 @@ export async function bootstrapRootDomain(
 }
 
 export async function createSubdomain(env: AppBindings, payload: { name: string; rootName?: string; subdomainType?: SubdomainType }) {
-  requireEmailRoutingAuth(env)
   const name = payload.name.trim().toLowerCase()
   const existing = await findDomain(env, name)
   if (existing?.is_root === 1) {
-    return existing
+    const readyStatus = await getReadyDomainStatusForRecord(env, existing)
+    if (readyStatus.ready) {
+      return existing
+    }
+
+    throw new AppError(400, 'domain_not_ready', {
+      domain: name,
+      reason: readyStatus.reason,
+    })
   }
+
+  if (existing) {
+    const readyStatus = await getReadyDomainStatusForRecord(env, existing)
+    if (readyStatus.ready) {
+      return existing
+    }
+  }
+
+  requireEmailRoutingAuth(env)
 
   const explicitRootName = payload.rootName?.trim().toLowerCase() ?? existing?.root_name
   const rootRecord = await resolveRootDomainRecord(env, name, explicitRootName)
   if (!rootRecord) {
     throw new AppError(400, '请先初始化根域名，再创建子域名')
+  }
+  const rootReadyStatus = await getReadyDomainStatusForRecord(env, rootRecord)
+  if (!rootReadyStatus.ready) {
+    throw new AppError(400, 'domain_not_ready', {
+      domain: rootRecord.name,
+      reason: rootReadyStatus.reason,
+    })
   }
   const rootName = rootRecord.name
   const subdomainType = existing ? normalizeSubdomainType(existing.subdomain_type) : normalizeSubdomainType(payload.subdomainType)
