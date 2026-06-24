@@ -470,6 +470,8 @@ wrangler deploy / pages deploy
 
 也就是说，GitHub-only / 混合部署里的“后续推送”已经能更新你自己的服务；如果你是维护者并准备对外发版，还要继续执行 [`RELEASING.md`](RELEASING.md)。
 
+特别注意：如果这次推送已经包含 `pnpm set:version` 生成的版本号变更，或者改动了 `shared/app-release.ts` / `package.json` 的版本号，就不能只等部署 workflow 成功。必须继续创建同版本 GitHub Release，并按 [`RELEASING.md`](RELEASING.md) 的发布后验收确认最新 Release、SDK 附件和代码版本一致。
+
 ---
 
 ## 六、自动接收上游更新

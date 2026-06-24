@@ -3,6 +3,8 @@ import test from 'node:test'
 
 import type { AppBindings } from '../src/types'
 
+import { handleScheduled } from '../src/scheduled'
+import { cleanupExpiredAddresses } from '../src/services/address'
 import { autoCleanupD1TemporaryData, cleanupD1Data } from '../src/services/d1-admin'
 import { getDashboardStats } from '../src/services/stats'
 
@@ -35,6 +37,7 @@ function createFakeEnv() {
     settings: new Map<string, string>(),
     fixedSize: null as number | null,
     capacityQueryCount: 0,
+    failExpiredAddressCleanup: false,
   }
 
   function calcSize() {
@@ -60,6 +63,14 @@ function createFakeEnv() {
 
     return state.addresses
       .filter((row) => row.ttl_hours > 0 && !kept.has(row.name))
+      .sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.name.localeCompare(b.name))
+      .slice(0, batchSize)
+      .map((row) => row.name)
+  }
+
+  function selectExpiredTemporaryAddressNames(batchSize: number) {
+    return state.addresses
+      .filter((row) => row.ttl_hours > 0)
       .sort((a, b) => a.updated_at.localeCompare(b.updated_at) || a.name.localeCompare(b.name))
       .slice(0, batchSize)
       .map((row) => row.name)
@@ -214,6 +225,44 @@ function createFakeEnv() {
             }
           }
 
+          if (normalized.startsWith('DELETE FROM raw_mails WHERE address IN (SELECT name FROM address WHERE ttl_hours > 0 AND datetime(updated_at)')) {
+            if (state.failExpiredAddressCleanup) {
+              throw new Error('TTL cleanup failed')
+            }
+
+            const affectedNames = new Set(selectExpiredTemporaryAddressNames(Number(boundValues[0])))
+            const before = state.mails.length
+            state.mails = state.mails.filter((row) => !affectedNames.has(row.address))
+            return {
+              meta: {
+                size_after: calcSize(),
+                changes: before - state.mails.length,
+                rows_read: before,
+                rows_written: 0,
+                duration: 0,
+                last_row_id: 0,
+                changed_db: true,
+              },
+            }
+          }
+
+          if (normalized.startsWith('DELETE FROM address WHERE name IN (SELECT name FROM address WHERE ttl_hours > 0 AND datetime(updated_at)')) {
+            const affectedNames = new Set(selectExpiredTemporaryAddressNames(Number(boundValues[0])))
+            const before = state.addresses.length
+            state.addresses = state.addresses.filter((row) => !affectedNames.has(row.name))
+            return {
+              meta: {
+                size_after: calcSize(),
+                changes: before - state.addresses.length,
+                rows_read: before,
+                rows_written: 0,
+                duration: 0,
+                last_row_id: 0,
+                changed_db: true,
+              },
+            }
+          }
+
           if (normalized === 'DELETE FROM address WHERE ttl_hours > 0') {
             const before = state.addresses.length
             const affectedNames = new Set(state.addresses.filter((row) => row.ttl_hours > 0).map((row) => row.name))
@@ -246,6 +295,20 @@ function createFakeEnv() {
                 duration: 0,
                 last_row_id: 0,
                 changed_db: true,
+              },
+            }
+          }
+
+          if (normalized.startsWith('DELETE FROM admin_sessions WHERE revoked_at IS NOT NULL OR expires_at <=')) {
+            return {
+              meta: {
+                size_after: calcSize(),
+                changes: 0,
+                rows_read: 0,
+                rows_written: 0,
+                duration: 0,
+                last_row_id: 0,
+                changed_db: false,
               },
             }
           }
@@ -307,6 +370,17 @@ test('cleanupD1Data 清理永久邮箱时会连同邮件一起删除', async () 
   assert.equal(state.mails.some((row) => row.address === 'perm-1@example.com'), false)
 })
 
+test('cleanupExpiredAddresses 分批清理临时邮箱并保留永久邮箱', async () => {
+  const { env, state } = createFakeEnv()
+  const result = await cleanupExpiredAddresses(env)
+
+  assert.equal(result.addressCount, 2)
+  assert.equal(result.mailCount, 3)
+  assert.equal(result.batchCount, 1)
+  assert.deepEqual(state.addresses.map((row) => row.name), ['perm-1@example.com'])
+  assert.deepEqual(state.mails.map((row) => row.address), ['perm-1@example.com'])
+})
+
 test('autoCleanupD1TemporaryData 未开启时不检查容量', async () => {
   const { env, state } = createFakeEnv()
   const result = await autoCleanupD1TemporaryData(env)
@@ -362,4 +436,54 @@ test('autoCleanupD1TemporaryData 达到 95% 后只保留最近活跃的 100 个�
   assert.equal(state.addresses.some((row) => row.name === 'temp-105@example.com'), true)
   assert.equal(state.mails.some((row) => row.address === 'temp-001@example.com'), false)
   assert.equal(state.mails.some((row) => row.address === 'temp-105@example.com'), true)
+})
+
+test('handleScheduled 记录每步日志，且 TTL 清理失败不会阻断 D1 自动清理', async () => {
+  const { env, state } = createFakeEnv()
+  state.settings.set('d1_auto_cleanup_temporary_enabled', 'true')
+  state.settings.set('update_last_checked_at', new Date().toISOString())
+  state.fixedSize = 480_000_000
+  state.failExpiredAddressCleanup = true
+  state.addresses = [
+    { name: 'perm@example.com', ttl_hours: 0, updated_at: '2026-05-01T00:00:00.000Z', created_at: '2026-05-01T00:00:00.000Z' },
+    ...Array.from({ length: 105 }, (_, index) => {
+      const id = String(index + 1).padStart(3, '0')
+      const timestamp = new Date(Date.UTC(2026, 4, 1, 0, index)).toISOString()
+      return {
+        name: `temp-${id}@example.com`,
+        ttl_hours: 24,
+        updated_at: timestamp,
+        created_at: timestamp,
+      }
+    }),
+  ]
+  state.mails = state.addresses.map((row) => ({ address: row.name, created_at: row.updated_at }))
+
+  const originalInfo = console.info
+  const originalError = console.error
+  const logs: Array<Record<string, unknown>> = []
+  console.info = (message?: unknown) => {
+    logs.push(JSON.parse(String(message)))
+  }
+  console.error = (message?: unknown) => {
+    logs.push(JSON.parse(String(message)))
+  }
+
+  try {
+    await handleScheduled({ cron: '0 * * * *', scheduledTime: Date.now() } as ScheduledController, env)
+  } finally {
+    console.info = originalInfo
+    console.error = originalError
+  }
+
+  const ttlLog = logs.find((entry) => entry.step === 'ttl_cleanup')
+  const autoCleanupLog = logs.find((entry) => entry.step === 'd1_auto_cleanup')
+  const completeLog = logs.find((entry) => entry.step === 'complete')
+
+  assert.equal(ttlLog?.status, 'error')
+  assert.equal(autoCleanupLog?.status, 'ok')
+  assert.equal(autoCleanupLog?.triggered, true)
+  assert.equal(autoCleanupLog?.deleted_addresses, 5)
+  assert.equal(completeLog?.status, 'ok')
+  assert.equal(state.addresses.filter((row) => row.ttl_hours > 0).length, 100)
 })

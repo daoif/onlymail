@@ -200,6 +200,8 @@ pnpm setup:github
 
 这一步是“部署更新”，不是“正式发版”。如果你维护的是公开版本，还需要按 [`RELEASING.md`](RELEASING.md) 手动创建 GitHub Release；发布 Release 后 `Release SDK Assets` 才会上传 SDK 附件，后台更新提醒也只认正式 Release。
 
+如果这次已经运行过 `pnpm set:version` 或改动了 `shared/app-release.ts` / `package.json` 里的版本号，就不要把流程停在部署成功。继续按 [`RELEASING.md`](RELEASING.md) 创建同版本 GitHub Release，并做发布后验收，避免线上版本高于 GitHub 最新正式 Release。
+
 如果还想自动跟上游版本，在 GitHub 仓库变量里设置：
 
 ```text

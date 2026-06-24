@@ -18,6 +18,7 @@
 
 > 重点：**push 会部署，但不会自动创建 GitHub Release；`Release SDK Assets` 会给已发布的 Release 挂附件，但不会替你创建 Release。**
 > 对当前维护仓库来说，默认分支 push 后线上 Worker / Pages 会由部署 workflow 自动更新；其他未接自动同步的实例只有在正式 GitHub Release 发布后才会看到更新提醒。
+> 如果后台看到“当前版本”高于“最新版本”，这不是更新提醒逻辑问题，而是维护者已经部署了更高版本代码，却没有创建对应 GitHub Release。应回到 [`RELEASING.md`](RELEASING.md) 补发同版本 Release，并确认 `Release SDK Assets` 成功。
 
 ---
 
@@ -60,6 +61,7 @@
 - **我要更新 Cloudflare 上正在跑的服务**：push 默认分支，确认 `CI` / `Deploy Worker` / `Deploy Frontend` 成功
 - **我要发布一个用户可见的新版本**：在 push 部署成功后，再创建 GitHub Release
 - **我要让未自动同步的实例看到更新提醒**：必须创建正式 GitHub Release，普通 commit 不会触发提醒
+- **我已经改了 `APP_VERSION` / `package.json` 版本号**：这已经进入正式发版流程，不能只部署不发 Release；必须继续按 [`RELEASING.md`](RELEASING.md) 完成 Release 和发布后验收
 
 ---
 

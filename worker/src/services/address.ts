@@ -6,6 +6,8 @@ import { getDomainReadyStatus } from './domain'
 
 export type AddressStatus = 'created' | 'occupied' | 'available'
 
+const EXPIRED_ADDRESS_CLEANUP_BATCH_SIZE = 500
+
 function normalizeAddress(address: string) {
   return address.trim().toLowerCase()
 }
@@ -113,25 +115,34 @@ export async function touchAddress(env: AppBindings, address: string) {
 }
 
 export async function cleanupExpiredAddresses(env: AppBindings) {
-  const expired = await many<{ name: string }>(
-    env.DB.prepare(
-      `SELECT name FROM address
-       WHERE ttl_hours > 0
-       AND datetime(updated_at) <= datetime('now', '-' || ttl_hours || ' hours')`,
-    ),
-  )
+  const expiredAddressSubquery = `SELECT name FROM address
+                                  WHERE ttl_hours > 0
+                                  AND datetime(updated_at) <= datetime('now', '-' || ttl_hours || ' hours')
+                                  ORDER BY updated_at ASC, id ASC
+                                  LIMIT ?1`
+  let addressCount = 0
+  let mailCount = 0
+  let batchCount = 0
 
-  if (expired.length === 0) {
-    return { addressCount: 0, mailCount: 0 }
+  while (true) {
+    const [mailDelete, addressDelete] = await env.DB.batch([
+      env.DB.prepare(`DELETE FROM raw_mails WHERE address IN (${expiredAddressSubquery})`).bind(EXPIRED_ADDRESS_CLEANUP_BATCH_SIZE),
+      env.DB.prepare(`DELETE FROM address WHERE name IN (${expiredAddressSubquery})`).bind(EXPIRED_ADDRESS_CLEANUP_BATCH_SIZE),
+    ])
+
+    mailCount += mailDelete.meta.changes
+    addressCount += addressDelete.meta.changes
+
+    if (addressDelete.meta.changes === 0) {
+      break
+    }
+
+    batchCount += 1
   }
 
-  const names = expired.map((item) => item.name)
-  const placeholders = names.map(() => '?').join(',')
-  const mailDelete = await exec(env.DB.prepare(`DELETE FROM raw_mails WHERE address IN (${placeholders})`).bind(...names))
-  const addressDelete = await exec(env.DB.prepare(`DELETE FROM address WHERE name IN (${placeholders})`).bind(...names))
-
   return {
-    addressCount: addressDelete.meta.changes,
-    mailCount: mailDelete.meta.changes,
+    addressCount,
+    mailCount,
+    batchCount,
   }
 }

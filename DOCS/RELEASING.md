@@ -53,6 +53,17 @@ pnpm set:version <x.y.z>
 
 这个命令只做一件事：把指定的版本号同步到上述 4 个位置，不做自动递增。
 
+### 版本号和 Release 必须对齐
+
+只要 `pnpm set:version <x.y.z>` 已经进入默认分支，并且这次变更不是纯私有实验，就必须在同一次发版流程里创建对应的 GitHub Release：
+
+- 代码内版本：`<x.y.z>`
+- GitHub Release tag：`v<x.y.z>`
+
+禁止停在“版本号已经改成 `<x.y.z>`，线上也已经部署，但 GitHub 最新 Release 还停在旧版本”的状态。这样会造成后台版本检查、SDK Release 附件和外部用户可见版本全部不一致。
+
+如果只是维护者自用、不准备对外发版，不要提前运行 `pnpm set:version`。先按普通部署流程 push / deploy；等决定正式发版时，再进入本文档流程统一改版本号、写 changelog、创建 Release。
+
 ## 发布前检查
 
 每次发布前至少做这些：
@@ -101,13 +112,15 @@ pnpm set:version <x.y.z>
 8. push 到默认分支，等待 `CI` 和必要的部署 workflow 成功
 9. 创建 GitHub Release（推荐 `gh release create`，由它在目标分支上创建 tag）
 10. 等 `Release SDK Assets` workflow 把 SDK 附件挂到当前 Release
-11. 检查 Release 页面是否已经出现源码包和 SDK 附件
+11. 校验 GitHub 最新 Release tag 等于本次版本号
+12. 检查 Release 页面是否已经出现源码包和 SDK 附件
 
 推荐命令顺序：
 
 ```bash
+VERSION=<x.y.z>
 git status
-pnpm set:version <x.y.z>
+pnpm set:version "$VERSION"
 # 手动更新 CHANGELOG.md、README.md 和 DOCS/ 中与本次版本相关的内容
 pnpm test
 pnpm build
@@ -117,9 +130,11 @@ python -m pip install build
 pnpm build:sdk:artifacts
 pnpm check:sdk:artifacts
 git add --all
-git commit -m "发布<x.y.z>版本"
+git commit -m "发布${VERSION}版本"
 git push origin <default-branch>
-gh release create v<x.y.z> --target <default-branch> --title "v<x.y.z>" --notes-file <release-notes-file>
+gh release create "v${VERSION}" --target <default-branch> --title "v${VERSION}" --notes-file <release-notes-file>
+gh release view "v${VERSION}"
+gh release list --limit 1
 gh run list --workflow "Release SDK Assets" --limit 5
 ```
 
@@ -131,6 +146,28 @@ gh run list --workflow "Release SDK Assets" --limit 5
 4. 发布后等待 `Release SDK Assets` 自动运行
 
 也可以先手动 `git tag` / `git push origin v<x.y.z>`，再基于这个 tag 创建 Release；但当前推荐路径是直接让 `gh release create` 在目标分支上创建 tag，减少“tag 已推送但 Release 未发布”的中间状态。
+
+## 发布后验收
+
+发布后不要只看部署 workflow 成功，还要确认正式版本源已经对齐：
+
+```bash
+VERSION=<x.y.z>
+VERSION="$VERSION" node --import tsx --input-type=module -e 'const moduleValue = await import("./shared/app-release.ts"); const appRelease = moduleValue.APP_VERSION ? moduleValue : moduleValue.default; const { APP_VERSION } = appRelease; if (APP_VERSION !== process.env.VERSION) throw new Error(`APP_VERSION=${APP_VERSION}, expected=${process.env.VERSION}`)'
+gh release view "v${VERSION}" --json tagName,isDraft,isPrerelease,publishedAt,url
+gh release list --limit 1
+gh run list --workflow "Release SDK Assets" --limit 5
+```
+
+验收标准：
+
+- `shared/app-release.ts` 中的 `APP_VERSION` 等于 `<x.y.z>`
+- `gh release view v<x.y.z>` 能查到已发布 Release，且不是 draft / prerelease
+- `gh release list --limit 1` 的第一条就是 `v<x.y.z>`
+- `Release SDK Assets` 已成功结束
+- Release assets 里已经有 Node.js 和 Python SDK 附件
+
+如果发现当前实例版本高于 GitHub 最新正式 Release，说明这次发版漏了 GitHub Release。处理方式不是改后台提示文案，而是补发对应版本的 Release，并确认 SDK 附件 workflow 成功。
 
 ## 发版发的是什么
 
