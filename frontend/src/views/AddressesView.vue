@@ -150,13 +150,7 @@
           </table>
         </div>
 
-        <div class="flex items-center justify-between text-sm text-slate-500">
-          <p>第 {{ pagination.page }} / {{ pagination.totalPages }} 页，共 {{ pagination.total }} 条</p>
-          <div class="flex gap-2">
-            <button class="button-secondary" type="button" :disabled="pagination.page <= 1" @click="changePage(-1)">上一页</button>
-            <button class="button-secondary" type="button" :disabled="pagination.page >= pagination.totalPages" @click="changePage(1)">下一页</button>
-          </div>
-        </div>
+        <AppPagination :pagination="pagination" @update:page="setPage" />
       </template>
 
       <p v-if="listError" class="text-sm text-rose-600">{{ listError }}</p>
@@ -181,6 +175,7 @@ import { useRouter } from 'vue-router'
 import { ApiError } from '../api/client'
 import { createAddress, deleteAdminAddress, getAddresses, getDomains, type AddressCreateResult } from '../api/admin'
 import AppShell from '../components/AppShell.vue'
+import AppPagination from '../components/AppPagination.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 import type { AddressRecord, ApiEnvelope, DomainRecord, PaginationMeta } from '../types'
@@ -364,7 +359,7 @@ async function confirmDelete() {
   await mutate()
 }
 
-function changePage(step: number) {
-  currentPage.value += step
+function setPage(page: number) {
+  currentPage.value = page
 }
 </script>

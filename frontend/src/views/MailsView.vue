@@ -33,6 +33,8 @@
             </button>
             <div v-if="mails.length === 0" class="px-4 py-12 text-center text-sm text-slate-500">暂无邮件</div>
           </div>
+
+          <AppPagination v-if="!listLoading" :pagination="pagination" @update:page="setPage" />
         </div>
 
         <div class="min-h-[520px] rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200/70">
@@ -74,9 +76,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '../api/client'
 import { deleteAdminMail, getMail, getMails } from '../api/admin'
 import AppShell from '../components/AppShell.vue'
+import AppPagination from '../components/AppPagination.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
-import type { MailDetail, MailSummary } from '../types'
+import type { MailDetail, MailSummary, PaginationMeta } from '../types'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
@@ -84,6 +87,8 @@ const router = useRouter()
 const authStore = useAuthStore()
 const addressFilter = ref(String(route.query.address ?? ''))
 const mails = ref<MailSummary[]>([])
+const pagination = ref<PaginationMeta>({ page: 1, size: 50, total: 0, totalPages: 1 })
+const currentPage = ref(1)
 const selectedMailId = ref<number | null>(null)
 const selectedMail = ref<MailDetail | null>(null)
 const pendingDeleteId = ref<number | null>(null)
@@ -100,10 +105,18 @@ async function refreshList() {
   listLoading.value = true
   listErrorMessage.value = ''
   try {
-    const params = new URLSearchParams({ page: '1', size: '50' })
-    if (addressFilter.value) params.set('address', addressFilter.value)
+    const params = new URLSearchParams({ page: String(currentPage.value), size: String(pagination.value.size) })
+    const normalizedAddress = addressFilter.value.trim()
+    if (normalizedAddress) params.set('address', normalizedAddress)
     const response = await getMails(authStore.token, params)
     mails.value = response.data.items
+    pagination.value = response.data.pagination
+
+    if (pagination.value.page > pagination.value.totalPages) {
+      currentPage.value = pagination.value.totalPages
+      await refreshList()
+      return
+    }
 
     if (selectedMailId.value && mails.value.some((item) => item.id === selectedMailId.value)) {
       return
@@ -136,11 +149,21 @@ async function confirmDelete() {
   if (pendingDeleteId.value === null) return
   await deleteAdminMail(authStore.token, pendingDeleteId.value)
   pendingDeleteId.value = null
+  if (mails.value.length === 1 && currentPage.value > 1) {
+    currentPage.value -= 1
+  }
   await refreshList()
 }
 
+function setPage(page: number) {
+  currentPage.value = page
+  refreshList()
+}
+
 watch(addressFilter, (value) => {
-  router.replace({ name: 'mails', query: value ? { address: value } : {} })
+  const normalizedAddress = value.trim()
+  currentPage.value = 1
+  router.replace({ name: 'mails', query: normalizedAddress ? { address: normalizedAddress } : {} })
 })
 
 onMounted(refreshList)
