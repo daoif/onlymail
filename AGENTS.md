@@ -14,6 +14,13 @@
 - 想准备发版，先看 `DOCS/RELEASING.md`。
 - 想知道当前现场事实和剩余待办，先看 `DOCS/STATUS.md`。
 
+### 发布闭环强制约束
+- 在本项目里，用户说“推上去更新”“上线更新”“发布更新”“发版”“更新线上”时，默认不是只执行 `git push`，而是执行完整发布闭环，除非用户明确说“只提交 / 只推代码 / 不发 Release”。
+- 完整发布闭环必须同时完成：更新版本号、更新 `CHANGELOG.md`、通过必要测试和构建、提交并推送到 GitHub、创建同版本 Git tag / GitHub Release、等待 `Release SDK Assets` 成功、确认 GitHub latest Release 等于当前代码版本、确认线上实例已经运行这个最新发布版本。
+- 只要改动已经进入默认分支并影响线上运行、部署、升级、接口、SDK、管理面板行为或运维判断，就必须按 `DOCS/RELEASING.md` 发新版本；不要把“代码已部署”当成“版本已发布”。
+- 如果由于权限、凭据或外部服务限制，无法完成 GitHub Release、SDK assets 或线上实例版本验收，必须明确告诉用户哪一步没有闭环，不得说“已更新完成”。
+- 执行任何发布相关动作前先打开 `DOCS/RELEASING.md`；执行更新/部署相关动作前先打开 `DOCS/UPDATE.md`，确认本次到底是在做部署、正式发布，还是两者都做。
+
 ### 常用命令
 - `pnpm run init`：幂等初始化，保留现有 D1，补齐基础设施并重新部署 Worker / Frontend。
 - `pnpm run rebuild`：删除并重建 D1，再重跑 `init`。
