@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="CHANGELOG.md">
-    <img src="https://img.shields.io/badge/version-v0.3.2-111827?style=flat-square" alt="version" />
+    <img src="https://img.shields.io/badge/version-v0.4.3-111827?style=flat-square" alt="version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-111827?style=flat-square" alt="license" />

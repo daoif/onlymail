@@ -108,6 +108,13 @@
 - Worker 运行时只读已经部署进 Cloudflare 的 secrets、`wrangler.toml` 和 D1
 - `D1_DATABASE_ID` 不放进 D1；它是数据库指针，必须在读 D1 之前先可用
 
+Worker 历史日志采集也固定在模板里：
+
+- `worker/wrangler.toml.template` 默认开启 `[observability] enabled = true`
+- `head_sampling_rate = 1`，确保定时任务、TTL 清理和 D1 自动清理的结构化日志不被采样漏掉
+- `pnpm render:wrangler`、`pnpm run init`、`pnpm deploy:worker` 和 GitHub `Deploy Worker` 都会从模板重新生成 `worker/wrangler.toml`
+- 排查线上定时任务时，优先查 Cloudflare Workers Logs；`wrangler tail` 只适合实时观察，不保存历史日志
+
 命令边界固定为以下三条：
 
 | 命令 | 行为 |

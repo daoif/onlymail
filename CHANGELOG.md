@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.4.3] - 2026-06-24
+
+### Added
+- 地址列表和邮件列表统一使用基础分页器，支持首页、上一页、下一页、末页、页码按钮和页码跳转。
+- Worker 部署配置开启 Workers Logs observability，并使用 100% head sampling，确保定时清理任务的结构化日志进入 Cloudflare 历史日志。
+
+### Changed
+- 邮件管理页从只展示最近邮件改为分页列表，便于在不依赖搜索的情况下翻查历史邮件。
+- 部署文档补充 Worker 历史日志采集约定，明确 `wrangler.toml` 由模板生成且包含 observability 配置。
+
 ## [v0.4.2] - 2026-06-24
 
 ### Changed
