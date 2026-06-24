@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [v0.4.1] - 2026-06-20
+## [v0.4.1] - 2026-06-24
 
 ### Changed
 - 项目本地与 GitHub Actions 的 Node.js 基线升级到 24，并同步更新 Actions 主版本以使用 Node 24 runtime。
@@ -12,9 +12,13 @@ All notable changes to this project will be documented in this file.
 - 已 ready 的 managed subdomain 创建请求增加 D1 fast path，减少重复调用 Cloudflare 的耗时。
 - `/call/address` 创建前会先校验域名 ready，未 ready 时返回 `domain_not_ready`，避免创建实际不可收信的地址。
 - `/call/address`、`/call/domains` 增加结构化耗时日志，便于观察 OnlyMail 调用耗时和错误。
+- Worker 定时任务增加结构化日志，按步骤记录 TTL 清理、D1 自动清理、管理员会话清理和版本检查的执行状态。
+- 发布文档补充版本号与 GitHub Release 必须对齐的发版红线和发布后验收命令。
 
 ### Fixed
 - 修复部署脚本读取 Wrangler JSON 输出时混入日志导致解析失败的问题。
+- 修复 TTL 过期邮箱清理失败会阻断后续 D1 95% 自动清理的问题；现在各定时任务步骤失败隔离，D1 自动清理会继续执行。
+- 修复 TTL 过期邮箱清理在数据量较大时全量读取并拼接巨大 `IN` 参数的问题，改为 D1 内部分批删除。
 
 ## [v0.4.0] - 2026-06-09
 
